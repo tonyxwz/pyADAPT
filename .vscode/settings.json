@@ -1,0 +1,9 @@
+{
+    "python.pythonPath": "C:\\Users\\20175506\\AppData\\Local\\Continuum\\anaconda3\\envs\\pyADAPT36\\python.exe",
+    "terminal.integrated.shellArgs.windows": [
+        "-NoExit",
+        "-Command",
+        "conda activate pyADAPT36"
+    ],
+    "python.terminal.activateEnvironment": false
+}

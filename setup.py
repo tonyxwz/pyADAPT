@@ -22,7 +22,8 @@ VERSION = '0.1.0'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    'numpy', 'scipy', 'scikit-learn', 'matplotlib'
+    'numpy', 'scipy', 'scikit-learn', 'sympy', 'matplotlib', 'networkx',
+    'cobra', 'python-libsbml', 'lmfit'
 ]
 
 # What packages are optional?
