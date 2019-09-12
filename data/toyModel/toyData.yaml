@@ -1,0 +1,27 @@
+name: toy data
+description: from Natal van Riel and Christian Tiemann's publication in 2013
+raw_path: toyData.mat
+mat_group: toy
+
+structure:
+  s1:
+    means: s1_mean
+    stds: s1_std
+    time: t
+    observable: true
+  s2:
+    means: s2_mean
+    stds: s2_std
+    time: t
+    observable: true
+  s3:
+    means: s3_mean
+    stds: s3_std
+    time: t
+    observable: true
+  s4:
+    means: s4_mean
+    stds: s4_std
+    time: t
+    observable: true
+
