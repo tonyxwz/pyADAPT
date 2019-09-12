@@ -2,7 +2,6 @@
 At least the process after the data is loaded should be standardize into using
 numpy and python dictionaries only. 
 """
-import matlab.engine
 import numpy as np
 from yaml import load, dump
 try:
@@ -26,6 +25,7 @@ def read_data_info(path_str):
 def read_data_raw(path_str, group=""):
     file_ext = path_str.split('.')[-1]
     if file_ext == 'mat':
+        import matlab.engine
         eng = matlab.engine.start_matlab()
         mat_data_dict = eng.load(path_str, nargout=1)
         if len(group):
