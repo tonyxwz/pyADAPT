@@ -22,13 +22,14 @@ VERSION = '0.1.0'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    'numpy', 'scipy', 'scikit-learn', 'sympy', 'matplotlib', 'networkx',
-    'cobra', 'python-libsbml', 'lmfit'
+    'numpy', 'scipy', 'sympy', 'matplotlib',
+    'networkx', 'lmfit', 'numdifftools', 'pyyaml', 'cached-property'
 ]
 
 # What packages are optional?
 EXTRAS = {
-    # 'fancy feature': ['django'],
+    'bio': ['cobra', 'python-libsbml'] ,
+    'optimization':['scikit-optimize', 'scikit-image', 'scikit-learn', 'gurobipy']
 }
 
 # The rest you shouldn't have to touch too much :)
