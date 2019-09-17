@@ -1,9 +1,16 @@
 {
-    "python.pythonPath": "C:\\Users\\20175506\\AppData\\Local\\Continuum\\anaconda3\\envs\\pyADAPT36\\python.exe",
+    "python.pythonPath": "C:\\InstallDir\\miniconda3\\envs\\scipy36\\python.exe",
+    // "terminal.integrated.shellArgs.windows": [
+    //     "-NoExit",
+    //     "-Command",
+    //     "conda activate scipy36"
+    // ],
     "terminal.integrated.shellArgs.windows": [
+        "-ExecutionPolicy",
+        "ByPass",
         "-NoExit",
         "-Command",
-        "conda activate pyADAPT36"
+        "& 'C:\\InstallDir\\miniconda3\\shell\\condabin\\conda-hook.ps1' ; conda activate scipy36 "
     ],
     "python.terminal.activateEnvironment": false,
     "python.testing.unittestArgs": [
