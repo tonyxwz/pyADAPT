@@ -1,4 +1,6 @@
-from cobra.core import Species
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# from cobra.core import Species
 from scipy import interpolate
 import numpy as np
 
@@ -21,19 +23,32 @@ class State(list):
 
         self.observable = observable  # IDK what does this do at all...
         # self.spline = self.generate_spline()
-        self.history = list()
+        self.value_hist = list()
+        self.std_hist = list()
 
-    def generate_spline(self, n_ts=100):
+    def value_spline(self, n_ts=100):
+        """ interpolate the values """
         values = self.sample()
         tck = interpolate.splrep(self.time, values)
         tnew = np.linspace(self.time[0], self.time[-1], n_ts)
         xnew = interpolate.splev(tnew, tck, der=0)
-        self.history.append(values)
+        self.value_hist.append(values)
         return xnew
 
+    def std_spline(self, n_ts=100):
+        """ interpolate standard deviation 
+        To be used to calculate the objective (error) function
+        interpolate linearly on variance
+        """
+        variances = np.asarray([d.std for d in self]) ** 2
+        tck = interpolate.splrep(self.time, variances)
+        tnew = np.linspace(self.time[0], self.time[-1], n_ts)
+        variances_new = interpolate.splev(tnew, tck, der=0)
+        std_new = np.sqrt(variances_new)
+        self.std_hist.append(std_new)
+        return std_new
+
+
     def sample(self):
-        # random sample of all the data points as an array
-        v = np.zeros(len(self))
-        for i in range(len(self)):
-            v[i] = self[i].sample()
-        return v
+        """ random sample of all the data points as an array """
+        return np.asarray([ d.sample() for d in self ])

@@ -1,6 +1,6 @@
 import numpy as np
-from pyADAPT.io import read_data_raw, read_data_info
-from pyADAPT.core import State
+from .io import read_data_raw, read_data_info
+from .core import State
 
 
 class DataSet(dict):
@@ -54,5 +54,8 @@ class DataSet(dict):
         spl = {}
         for k,v in self.items():
             # e.g.: k: 's1', v: s1: State
-            spl[k] = v.generate_spline(n_ts=n_ts)
+            d = dict()
+            d['value'] = v.value_spline(n_ts=n_ts)
+            d['std'] = v.std_spline(n_ts=n_ts)
+            spl[k] = d
         return spl
