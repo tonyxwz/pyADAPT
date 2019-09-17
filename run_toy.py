@@ -1,7 +1,8 @@
-from pyADAPT import DataSet, Model, ADAPTapp
-
 import matplotlib.pyplot as plt
 import numpy as np
+
+from pyADAPT import ADAPTapp, DataSet, Model
+
 
 class ToyModel(Model):
     @staticmethod

@@ -1,6 +1,7 @@
 import numpy as np
-from .io import read_data_raw, read_data_info
+
 from .core import State
+from .io import read_data_info, read_data_raw
 
 
 class DataSet(dict):
