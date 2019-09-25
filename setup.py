@@ -22,7 +22,7 @@ VERSION = '0.1.0'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    'numpy', 'scipy', 'sympy', 'matplotlib',
+    'numpy', 'scipy', 'sympy', 'matplotlib', 'pandas',
     'networkx', 'lmfit', 'numdifftools', 'pyyaml', 'cached-property'
 ]
 
