@@ -1,17 +1,18 @@
 {
     "python.pythonPath": "C:\\InstallDir\\miniconda3\\envs\\scipy36\\python.exe",
-    // "terminal.integrated.shellArgs.windows": [
-    //     "-NoExit",
-    //     "-Command",
-    //     "conda activate scipy36"
-    // ],
     "terminal.integrated.shellArgs.windows": [
-        "-ExecutionPolicy",
-        "ByPass",
         "-NoExit",
         "-Command",
-        "& 'C:\\InstallDir\\miniconda3\\shell\\condabin\\conda-hook.ps1' ; conda activate scipy36 "
+        "conda activate scipy36"
     ],
+    // "terminal.integrated.shellArgs.windows": [
+    //     "-ExecutionPolicy",
+    //     "ByPass",
+    //     "-NoExit",
+    //     "-Command",
+    //     "& 'C:\\InstallDir\\miniconda3\\shell\\condabin\\conda-hook.ps1' ; conda activate scipy36 "
+    // ],
+    // "terminal.integrated.shell.windows": "pwsh.exe",
     "python.terminal.activateEnvironment": false,
     "python.testing.unittestArgs": [
         "-v",
@@ -22,5 +23,16 @@
     ],
     "python.testing.pytestEnabled": false,
     "python.testing.nosetestsEnabled": false,
-    "python.testing.unittestEnabled": true
+    "python.testing.unittestEnabled": true,
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/.ipynb_checkpoints": true,
+        "**/.spyproject": true,
+        "**/.idea": true,
+        "**/.mypy_cache": true
+    },
+    "python.formatting.provider": "yapf",
+    "python.linting.pylintEnabled": false,
+    "python.linting.enabled": true,
+    "python.linting.mypyEnabled": true
 }

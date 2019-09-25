@@ -4,6 +4,9 @@
       <w>matplotlib</w>
       <w>scikit</w>
       <w>scipy</w>
+      <w>stds</w>
+      <w>tapp</w>
+      <w>tiemann</w>
     </words>
   </dictionary>
 </component>
