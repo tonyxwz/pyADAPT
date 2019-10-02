@@ -1,26 +1,45 @@
 name: toy model
 description: from Natal van Riel and Christian Tiemann's publication in 2013
 type: ODE model
+options:
+  scale_max: 1
+  scale_min: 1
+
 constants:
   u1: 1
   u2: 1
 
 parameters:
   k1:
+    init: 1
     fit: true
-    init: 1
+    init_fit: true
+    smax: 1
+    smin: -1
   k2:
-    fit: false
     init: 1
+    fit: false
+    init_fit: true
+    smax: 1
+    smin: -1
   k3:
-    fit: false
     init: 0.1
+    fit: false
+    init_fit: true
+    smax: 1
+    smin: -1
   k4:
-    fit: false
     init: 0.5
-  k5:
     fit: false
+    init_fit: true
+    smax: 1
+    smin: -1
+  k5:
     init: 1
+    fit: false
+    init_fit: true
+    smax: 1
+    smin: -1
 
 reactions:
   v1: k1 * u1 * s2
@@ -28,7 +47,6 @@ reactions:
   v3: k3 * s1
   v4: k4 * s1
   v5: k5 * s4
-
   ds3dt: v1 - v2
 
 states:
@@ -36,4 +54,5 @@ states:
   ds2dt: -v1 + v2
   ds3dt: v1 - v2
   ds4dt: v4 - v5
+
 
