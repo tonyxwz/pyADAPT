@@ -37,8 +37,8 @@ class DataSet(dict):
         for k,v in self.info.items():
             self.__setattr__(k, v)
 
-        for k,v in self.structure.items():
-            print(v)
+        for k, v in self.structure.items():
+            # !print(v)
             time = self.data[v['time']]
             means = self.data[v['means']]
             stds = self.data[v['stds']]
@@ -46,14 +46,14 @@ class DataSet(dict):
             self[k] = s
 
     def generate_splines(self, n_ts=100):
-        """ in every iteration, this function is called once to get a new
+        """In every ADAPT iteration, this function is called once to get a new
         spline for the optimizer to fit (from t0 till the end). the length of
         the list of the spline should be equal to the number of states in the
         data.
         """
-        # TODO: find out differences if using b-spline rather than cubic-smooth
+        # TODO: find out influence if using b-spline rather than cubic-smooth
         spl = {}
-        for k,v in self.items():
+        for k, v in self.items():
             # e.g.: k: 's1', v: s1: State
             d = dict()
             d['value'] = v.value_spline(n_ts=n_ts)

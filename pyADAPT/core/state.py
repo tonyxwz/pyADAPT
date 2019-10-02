@@ -14,9 +14,7 @@ class State(list):
         super().__init__()
         self.name = name  # s1
         self.time = np.array(time)  # t1 from dataset
-        print(time)
-        print(stds)
-        print(means)
+
         assert len(time) == len(stds) == len(means)
         for m, s in zip(means, stds):
             self.append(Normal_Dist(m, s))
@@ -35,6 +33,8 @@ class State(list):
         self.value_hist.append(values)
         return xnew
 
+    # TODO: consider define std splines as a property for they don't change between iterations
+    #  between iterations at all
     def std_spline(self, n_ts=100):
         """ interpolate standard deviation 
         To be used to calculate the objective (error) function
