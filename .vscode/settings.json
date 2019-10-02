@@ -5,14 +5,7 @@
         "-Command",
         "conda activate scipy36"
     ],
-    // "terminal.integrated.shellArgs.windows": [
-    //     "-ExecutionPolicy",
-    //     "ByPass",
-    //     "-NoExit",
-    //     "-Command",
-    //     "& 'C:\\InstallDir\\miniconda3\\shell\\condabin\\conda-hook.ps1' ; conda activate scipy36 "
-    // ],
-    // "terminal.integrated.shell.windows": "pwsh.exe",
+    "terminal.integrated.shell.windows": "pwsh.exe",
     "python.terminal.activateEnvironment": false,
     "python.testing.unittestArgs": [
         "-v",
