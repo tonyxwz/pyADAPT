@@ -3,13 +3,13 @@
 # from cobra.core import Species
 
 import numpy as np
-from scipy.interpolate import PchipInterpolator
+from scipy.interpolate import PchipInterpolator, CubicHermiteSpline
 
-from pyADAPT.sampling import Normal_Dist
+from pyADAPT.sampling import NormalDist
 
 
 class State(list):
-    """ species, x, implemented as list of Distribtions """
+    """ species, x, implemented as list of NormalDist """
     def __init__(self, name="", time=None, means=None, stds=None, observable=False):
         super().__init__()
         self.name = name  # s1
@@ -17,7 +17,7 @@ class State(list):
 
         assert len(time) == len(stds) == len(means)
         for m, s in zip(means, stds):
-            self.append(Normal_Dist(m, s))
+            self.append(NormalDist(m, s))
 
         self.observable = observable  # IDK what does this do at all...
         # self.spline = self.generate_spline()

@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class Normal_Dist(object):
+class NormalDist(object):
     """ Normal distribution """
     # one distribution from the data
     def __init__(self, mean, std):

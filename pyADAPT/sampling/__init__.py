@@ -1,2 +1,2 @@
 # -*- coding: utf-8 -*-
-from .distributions import Normal_Dist
+from .distributions import NormalDist
