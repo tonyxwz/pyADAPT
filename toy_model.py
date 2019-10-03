@@ -2,7 +2,7 @@
 """constant parameter simulation (step 1)
 fit the model to the data using constant parameters
 """
-# %%
+
 import numpy as np
 
 from pyADAPT import Model, DataSet, ADAPTapp
@@ -78,6 +78,6 @@ class ToyModel(Model):
         return v
 
     def inputs(self, t):
-        # let's skip `t` this for the ToyModel
+        # let's skip `t` for the ToyModel
         return {'u1': 1, 'u2': 1}
 
