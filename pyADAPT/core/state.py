@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # from cobra.core import Species
-from scipy import interpolate
-import numpy as np
 
+import numpy as np
+from scipy.interpolate import PchipInterpolator
 
 from pyADAPT.sampling import Normal_Dist
 
@@ -27,9 +27,9 @@ class State(list):
     def value_spline(self, n_ts=100):
         """ interpolate the values """
         values = self.sample()
-        tck = interpolate.splrep(self.time, values)
+        pp = PchipInterpolator(self.time, values)
         tnew = np.linspace(self.time[0], self.time[-1], n_ts)
-        xnew = interpolate.splev(tnew, tck, der=0)
+        xnew = pp(tnew)
         self.value_hist.append(values)
         return xnew
 
@@ -41,9 +41,9 @@ class State(list):
         interpolate linearly on variance
         """
         variances = np.asarray([d.std for d in self]) ** 2
-        tck = interpolate.splrep(self.time, variances)
+        pp = PchipInterpolator(self.time, variances)
         tnew = np.linspace(self.time[0], self.time[-1], n_ts)
-        variances_new = interpolate.splev(tnew, tck, der=0)
+        variances_new = pp(tnew)
         std_new = np.sqrt(variances_new)
         self.std_hist.append(std_new)
         return std_new
