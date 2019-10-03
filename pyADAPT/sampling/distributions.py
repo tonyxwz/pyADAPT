@@ -10,3 +10,12 @@ class NormalDist(object):
 
     def sample(self):
         return np.random.normal(self.mean, self.std)
+
+    def __repr__(self):
+        return f"NormalDist(mean: {self.mean}, std: {self.std})"
+
+
+
+if __name__ == "__main__":
+    n = NormalDist(5, 1)
+    print(n)
