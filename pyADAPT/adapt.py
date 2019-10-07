@@ -22,6 +22,9 @@ class ADAPTapp(object):
     def __init__(self, model: Model, dataset: DataSet):
         """ Design paradigm: the model and dataset should not store any
         runtime data, ADAPTapp instance handles everything else
+        
+        In `ADAPTapp` class, the identifier of a name should be key of the dictionary
+        But in class `DataSet` and class `Model`, musks and flags should be used.
         """
         # *1 logger
         self.logger = logging.getLogger(self.__str__())
@@ -131,7 +134,7 @@ class ADAPTapp(object):
         # scipy.integrate.solve_ivp
 
     def randomize_data(self):
-        d = self.dataset.generate_splines(self.options['n_ts'])
+        d = self.dataset.interpolate(self.options['n_ts'])
         return d
 
     def randomize_parameters(self):

@@ -1,7 +1,7 @@
 import numpy as np
 
-from .core import State
-from .io import read_data_info, read_data_raw
+from pyADAPT.core import State
+from pyADAPT.io import read_data_info, read_data_raw
 
 
 class DataSet(dict):
@@ -45,18 +45,42 @@ class DataSet(dict):
             s = State(name=k, time=time, means=means, stds=stds)
             self[k] = s
 
-    def generate_splines(self, n_ts=100):
+    def interpolate(self, n_ts=100, method='Hermite'):
         """In every ADAPT iteration, this function is called once to get a new
         spline for the optimizer to fit (from t0 till the end). the length of
         the list of the spline should be equal to the number of states in the
         data.
+
+        return
+        ------
+        Dictionary (In py3.7+, OrderedDict is not required.)
+        ```
+        {
+            's1': {'values': list, 'stds': list},
+            's2': {'values': list, 'stds': list},
+            's3': {'values': list, 'stds': list},
+            ......
+        }
+        ```
         """
-        # TODO: find out influence if using b-spline rather than cubic-smooth
-        spl = {}
+        # TODO: compare different interp methods
+        # TODO: take care of states using different time points, t1, t2
+        inter_p = dict()
         for k, v in self.items():
             # e.g.: k: 's1', v: s1: State
             d = dict()
-            d['value'] = v.value_spline(n_ts=n_ts)
-            d['std'] = v.std_spline(n_ts=n_ts)
-            spl[k] = d
-        return spl
+            d['values'] = v.interp_values(n_ts=n_ts)  # TODO: Cubic/Hermite
+            d['stds'] = v.interp_stds(n_ts=n_ts)
+            inter_p[k] = d
+        return inter_p
+
+
+if __name__ == "__main__":
+
+    from pprint import pprint, pformat
+    # from colorama import Fore, Back, Style, init
+    # init()
+    D = DataSet(raw_data_path='data/toyModel/toyData.npy',
+        data_info_path='data/toyModel/toyData.yaml')
+    pprint(D.interpolate(n_ts=10))
+

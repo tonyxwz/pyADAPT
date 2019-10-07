@@ -17,7 +17,6 @@ TODO
 """
 # import networkx as nx
 from collections import OrderedDict
-from itertools import compress
 from abc import abstractmethod, ABCMeta
 
 import numpy as np
@@ -172,15 +171,10 @@ class Model(metaclass=ABCMeta):
         self.predictor = value
         self.predictor_name = name
 
-    def add_state(self, name="", init=None, expr=None, observable=True) -> None:
+    def add_state(self, name="", init=None, observable=True) -> None:
         self.add_name(name)
         self.states[name] = init
-        # TODO expr
         self.observables[name] = observable
-
-    # @property
-    # def observable_output(self):
-    #     return compress(self.states.keys(), self.observabels)
 
     def randomize_params(self, smin, smax):
         """smin, smax"""

@@ -21,4 +21,3 @@ class Flux(object):
         self.xs = xs
         self.xe = xe
         self.equation = equation # p_1 * p_2
-        self.
