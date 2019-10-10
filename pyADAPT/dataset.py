@@ -48,31 +48,29 @@ class DataSet(dict):
     def interpolate(self, n_ts=100, method='Hermite'):
         """In every ADAPT iteration, this function is called once to get a new
         spline for the optimizer to fit (from t0 till the end). the length of
-        the list of the spline should be equal to the number of states in the
-        data.
+        the list of the splines should equal the number of states in the data.
 
         return
         ------
-        Dictionary (In py3.7+, OrderedDict is not required.)
+        numpy.ndarray (In py3.7+, OrderedDict is not required.)
         ```
-        {
-            's1': {'values': list, 'stds': list},
-            's2': {'values': list, 'stds': list},
-            's3': {'values': list, 'stds': list},
-            ......
-        }
+        [
+            [
+                [value, std],
+                ......
+                [value, std]
+            ]
+        ]
         ```
         """
-        # TODO: compare different interp methods
+        # TODO: add different interp methods
         # TODO: take care of states using different time points, t1, t2
-        inter_p = dict()
-        for k, v in self.items():
-            # e.g.: k: 's1', v: s1: State
-            d = dict()
-            d['values'] = v.interp_values(n_ts=n_ts)  # TODO: Cubic/Hermite
-            d['stds'] = v.interp_stds(n_ts=n_ts)
-            inter_p[k] = d
-        return inter_p
+        ainter_p = np.zeros((len(self), n_ts, 2))  #a stands for array
+        v = list(self.values())
+        for i in range(len(v)):
+            ainter_p[i, :, 0] = v[i].interp_values(n_ts=n_ts)
+            ainter_p[i, :, 1] = v[i].interp_stds(n_ts=n_ts)
+        return ainter_p
 
 
 if __name__ == "__main__":
@@ -82,5 +80,15 @@ if __name__ == "__main__":
     # init()
     D = DataSet(raw_data_path='data/toyModel/toyData.npy',
         data_info_path='data/toyModel/toyData.yaml')
-    pprint(D.interpolate(n_ts=10))
+    idp = D.interpolate(n_ts=10)
+
+    # all for s1:
+    pprint(idp[0, :, :])
+
+    # select all the data from time step 3
+    pprint(idp[:,3,:])
+
+    # all for values
+    pprint(idp[:, :, 0])
+
 

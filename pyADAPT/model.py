@@ -13,7 +13,7 @@ Steps
 TODO
 ====
 1. warning about the unused names
-2. 
+2. clever way to add ofi
 """
 # import networkx as nx
 from collections import OrderedDict
@@ -24,39 +24,6 @@ from scipy.integrate import solve_ivp
 from lmfit import Parameters, minimize, Parameter
 
 from .io import read_data_info
-
-
-class ModelComponents(OrderedDict):
-    # TODO fancy printing
-    def __repr__(self):
-        return super().__repr__()
-
-
-class OverrideProtection(ABCMeta):
-    """metaclass to protect private methods in `Model`"""
-    def __new__(cls, name, bases, nmspc, **kwargs):
-        protected_names = ['add_parameter', 'add_state',
-                'add_constant', 'add_predictor']
-
-        overriding = any([(x in nmspc) for x in protected_names])
-        if bases in nmspc and overriding:
-            raise Exception("Overriding protected components.")
-        return type.__new__(cls, name, bases, nmspc)
-
-
-def protect(*protected):
-    """Returns a metaclass that protects all attributes given as strings"""
-    class Protect(type):
-        has_base = False
-        def __new__(meta, name, bases, attrs):
-            if meta.has_base:
-                for attribute in attrs:
-                    if attribute in protected:
-                        raise AttributeError('Overriding of attribute "%s" not allowed.' % attribute)
-            meta.has_base = True
-            klass = super().__new__(meta, name, bases, attrs)
-            return klass
-    return Protect
 
 
 class Model(metaclass=ABCMeta):
@@ -71,6 +38,20 @@ class Model(metaclass=ABCMeta):
     3. Define model input function.
     4. Define reactions function.
     """
+    name: str
+    description: str
+    spec: dict
+    predictor: list
+    constants: OrderedDict
+    parameters: Parameters
+    states: OrderedDict
+    observables: OrderedDict
+    trajectories: OrderedDict
+    var_names: set
+    oxi: list
+    ofi: list
+    n_tstep: int
+    n_iter: int
 
     def __new__(cls, *args, **kwargs):
         # to use `super` in `__new__` method: issubclass(cls, Model) is True
@@ -96,8 +77,12 @@ class Model(metaclass=ABCMeta):
         instance.states = OrderedDict()
         instance.observables = OrderedDict()
         instance.trajectories = OrderedDict()
+        instance.oxi = list()  # observable state
+        instance.ofi = list()  # observabel flux
         
         instance.var_names = set()
+        instance.n_tstep = 0
+        instance.n_iter = 0
         return instance
 
     def __init__(self):
@@ -108,8 +93,7 @@ class Model(metaclass=ABCMeta):
         " constant are not. This provides the flexibility to select which
         " parameters to fit.
         """
-        self.n_tstep = 0  # the number of timesteps, initially 0
-        self.n_iter = 0  # the number of iteration in the optimizer
+        pass
 
     # @staticmethod
     @abstractmethod
@@ -139,9 +123,8 @@ class Model(metaclass=ABCMeta):
         if t_eval is None:
             t_eval = [t_span[-1]]
         # u = self.inputs(t_span[0])  # input
-
         if type(x0) is OrderedDict or type(x0) is dict:
-            x0 = list(x0.values())
+            x0 = np.array(list(x0.values()))
 
         sol = solve_ivp(lambda t, x: self.odefunc(t, x, p), t_span, x0,
                         t_eval=t_eval, rtol=rtol, atol=atol)
@@ -174,17 +157,18 @@ class Model(metaclass=ABCMeta):
     def add_state(self, name="", init=None, observable=True) -> None:
         self.add_name(name)
         self.states[name] = init
-        self.observables[name] = observable
+        self.oxi.append(observable)
 
     def randomize_params(self, smin, smax):
-        """smin, smax"""
-        rp = OrderedDict()  # maybe dict is as good in python 3.7+
-        # !!! Wrong !!!
-        # TODO fix
-        for k,v in self.observables.items():
-            if v: # values of dict observables is boolean
-                rp[k] = np.power(10, ((smax - smin) * np.random.rand() + smin))
-        return rp
+        """using the formula in van Beek's thesis and matlab function in:
+        `AMF.Model.randomizeParameters`
+        
+        smin, smax
+        """
+        # rp = OrderedDict()  # maybe dict is as good in python 3.7+
+        for k,v in self.parameters.items(): # TODO maybe change v.vary to initvary flags
+            if v.vary: # values of dict observables is boolean
+                 v.value = np.power(10, ((smax - smin) * np.random.rand() + smin))
 
     def add_name(self, name: str):
         # TODO: add reference to the variable
@@ -195,11 +179,3 @@ class Model(metaclass=ABCMeta):
 
     def check_name(self, name):
         return not name in self.var_names
-
-    def begin_extend(self):
-        # do it in __new__
-        pass
-
-    def end_extend(self):
-        # do it in __init__
-        pass

@@ -5,6 +5,7 @@ import numpy as np
 from lmfit import Parameters, minimize
 from scipy.integrate import OdeSolver, odeint, solve_ivp
 from scipy.optimize import least_squares
+from cached_property import cached_property
 
 from pyADAPT import DataSet, Model
 
@@ -30,9 +31,9 @@ class ADAPTapp(object):
         self.logger = logging.getLogger(self.__str__())
         self.logger.setLevel(logging.DEBUG)
         ch = logging.StreamHandler()
-        ch.setLevel(logging.WARNING)
+        # ch.setLevel(logging.WARNING)
         fh = logging.FileHandler("adapt.log")
-        fh.setLevel(logging.INFO)
+        # fh.setLevel(logging.INFO)
 
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         ch.setFormatter(formatter)
@@ -48,6 +49,10 @@ class ADAPTapp(object):
         self.options['smax'] = 1  # scale max
         self.options['seed'] = 0  # to seed the random generator
         self.options['ss_time'] = 100  # steady-state duration
+        self.options['lambda'] = 0.1  # regularization weight
+        self.options['rtol'] = 1e-7
+        self.options['atol'] = 1e-7
+        self.options['log_level'] = logging.WARNING
         
 
         # *3 model components
@@ -55,83 +60,39 @@ class ADAPTapp(object):
         self.dataset = dataset
         # TODO check the names consistency in model and dataset
 
-        # *4 simulation results
+        # *4 preparation
+        # *5 simulation results
+        self.time_points:list = []
         self.current_timestep = 0
-        self.trajectories:list = list()  # index being the iteration number
+        self.trajectories:list = []  # index being the iteration number
+        self.min_history:list = []
         # trajectories[0]['s1'][0]
 
-    def run(self, n_iter=None):
-        np.random.seed(self.options['seed'])
-        if n_iter is None:
-            n_iter = self.options['n_iter']
-        for i in range(n_iter):
-            self.trajectories.append(dict())
-            # self.logger.info('Start iteration %d' % i)
-            # 1. randomize data (generate splines)
-            # d is the randomized data, which is a dict {s1, s2} of dict {value, std}
-            d = self.randomize_data()
-            # 2. randomize parameter set (pagina 32 op thesis)
-            # p: initial values of the parameters, dict {s1, s2}
-            p = self.randomize_parameters()
-            # 3. optimize the penalty function
-            self.steady_state_sim(duration=100)
-            for j in range(len(np.arange(10))):  # TODO change to time step no.
-                # self.logger.info('Fit time step %d' % j)
-                self.fit_timestep(j)
+    def set_options(self, **kwargs):
+        for k, v in kwargs.items():
+            if k in self.options:
+                self.options[k] = v
+            else:
+                self.logger.error(f"Unknown option: {k}")
+                raise Exception(f"Unknown option: {k}")
 
-    def preintervention_sim(self):
-        pass
-
-    def steady_state_sim(self, duration=100):
-        """ steady state simulation before intervention (t0)
-        `p` at the end this simulation is kept as the initial guesses
-        """
-        pass
-
-    def fit_timestep(self, tstep, phase="fit"):
-        """ simulate one timestep.
-        1. compute states
-        2. compute fluxes
-        """
-        # self.logger.error('not implemented')
-        if phase == "fit":
-            pass
-        elif phase == "ss": # steady state
-            pass
+    def get_tspan(self, ts):
+        # time range of timestep ts
+        if ts == 0:
+            tspan = [ self.model.predictor[0]-self.options['ss_time'],
+                    self.model.predictor[0] ]
         else:
-            raise Exception(f"Unknown option: {phase}")
+            tspan = self.time_points[ts-1: ts+1]
+        return tspan
 
-    def optimize_parameters(self):
-        """ 1. find which parameters are fittable
-        2. optimize with scipy.optimize.least_squares. The differential
-        equations need be solved in the objective function passed into the
-        optimizer.
-        TODO: define the objective function.
-        """
-        pass
-        # scipy.optimize.least_squares
-
-    @staticmethod
-    def objective_func(p, x0, tspan, tstep):
-        """ Objective function that gives the error between model output and
-        the penalty for parameter changes.
-
-        Parameters
-        ----------
-        `p` : list
-            parameters to evaluate the error with
-
-        `x0` : numpy.ndarray
-            initial states as the initial value of the ode
-
-        `tspan` : numpy.ndarray of size (2,)
-            time span to integrate on
-
-        `tstep` : int
-            the ID of the current time step
-        """
-        pass
-        # scipy.integrate.solve_ivp
+    def append_traj(self, p=None):
+        # append the parameters to the latest trajectory (current iteration)
+        if p is None:
+            p = self.model.parameters.valuesdict()
+        for k,v in p.items():
+            if k not in self.trajectories[-1]:
+                self.trajectories[-1][k] = list()
+            self.trajectories[-1][k].append(v)
 
     def randomize_data(self):
         d = self.dataset.interpolate(self.options['n_ts'])
@@ -139,13 +100,72 @@ class ADAPTapp(object):
 
     def randomize_parameters(self):
         """randomize the parameters at the beginning of a simulation
-        using the formula in van Beek's thesis and matlab function in:
-        *AMF.Model.randomizeParameters*
         """
-        p = self.model.randomize_params(self.options['smin'], self.options['smax'])
-        for k, v in p.items():
-            self.trajectories[-1][k] = [v]  # always handling the newest traj
-        return p
+        self.model.randomize_params(self.options['smin'], self.options['smax'])
+
+    def run(self, n_iter=None):
+        np.random.seed(self.options['seed'])
+        if n_iter is None:
+            n_iter = self.options['n_iter']
+        else:
+            self.options['n_iter'] = n_iter
+
+        self.time_points = np.linspace(self.model.predictor[0],
+                                        self.model.predictor[1],
+                                        self.options['n_ts'])
+
+
+        for i in range(self.options['n_iter']):
+            self.model.n_iter = i
+            self.trajectories.append(dict())
+            self.logger.debug(f"iteration {i}")
+            # 1. randomize data (generate splines)
+            # d { s1: {value:[], std:[]}, s2: {value:[], std:[] } }
+            data = self.randomize_data()
+            # 2. randomize parameter (in place)
+            self.randomize_parameters()
+
+            for ts in range(len(np.arange(self.options['n_ts']))):
+                # self.logger.debug(f"timestep {ts}")
+                self.model.n_tstep = ts
+                d = data[:, ts, :]  # select all the data at ts
+                x0 = self.model.states
+
+                min_res = self.fit_timestep(ts, x0, d)
+                self.min_history.append(min_res)
+                self.append_traj()
+
+
+    def fit_timestep(self, t_step, x0, d):
+        # x0 is the simulation result from previous time span
+        # d is the interp data in current iteration
+        # call objective function in minimizer here:
+        t_span = self.get_tspan(t_step)
+
+        min_res = minimize(self.objective_func, self.model.parameters,
+                        args=[x0, d, t_span, t_step])
+        self.model.parameters = min_res.params
+        return min_res
+        
+    
+    def objective_func(self, p, x0, d, t_span, tstep):
+        # 1. solve the ode using `p` and initial condition `x0`
+        x = self.model.compute_states(t_span, x0, p, 
+                rtol=self.options['rtol'],
+                atol=self.options['atol'],
+                t_eval=[t_span[-1]])
+        f = self.model.compute_reactions(t_span[-1], x, p)
+        # select observables
+        ox = x[self.model.oxi]
+        oxdvalue = d[self.model.oxi, 0]  # observable states from data (value)
+        oxdstd = d[self.model.oxi, 1]  # observable states from data (std)
+        
+        # of = f[self.model.ofi] # FIXME fluxes are not computed
+        errors = (ox - oxdvalue) / oxdstd
+        return errors
+        
+        
+
 
     def regularization_term(self, p):
         # theta: new parameters
@@ -157,9 +177,5 @@ class ADAPTapp(object):
         penalty = np.sum(((p - p_previous) / self.delta_t * 1 / p_init)**2)
         return penalty
 
-    def set_options(self, **kwargs):
-        for k, v in kwargs.items():
-            if k in self.options:
-                self.options[k] = v
-            else:
-                self.logger.error(f"Unknown option: {k}")
+    def plot_trajectoies(self):
+        pass
