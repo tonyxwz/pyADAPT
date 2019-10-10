@@ -29,8 +29,6 @@ class State(list):
         assert len(time) == len(stds) == len(means)
         for m, s in zip(means, stds):
             self.append(NormalDist(m, s))
-        # TODO: seems that observable is not used here
-        self.observable = observable  # IDK what does this do at all...
 
     @property  # cannot be cached because sampling is different each time
     def values_spline(self):
@@ -44,10 +42,9 @@ class State(list):
         values_interp = self.values_spline(tnew)
         return values_interp
 
-    # TODO: consider define std splines as a property for they don't change between iterations
     #  between iterations at all
     @cached_property
-    def stds_spline(self, n_ts=100):
+    def stds_spline(self):
         """ interpolate standard deviation
         To be used to calculate the objective (error) function
         interpolate linearly on variance
