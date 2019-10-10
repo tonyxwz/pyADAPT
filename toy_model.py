@@ -18,18 +18,19 @@ class ToyModel(Model):
         self.add_constant('u1', 1)
         self.add_constant('u2', 1)
 
-        self.add_parameter(name='k1', value=1, vary=True)
-        self.add_parameter(name='k2', value=1, vary=False)
-        self.add_parameter(name='k3', value=0.1, vary=False)
-        self.add_parameter(name='k4', value=0.5, vary=False)
-        self.add_parameter(name='k5', value=1, vary=False)
+        self.add_parameter(name='k1', value=1, vary=True, lb=0)
+        self.add_parameter(name='k2', value=0.9, vary=True, lb=0)
+        self.add_parameter(name='k3', value=0.1, vary=False, lb=0)
+        self.add_parameter(name='k4', value=0.5, vary=False, lb=0)
+        self.add_parameter(name='k5', value=1, vary=False, lb=0)
+        self.init_vary = ['k1', 'k2', 'k3', 'k4', 'k5']
+        self.vary_flags = [p.vary for p in self.parameters.values()]
 
         self.add_state(name='s1', init=1)
         self.add_state(name='s2', init=1)
         self.add_state(name='s3', init=1, observable=False)
         self.add_state(name='s4', init=1)
 
-        self.end_extend()
         super().__init__()
 
     def odefunc(self, t, x, p):
