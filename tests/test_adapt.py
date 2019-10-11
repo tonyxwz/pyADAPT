@@ -7,11 +7,13 @@ class Test_ADAPT(unittest.TestCase):
     def setUp(self):
         model = ToyModel()
         data = DataSet(raw_data_path='data/toyModel/toyData.npy',
-            data_info_path='data/toyModel/toyData.yaml')
+            data_specs_path='data/toyModel/toyData.yaml')
         self.app = ADAPTapp(model, data)
 
     def test_set_options(self):
         self.assertRaises(Exception, self.app.set_options, hh=120)
+
+    def test_
 
 
 
@@ -31,12 +33,11 @@ class ToyModel(Model):
         self.add_parameter(name='k4', value=0.5, vary=False)
         self.add_parameter(name='k5', value=1, vary=False)
 
-        self.add_state(name='s1', init=1, expr="v1-v3-v4")
-        self.add_state(name='s2', init=1, expr="-v1+v2")
-        self.add_state(name='s3', init=1, expr="ds3dt", observable=False)
-        self.add_state(name='s4', init=1, expr="v4-v5")
+        self.add_state(name='s1', init=1)
+        self.add_state(name='s2', init=1)
+        self.add_state(name='s3', init=1, observable=False)
+        self.add_state(name='s4', init=1)
 
-        self.end_extend()
         super().__init__()
     
     @staticmethod

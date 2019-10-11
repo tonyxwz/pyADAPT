@@ -52,7 +52,6 @@ class ToyModel(Model):
 
     @staticmethod
     def reactions(t, x, p, u):
-        # TODO: find a way to share the code between `reactions` and `odefunc`
         u1 = u['u1']
         u2 = u['u2']
 
