@@ -25,7 +25,7 @@ class State(list):
         super().__init__()
         self.name = name  # s1
         self.time = np.array(time)  # e.g. toymodel, t1 from dataset
-
+        self.sampled_values = None
         assert len(time) == len(stds) == len(means)
         for m, s in zip(means, stds):
             self.append(NormalDist(m, s))
@@ -33,8 +33,8 @@ class State(list):
     @property  # cannot be cached because sampling is different each time
     def values_spline(self):
         """ interpolate the values """
-        values = self.sample()
-        pp = PchipInterpolator(self.time, values)
+        self.sampled_values = self.sample()
+        pp = PchipInterpolator(self.time, self.sampled_values)
         return pp
     
     def interp_values(self, n_ts=100, method='pchip'):
