@@ -45,13 +45,13 @@ class Model(metaclass=ABCMeta):
     constants: OrderedDict
     parameters: Parameters
     states: OrderedDict
+    init_vary: list
     observables: OrderedDict
-    trajectories: OrderedDict
     var_names: set
-    oxi: list
-    ofi: list
-    n_tstep: int
-    n_iter: int
+    state_musk: list
+    flux_musk: list
+    i_tstep: int
+    i_iter: int
 
     def __new__(cls, *args, **kwargs):
         # to use `super` in `__new__` method: issubclass(cls, Model) is True
@@ -75,14 +75,14 @@ class Model(metaclass=ABCMeta):
         instance.parameters = Parameters()
         # instance.reactions = list()
         instance.states = OrderedDict()
+        instance.init_vary = []
         instance.observables = OrderedDict()
-        instance.trajectories = OrderedDict()
-        instance.oxi = list()  # observable state
-        instance.ofi = list()  # observabel flux
+        instance.state_musk = list()  # observable state
+        instance.flux_musk = list()  # observabel flux
         
         instance.var_names = set()
-        instance.n_tstep = 0
-        instance.n_iter = 0
+        instance.i_tstep = 0
+        instance.i_iter = 0
         return instance
 
     def __init__(self):
@@ -157,15 +157,16 @@ class Model(metaclass=ABCMeta):
     def add_state(self, name="", init=None, observable=True) -> None:
         self.add_name(name)
         self.states[name] = init
-        self.oxi.append(observable)
+        self.state_musk.append(observable)
 
-    def randomize_params(self, smin, smax):
+    def randomize_params(self, smin, smax, params=None):
         """using the formula in van Beek's thesis and matlab function in:
         `AMF.Model.randomizeParameters`
         
         smin, smax
         """
-        # rp = OrderedDict()  # maybe dict is as good in python 3.7+
+        # if params is None:
+        #     params = self.init_vary
         for k,v in self.parameters.items(): # TODO maybe change v.vary to initvary flags
             if v.vary: # values of dict observables is boolean
                  v.value = np.power(10, ((smax - smin) * np.random.rand() + smin))

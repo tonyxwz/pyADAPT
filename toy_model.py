@@ -19,7 +19,7 @@ class ToyModel(Model):
         self.add_constant('u2', 1)
 
         self.add_parameter(name='k1', value=1, vary=True, lb=0)
-        self.add_parameter(name='k2', value=0.9, vary=True, lb=0)
+        self.add_parameter(name='k2', value=0.9, vary=False, lb=0)
         self.add_parameter(name='k3', value=0.1, vary=False, lb=0)
         self.add_parameter(name='k4', value=0.5, vary=False, lb=0)
         self.add_parameter(name='k5', value=1, vary=False, lb=0)
@@ -28,7 +28,7 @@ class ToyModel(Model):
 
         self.add_state(name='s1', init=1)
         self.add_state(name='s2', init=1)
-        self.add_state(name='s3', init=1, observable=False)
+        self.add_state(name='s3', init=1, observable=True)
         self.add_state(name='s4', init=1)
 
         super().__init__()

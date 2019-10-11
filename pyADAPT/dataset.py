@@ -105,7 +105,7 @@ if __name__ == "__main__":
     n_ts = 200
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))  # 4 interpolations, 4 states
     fig.canvas.set_window_title(f'DataSet Interpolation')
-    fig.suptitle('Toy data interpolation (100)')
+    # fig.suptitle('Toy data interpolation (100)')
     np.random.seed(725)
     # plot all interpolations of values
     for i_interp in range(n_interp):
@@ -127,5 +127,5 @@ if __name__ == "__main__":
                         uplims=True,
                         lolims=True)
 
-    # fig.tight_layout()
+    fig.tight_layout()
     plt.show()
