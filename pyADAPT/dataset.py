@@ -86,7 +86,7 @@ if __name__ == "__main__":
 
     from pprint import pprint, pformat
     import matplotlib.pyplot as plt
-    import seaborn as sns
+    # import seaborn as sns
 
     D = DataSet(raw_data_path='data/toyModel/toyData.npy',
         data_specs_path='data/toyModel/toyData.yaml')
@@ -101,31 +101,31 @@ if __name__ == "__main__":
     # all for values
     pprint(idp[:, :, 0])
 
-    n_iterp = 100
+    n_interp = 100
     n_ts = 200
-    fig, axes = plt.subplots(1, 4, figsize=(12, 3))  # 4 interpolations, 4 states
-
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))  # 4 interpolations, 4 states
+    fig.canvas.set_window_title(f'DataSet Interpolation')
+    fig.suptitle('Toy data interpolation (100)')
+    np.random.seed(725)
     # plot all interpolations of values
-    for i_interp in range(n_iterp):
+    for i_interp in range(n_interp):
         idp = D.interpolate(n_ts=n_ts)
         for i_state in range(idp.shape[0]):
-            ax:plt.Axes = axes[i_state]
+            ax:plt.Axes = axes[i_state//2, i_state%2]
             state:State = D[i_state]
             t_ = state.time
             t = np.linspace(t_[0], t_[-1], n_ts)
-            if not ax.title.get_label():
-                ax.set_title(f"{D.ordered_names[i_state]} values")
-                ax.set_xlabel('days')
-                err = ax.errorbar(t_, [d.mean for d in state], yerr=[d.std for d in state], fmt='_--k')
             ax.plot(t, idp[i_state, :, 0], color='red', alpha=0.15)  # values of s1
+            ax.plot(t_, state.sampled_values, '.g', alpha=0.5, markersize=5)
 
-    # for i_state in range(idp.shape[0]):
-    #     t = D[i_state].time
-    #     t = np.linspace(t[0], t[-1], n_ts)
-    #     ax = axes[1, i_state]
-    #     ax.set_title(f"{D.ordered_names[i_state]} std")
-    #     ax.plot(t, idp[i_state, :, 1], color='blue')  # stds of s1
-    #     ax.set_xlabel('days')
+            if not ax.title.get_label():
+                ax.set_title(f"{D.ordered_names[i_state]}")
+                ax.set_xlabel('days')
+                err = ax.errorbar(t_, [d.mean for d in state],
+                        yerr=[d.std for d in state],
+                        fmt='.b',
+                        uplims=True,
+                        lolims=True)
 
-    fig.tight_layout()
+    # fig.tight_layout()
     plt.show()
