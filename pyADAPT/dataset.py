@@ -4,7 +4,7 @@ from pyADAPT.core import State
 from pyADAPT.io import read_data_info, read_data_raw
 
 
-class DataSet(dict):
+class DataSet(list):
     """
     dataset for ADAPT. containing phenotypes measured at different stages after
     intervention. list of States
@@ -13,37 +13,41 @@ class DataSet(dict):
     yields new interpolant data. Model stores the interpolants as the
     trajectories.
     """
-    def __init__(self, raw_data_path="", data_info_path="",
-                 raw_data={}, data_info={}):
+    def __init__(self, raw_data_path="", data_specs_path="",
+                 raw_data={}, data_specs={}):
         """
         raw_data: phenotypes organized into a dictionary
 
         data_info: instructions of the data, such as which time variable 
             should be used for which state.
         """
-        if data_info:
-            self.info = data_info
+        if data_specs:
+            self.data_specs = data_specs
         else:
-            self.info = read_data_info(data_info_path)
+            self.data_specs = read_data_info(data_specs_path)
 
         if raw_data:
-            self.data = raw_data
+            self.raw_data = raw_data
         else:
             # group: to solve the stupid matlab issue
-            group = self.info['mat_group'] if 'mat_group' in self.info else ""
-            self.data = read_data_raw(raw_data_path, group=group)
+            group = self.data_specs['mat_group'] if 'mat_group' in self.data_specs else ""
+            self.raw_data = read_data_raw(raw_data_path, group=group)
 
         self.structure = {}
-        for k,v in self.info.items():
+        self.ordered_names = []
+
+        for k,v in self.data_specs.items():
             self.__setattr__(k, v)
 
         for k, v in self.structure.items():
             # !print(v)
-            time = self.data[v['time']]
-            means = self.data[v['means']]
-            stds = self.data[v['stds']]
+            time = self.raw_data[v['time']]
+            means = self.raw_data[v['means']]
+            stds = self.raw_data[v['stds']]
             s = State(name=k, time=time, means=means, stds=stds)
-            self[k] = s
+            # self[k] = s
+            self.append(s)
+            self.ordered_names.append(k)
 
     def interpolate(self, n_ts=100, method='Hermite'):
         """In every ADAPT iteration, this function is called once to get a new
@@ -52,7 +56,7 @@ class DataSet(dict):
 
         return
         ------
-        numpy.ndarray (In py3.7+, OrderedDict is not required.)
+        numpy.ndarray in the same order as `self.ordered_names`
         ```
         [
             [
@@ -66,20 +70,26 @@ class DataSet(dict):
         # TODO: add different interp methods
         # TODO: take care of states using different time points, t1, t2
         ainter_p = np.zeros((len(self), n_ts, 2))  #a stands for array
-        v = list(self.values())
-        for i in range(len(v)):
-            ainter_p[i, :, 0] = v[i].interp_values(n_ts=n_ts)
-            ainter_p[i, :, 1] = v[i].interp_stds(n_ts=n_ts)
+        # v = list(self.values())
+        for i in range(len(self)):
+            ainter_p[i, :, 0] = self[i].interp_values(n_ts=n_ts)
+            ainter_p[i, :, 1] = self[i].interp_stds(n_ts=n_ts)
         return ainter_p
+
+    def __getitem__(self, index):
+        if type(index) is str:
+            index = self.ordered_names.index(index)
+        return super().__getitem__(index)
 
 
 if __name__ == "__main__":
 
     from pprint import pprint, pformat
-    # from colorama import Fore, Back, Style, init
-    # init()
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
     D = DataSet(raw_data_path='data/toyModel/toyData.npy',
-        data_info_path='data/toyModel/toyData.yaml')
+        data_specs_path='data/toyModel/toyData.yaml')
     idp = D.interpolate(n_ts=10)
 
     # all for s1:
@@ -91,4 +101,31 @@ if __name__ == "__main__":
     # all for values
     pprint(idp[:, :, 0])
 
+    n_iterp = 100
+    n_ts = 200
+    fig, axes = plt.subplots(1, 4, figsize=(12, 3))  # 4 interpolations, 4 states
 
+    # plot all interpolations of values
+    for i_interp in range(n_iterp):
+        idp = D.interpolate(n_ts=n_ts)
+        for i_state in range(idp.shape[0]):
+            ax:plt.Axes = axes[i_state]
+            state:State = D[i_state]
+            t_ = state.time
+            t = np.linspace(t_[0], t_[-1], n_ts)
+            if not ax.title.get_label():
+                ax.set_title(f"{D.ordered_names[i_state]} values")
+                ax.set_xlabel('days')
+                err = ax.errorbar(t_, [d.mean for d in state], yerr=[d.std for d in state], fmt='_--k')
+            ax.plot(t, idp[i_state, :, 0], color='red', alpha=0.15)  # values of s1
+
+    # for i_state in range(idp.shape[0]):
+    #     t = D[i_state].time
+    #     t = np.linspace(t[0], t[-1], n_ts)
+    #     ax = axes[1, i_state]
+    #     ax.set_title(f"{D.ordered_names[i_state]} std")
+    #     ax.plot(t, idp[i_state, :, 1], color='blue')  # stds of s1
+    #     ax.set_xlabel('days')
+
+    fig.tight_layout()
+    plt.show()
