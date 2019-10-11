@@ -77,7 +77,7 @@ class State(list):
 
     def __repr__(self):
         repr_list = list(zip(self.time, self))
-        return f"State {self.name}: {repr_list}"
+        return f"State({self.name}): {repr_list}"
 
 
 if __name__ == "__main__":
@@ -86,6 +86,6 @@ if __name__ == "__main__":
     means =  [6,   4,   2,   5,   3]
     stds  =  [1, 0.5, 1.7, 1.2, 0.9]
 
-    s = State(name='test_s1', time=time, means=means, stds=stds)
+    s = State(name='Hepatic TG', time=time, means=means, stds=stds)
     pprint(s)
     # print(s.means, s.stds, s.variances, sep='\n')
