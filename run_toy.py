@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pyADAPT import ADAPTapp, DataSet, Model
-from toy_model import ToyModel
+from pyADAPT.models import ToyModel
 from logging import DEBUG
 
 toy = ToyModel()
