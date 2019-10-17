@@ -15,19 +15,19 @@ class ADAPTOptions(object):
     """ helper """
     pass
 
-class ADAPTapp(object):
+class ADAPT(object):
     """ implementation of ADAPT algorithm
     Encapsulates all the methods required to perform ADAPT simulation
     """
     def __init__(self, model: Model, dataset: DataSet):
         """ Design paradigm: the model and dataset should not store any
-        runtime data, ADAPTapp instance handles everything else
+        runtime data, ADAPT instance handles everything else
 
-        In `ADAPTapp` class, the identifier of a name should be key of the dictionary
+        In `ADAPT` class, the identifier of a name should be key of the dictionary
         But in class `DataSet` and class `Model`, musks and flags should be used.
         """
         # *1 logger
-        self.logger = logging.getLogger('ADAPTapp')
+        self.logger = logging.getLogger('ADAPT')
         self.logger.setLevel(logging.WARNING)
         ch = logging.StreamHandler()
         # ch.setLevel(logging.WARNING)

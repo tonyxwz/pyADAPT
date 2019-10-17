@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pyADAPT import ADAPTapp, DataSet, Model
+from pyADAPT import ADAPT, DataSet, Model
 from pyADAPT.models import ToyModel
 from logging import DEBUG
 
@@ -9,8 +9,8 @@ toy = ToyModel()
 data = DataSet(raw_data_path='data/toyModel/toyData.npy', 
     data_specs_path='data/toyModel/toyData.yaml')
 # print(isinstance(toy, Model))
-app = ADAPTapp(toy, data)
-app.set_options(n_iter=20, n_ts=100, log_level=DEBUG)
+adapt = ADAPT(toy, data)
+adapt.set_options(n_iter=20, n_ts=100, log_level=DEBUG)
 # print(toy.constants)
 # toy.parameters.pretty_print()
 # print(toy.states)
@@ -19,19 +19,19 @@ app.set_options(n_iter=20, n_ts=100, log_level=DEBUG)
 # toy.parameters.pretty_print()
 # print([p.vary for p in toy.parameters.values()])
 # print(toy.parameters.valuesdict())
-app.run()
+adapt.run()
 
-n_traj = app.trajectories.shape[0]
-n_params = app.trajectories.shape[1]
+n_traj = adapt.trajectories.shape[0]
+n_params = adapt.trajectories.shape[1]
 fig, axes = plt.subplots(ncols=5, nrows=4, figsize=(15,10))
 
 for i in range(n_traj):
     
     ax:plt.Axes = axes[i//5, i%5]
-    keys = app.model.parameters.keys()
+    keys = adapt.model.parameters.keys()
 
     for p in range(n_params):
-        ax.plot(app.trajectories[i, p, :])
+        ax.plot(adapt.trajectories[i, p, :])
     ax.legend(keys)
 
 x0 = toy.states
