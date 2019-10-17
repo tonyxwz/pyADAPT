@@ -38,20 +38,6 @@ class Model(metaclass=ABCMeta):
     3. Define model input function.
     4. Define reactions function.
     """
-    name: str
-    description: str
-    spec: dict
-    predictor: list
-    constants: OrderedDict
-    parameters: Parameters
-    states: OrderedDict
-    init_vary: list
-    observables: OrderedDict
-    var_names: set
-    state_musk: list
-    flux_musk: list
-    i_tstep: int
-    i_iter: int
 
     def __new__(cls, *args, **kwargs):
         # to use `super` in `__new__` method: issubclass(cls, Model) is True
@@ -81,8 +67,8 @@ class Model(metaclass=ABCMeta):
         instance.flux_musk = list()  # observabel flux
         
         instance.var_names = set()
-        instance.i_tstep = 0
-        instance.i_iter = 0
+        # instance.i_tstep = 0
+        # instance.i_iter = 0
         return instance
 
     def __init__(self):
@@ -93,7 +79,19 @@ class Model(metaclass=ABCMeta):
         " constant are not. This provides the flexibility to select which
         " parameters to fit.
         """
-        pass
+        self.name: str
+        self.description: str
+        self.spec: dict
+        self.predictor: list
+        self.constants: OrderedDict
+        self.parameters: Parameters
+        self.states: OrderedDict
+        self.init_vary: list
+        self.observables: OrderedDict
+        self.var_names: set
+        self.state_musk: list
+        self.flux_musk: list
+        self.vary_flags = [p.vary for p in self.parameters.values()]
 
     # @staticmethod
     @abstractmethod
@@ -129,6 +127,9 @@ class Model(metaclass=ABCMeta):
         sol = solve_ivp(lambda t, x: self.odefunc(t, x, p), t_span, x0,
                         t_eval=t_eval, rtol=rtol, atol=atol)
 
+        # solve_ivp always return an array of shape(len(x0), len(t_eval))
+        # so I have to squeeze the result if I want only the last row
+        # https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html
         # y is in the same order as x0
         return sol.y
 

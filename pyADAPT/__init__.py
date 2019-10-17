@@ -11,4 +11,4 @@ Monte Carlo module in sampling
 
 from .dataset import DataSet
 from .model import Model
-from .adapt import ADAPTapp
+from .adapt import ADAPT
