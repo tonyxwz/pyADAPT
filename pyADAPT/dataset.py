@@ -87,7 +87,7 @@ if __name__ == "__main__":
     from pprint import pprint, pformat
     import matplotlib.pyplot as plt
     # import seaborn as sns
-
+    plt.style.use('ggplot')
     D = DataSet(raw_data_path='data/toyModel/toyData.npy',
         data_specs_path='data/toyModel/toyData.yaml')
     idp = D.interpolate(n_ts=10)
