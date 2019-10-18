@@ -9,6 +9,7 @@ try:
 except ImportError:
     from yaml import Loader, Dumper
 import json
+import scipy.io as scio
 
 
 def read_data_info(path_str):
@@ -25,9 +26,7 @@ def read_data_info(path_str):
 def read_data_raw(path_str, group=""):
     file_ext = path_str.split('.')[-1]
     if file_ext == 'mat':
-        import matlab.engine
-        eng = matlab.engine.start_matlab()
-        mat_data_dict = eng.load(path_str, nargout=1)
+        mat_data_dict = read_mat(matpath=path_str)
         if len(group):
             mat_data_dict = mat_data_dict[group]
         data_dict = dict()
@@ -43,3 +42,40 @@ def read_data_raw(path_str, group=""):
         raise Exception('Unknown file type.')
 
     return data_dict
+
+
+def read_mat(matpath=""):
+    
+    mat = scio.loadmat(matpath, squeeze_me=False)
+
+    del mat['__header__']
+    del mat['__version__']
+    del mat['__globals__']
+    
+    mat2 = dict()  # {datasetname: dataset}
+    for k, v in mat.items():
+        mat2[k] = dict()  # {fieldName: data}
+        for f in v.dtype.fields:
+            mat2[k][f] = np.array([ i[0] for i in v[f][0][0] ])
+    return mat2
+
+def save_npy(data):
+    # TODO
+    pass
+
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    mat = read_mat(matpath='data/clampModelFinal/DataFinal2.mat')
+    for datasetname, dataset in mat.items():
+        keys = dataset.keys()
+        names = [ k[:-5] for k in keys if (k[-4:] == 'time') and (len(dataset[k]) > 1) ]
+        for n in names:
+            try:
+                time, flux= dataset[n+"_time"], dataset[n+"_flux"]
+                fig, axes = plt.subplots()
+                axes.set_title(n)
+                axes.plot(time, flux)
+            except KeyError as ke:
+                print(ke)
+    plt.show()
