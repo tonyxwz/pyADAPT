@@ -34,11 +34,24 @@ for i in range(n_traj):
         ax.plot(adapt.trajectories[i, p, :])
     ax.legend(keys)
 
-x0 = toy.states
-tspan = [-100, 0]
-t_eval = np.linspace(*tspan, 100)
 fig.tight_layout()
+
+fig2, axes2 = plt.subplots(ncols=5, nrows=4, figsize=(15, 10))
+n_plot = adapt.states.shape[0]
+n_states = adapt.states.shape[1]
+
+for i in range(n_plot):
+    ax = axes2[i//5, i%5]
+    for s in range(n_states):
+        ax.plot(adapt.states[i, s, :])
+    ax.legend(data.ordered_names)
+fig2.tight_layout()
+
 plt.show()
+
+# x0 = toy.states
+# tspan = [-100, 0]
+# t_eval = np.linspace(*tspan, 100)
 # y = toy.compute_states(tspan, x0, t_eval=t_eval)
 
 # import matplotlib.pyplot as plt

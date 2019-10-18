@@ -36,6 +36,8 @@ class DataSet(list):
         self.structure = {}
         self.ordered_names = []
 
+        assert 'structure' in self.data_specs
+        
         for k,v in self.data_specs.items():
             self.__setattr__(k, v)
 

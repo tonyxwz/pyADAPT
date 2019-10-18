@@ -4,7 +4,7 @@ fit the model to the data using constant parameters
 """
 import numpy as np
 
-from pyADAPT import Model, DataSet, ADAPTapp
+from pyADAPT import Model, DataSet, ADAPT
 
 
 class ToyModel(Model):
