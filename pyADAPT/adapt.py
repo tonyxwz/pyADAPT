@@ -201,7 +201,7 @@ class ADAPT(object):
         """
         p_init = self.trajectories[i_iter, :, 0]
         p_previous = self.trajectories[i_iter, :, i_tstep]
-        penalty = self.options['lambda'] * ((p - p_previous) / self.delta_t)**2
+        penalty = self.options['lambda'] * ((p - p_previous) / self.delta_t / p_init)**2
         return penalty
 
     def mkplot(self):
