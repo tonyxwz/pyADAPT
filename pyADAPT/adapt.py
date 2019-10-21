@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import logging
 from multiprocessing import Pool, current_process
 
 import numpy as np
@@ -27,20 +26,6 @@ class ADAPT(object):
         In `ADAPT` class, the identifier of a name should be key of the dictionary
         But in class `DataSet` and class `Model`, musks and flags should be used.
         """
-        # *1 logger
-        self.logger = logging.getLogger('ADAPT')
-        self.logger.setLevel(logging.WARNING)
-        ch = logging.StreamHandler()
-        # ch.setLevel(logging.WARNING)
-        fh = logging.FileHandler("adapt.log")
-        # fh.setLevel(logging.INFO)
-
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        ch.setFormatter(formatter)
-        fh.setFormatter(formatter)
-        self.logger.addHandler(ch)
-        self.logger.addHandler(fh)
-
         # *2 default simulation options
         self.options: dict = dict()
         self.options['n_ts']=  100  # number of time steps
@@ -52,7 +37,6 @@ class ADAPT(object):
         self.options['lambda'] = 0.1  # regularization weight
         self.options['rtol'] = 1e-7
         self.options['atol'] = 1e-7
-        self.options['log_level'] = logging.WARNING
 
 
         # *3 model components
@@ -80,7 +64,6 @@ class ADAPT(object):
             if k in self.options:
                 self.options[k] = v
             else:
-                self.logger.error(f"Unknown option: {k}")
                 raise Exception(f"Unknown option: {k}")
 
     def get_tspan(self, ts):
@@ -122,7 +105,6 @@ class ADAPT(object):
         else:
             self.options['n_iter'] = n_iter
 
-        self.logger.setLevel(self.options['log_level'])
         self.time_points = np.linspace(self.model.predictor[0], self.model.predictor[1], self.options['n_ts'])
 
         self.trajectories = np.zeros((n_iter, len(self.model.parameters), self.options['n_ts']+1))
@@ -131,13 +113,11 @@ class ADAPT(object):
         if n_core > 1:
             pool = Pool(n_core)
             pool_results = []
-            # for i_iter in range(n_iter):
-            #     r_ = pool.apply_async(self.parallel_kernel, 
-            #             args=(i_iter,
-
-            #             )
-            #         )
-            #     pool_results.append(r_)
+            for i_iter in range(n_iter):
+                r_ = pool.apply_async(self.test_kernel, 
+                        args=(i_iter,)
+                    )
+                pool_results.append(r_)
             pool.close()
             pool.join()
             # for r_ in pool_results:
@@ -145,7 +125,7 @@ class ADAPT(object):
         else:
             for i_iter in range(n_iter):
                 self.i_iter = i_iter
-                self.logger.debug(f"iteration {i_iter}")
+                print(f"iteration {i_iter}")
                 # 1. randomize data (generate splines)
                 # d [n step]
                 data = self.randomize_data()
@@ -153,7 +133,6 @@ class ADAPT(object):
                 self.randomize_init_parameters()
                 self.states[i_iter, :, 0] = np.array(list(self.model.states.values()))
                 for i_tstep in range(self.options['n_ts']):
-                    # self.logger.debug(f"timestep {ts}")
                     self.i_tstep = i_tstep
                     d = data[:, i_tstep, :]  # select all the data at ts
                     # FIXME x0 should be the last moment of previous time step
@@ -166,8 +145,12 @@ class ADAPT(object):
 
             #TODO return AdaptedModel
 
+    def test_kernel(self, i_iter):
+        n = np.random.rand(10000000)
+        print(f"{current_process()}: {i_iter}")
+        return n
+
     def parallel_kernel(self, i_iter):
-        self.logger.debug(f"{current_process()}: iteration {i_iter}")
         trajectory = np.zeros((len(self.model.parameters), self.options['n_ts']+1))
         states = np.zeros((len(self.model.states), self.options['n_ts']+1))
         data = self.randomize_data()
@@ -175,14 +158,13 @@ class ADAPT(object):
         trajectory[:, 0] = np.array( list(self.model.parameters.values()) )
         states[:, 0] = np.array( list(self.model.states.values()) )
         for i_tstep in range(self.options['n_ts']):
-            # self.logger.debug(f"timestep {ts}")
             self.i_tstep = i_tstep
             d = data[:, i_tstep, :]  # select all the data at i_tstep
             x0 = self.states[i_iter, :, i_tstep]
             _min_res = self.fit_timestep(x0, d, i_iter, i_tstep)
             trajectory[:, i_tstep+1] = np.array( list(self.model.parameters.values()) )
             states[:, i_tstep+1] = np.array( list(self.model.states.values()) )
-
+        print(f'{i_iter}, {trajectory}')
         return trajectory, states
         
 
@@ -197,7 +179,7 @@ class ADAPT(object):
         # FIXME model should be static in this project, also i_iter, i_tstep
         self.model.parameters = minimization_result.params
         if not minimization_result.success:
-            self.logger.warning(f'unsuccessful minimization, iter: {i_iter}, t_step: {i_tstep}')
+            print(f'unsuccessful minimization, iter: {i_iter}, t_step: {i_tstep}')
         return minimization_result
 
 
@@ -220,7 +202,6 @@ class ADAPT(object):
         errors = (observable_states - observable_states_values) / observable_states_stds
         reg = self.tiemann_regularization(p, i_iter, i_tstep)
         errors = np.concatenate([errors, reg])
-        # self.logger.debug(errors)
         return errors
 
     def tiemann_regularization(self, p, i_iter, i_tstep):
