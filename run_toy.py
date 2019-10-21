@@ -39,4 +39,3 @@ for i in range(n_plot):
 fig2.tight_layout()
 
 plt.show()
-

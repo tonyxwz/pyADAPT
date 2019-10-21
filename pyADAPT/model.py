@@ -23,7 +23,7 @@ import numpy as np
 from scipy.integrate import solve_ivp
 from lmfit import Parameters, minimize, Parameter
 
-from .io import read_data_info
+from .io import read_data_specs
 
 
 class Model(metaclass=ABCMeta):
