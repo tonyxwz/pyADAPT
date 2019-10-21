@@ -85,6 +85,7 @@ class DataSets(list):
         data_info: instructions of the data, such as which time variable
             should be used for which state.
         """
+        # TODO: use DataSets in ADAPT
         self.data_specs = data_specs if data_specs else read_data_specs(data_specs_path)
         self.raw_data = raw_data if raw_data else read_data_raw(raw_data_path)
 
@@ -95,51 +96,51 @@ class DataSets(list):
 
 
 if __name__ == "__main__":
-
     from pprint import pprint, pformat
     import matplotlib.pyplot as plt
     # import seaborn as sns
     plt.style.use('ggplot')
     D = DataSet(raw_data_path='data/toyModel/toyData.mat',
-            data_specs_path='data/toyModel/toyData.yaml')
+                data_specs_path='data/toyModel/toyData.yaml')
     idp = D.interpolate(n_ts=10)
-    D2 = DataSets(raw_data_path='data/clampModelFinal/DataFinal2.mat',
-            data_specs_path='data/clampModelFinal/clampData.json')
-    pprint([d.name for d in D2])
     # all for s1:
-    # pprint(idp[0, :, :])
+    pprint(idp[0, :, :])
 
-    # # select all the data from time step 3
-    # pprint(idp[:,3,:])
+    # select all the data from time step 3
+    pprint(idp[:,3,:])
 
-    # # all for values
-    # pprint(idp[:, :, 0])
+    # all for values
+    pprint(idp[:, :, 0])
 
-    # n_interp = 100
-    # n_ts = 200
-    # fig, axes = plt.subplots(2, 2, figsize=(12, 10))  # 4 interpolations, 4 states
-    # fig.canvas.set_window_title(f'DataSet Interpolation')
-    # # fig.suptitle('Toy data interpolation (100)')
-    # np.random.seed(725)
-    # # plot all interpolations of values
-    # for i_interp in range(n_interp):
-    #     idp = D.interpolate(n_ts=n_ts)
-    #     for i_state in range(idp.shape[0]):
-    #         ax:plt.Axes = axes[i_state//2, i_state%2]
-    #         state:State = D[i_state]
-    #         t_ = state.time
-    #         t = np.linspace(t_[0], t_[-1], n_ts)
-    #         ax.plot(t, idp[i_state, :, 0], color='red', alpha=0.15)  # values of s1
-    #         ax.plot(t_, state.sampled_values, '.g', alpha=0.5, markersize=5)
+    D2 = DataSets(raw_data_path='data/clampModelFinal/DataFinal2.mat',
+                  data_specs_path='data/clampModelFinal/clampData.json')
+    pprint([d.name for d in D2])
 
-    #         if not ax.title.get_label():
-    #             ax.set_title(f"{D.ordered_names[i_state]}")
-    #             ax.set_xlabel('days')
-    #             err = ax.errorbar(t_, [d.mean for d in state],
-    #                     yerr=[d.std for d in state],
-    #                     fmt='.b',
-    #                     uplims=True,
-    #                     lolims=True)
+    n_interp = 100
+    n_ts = 200
+    fig, axes = plt.subplots(2, 2, figsize=(12, 10))  # 4 interpolations, 4 states
+    fig.canvas.set_window_title(f'DataSet Interpolation')
+    # fig.suptitle('Toy data interpolation (100)')
+    np.random.seed(725)
+    # plot all interpolations of values
+    for i_interp in range(n_interp):
+        idp = D.interpolate(n_ts=n_ts)
+        for i_state in range(idp.shape[0]):
+            ax:plt.Axes = axes[i_state//2, i_state%2]
+            state:State = D[i_state]
+            t_ = state.time
+            t = np.linspace(t_[0], t_[-1], n_ts)
+            ax.plot(t, idp[i_state, :, 0], color='red', alpha=0.15)  # values of s1
+            ax.plot(t_, state.sampled_values, '.g', alpha=0.5, markersize=5)
 
-    # fig.tight_layout()
-    # plt.show()
+            if not ax.title.get_label():
+                ax.set_title(f"{D.ordered_names[i_state]}")
+                ax.set_xlabel('days')
+                err = ax.errorbar(t_, [d.mean for d in state],
+                        yerr=[d.std for d in state],
+                        fmt='.b',
+                        uplims=True,
+                        lolims=True)
+
+    fig.tight_layout()
+    plt.show()
