@@ -1,7 +1,8 @@
 name: toy data
 description: from Natal van Riel and Christian Tiemann's publication in 2013
 raw_path: toyData.mat
-mat_group: toy
+groups:
+  - toy
 
 structure:
   s1:

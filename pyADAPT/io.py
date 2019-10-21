@@ -11,8 +11,9 @@ except ImportError:
 import json
 import scipy.io as scio
 
+__all__ = ['read_data_specs', 'read_data_raw', 'read_mat', 'save_npy']
 
-def read_data_info(path_str):
+def read_data_specs(path_str):
     """ yaml or json """
     with open(path_str, 'r') as f:
         ext = path_str.split('.')[-1]
@@ -26,13 +27,11 @@ def read_data_info(path_str):
 def read_data_raw(path_str, group=""):
     file_ext = path_str.split('.')[-1]
     if file_ext == 'mat':
-        mat_data_dict = read_mat(matpath=path_str)
-        if len(group):
-            mat_data_dict = mat_data_dict[group]
-        data_dict = dict()
-        for k,v in mat_data_dict.items():
-            data_dict[k] = np.squeeze(np.asarray(v))
+        data_dict = read_mat(matpath=path_str)
+        if group:
+            data_dict = data_dict[group]
     elif file_ext == 'npy':
+        # TODO: add group to npy data
         data_dict = np.load(path_str)
     elif file_ext == 'json':
         pass
@@ -45,7 +44,6 @@ def read_data_raw(path_str, group=""):
 
 
 def read_mat(matpath=""):
-    
     mat = scio.loadmat(matpath, squeeze_me=False)
 
     del mat['__header__']
@@ -66,7 +64,7 @@ def save_npy(data):
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    mat = read_mat(matpath='data/clampModelFinal/DataFinal2.mat')
+    mat = read_data_raw(path_str='data/clampModelFinal/DataFinal2.mat')
     for datasetname, dataset in mat.items():
         keys = dataset.keys()
         names = [ k[:-5] for k in keys if (k[-4:] == 'time') and (len(dataset[k]) > 1) ]

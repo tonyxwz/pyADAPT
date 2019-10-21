@@ -1,0 +1,30 @@
+{
+    "dataset_name": "Clamp Data",
+    "description": "Clamp model from Pascal van Beeks thesis",
+    "raw_path": "DataFinal2.mat",
+    "groups": [
+        "BC003pre",
+        "BC003post",
+        "BC004pre",
+        "BC004post"
+    ],
+    "structure":{
+        "glucose" : {"means": "glu_conc", "stds": "glu_std", "time": "glu_time", "observable": true},
+        "glucose_TTR" : {"means": "glu_ttr", "stds": "glu_ttr_std", "time": "glu_time2", "observable": true},
+        "glycerol" : {"means": "gly_conc", "stds": "gly_std", "time": "gly_time", "observable": true},
+        "glycerol_TTR" : {"means": "gly_ttr", "stds": "gly_ttr_std", "time": "gly_time2", "observable": true},
+        "insulin" : {"time": "ins_time", "means": "ins_conc", "stds": "ins_std", "observable": true},
+        "FFA" : {"time": "FFA_time", "means": "FFA_conc", "stds": "FFA_std", "observable": true},
+        "cpeptide" : {"time": "cpe_time", "means": "cpe_conc", "stds": "cpe_std", "observable": true},
+        "cho" : {"time": "cho_time", "means": "cho_conc", "stds": "cho_std", "observable": true},
+        "ldl" : {"time": "ldl_time", "means": "ldl_conc", "stds": "ldl_std", "observable": true},
+        "hdl" : {"time": "hdl_time", "means": "hdl_conc", "stds": "hdl_std", "observable": true},
+        "tri" : {"time": "tri_time", "means": "tri_conc", "stds": "tri_std", "observable": true},
+        "ins1" : {"time": "ins1_time", "means": "ins1_flux", "stds": "ins1_std", "observable": true},
+        "glu1" : {"time": "glu1_time", "means": "glu1_flux", "stds": "glu1_std", "observable": true},
+        "glu2" : {"time": "glu2_time", "means": "glu2_flux", "stds": "glu2_std", "observable": true},
+        "glu3" : {"time": "glu3_time", "means": "glu3_flux", "stds": "glu3_std", "observable": true},
+        "gly1" : {"time": "gly1_time", "means": "gly1_flux", "stds": "gly1_std", "observable": true},
+        "gly2" : {"time": "gly2_time", "means": "gly2_flux", "stds": "gly2_std", "observable": true}
+    }
+}
