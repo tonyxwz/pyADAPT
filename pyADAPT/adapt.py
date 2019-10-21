@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
-from multiprocessing import Pool
+from multiprocessing import Pool, current_process
 
 import numpy as np
 from lmfit import Parameters, minimize
@@ -99,21 +99,22 @@ class ADAPT(object):
         if i_iter is None:
             i_iter = self.i_iter
         if i_tstep is None:
-            i_tstep = self.i_tstep
+            i_tstep = self.i_tstep + 1
         self.trajectories[i_iter, :, i_tstep] = p
 
     def randomize_data(self):
         d = self.dataset.interpolate(self.options['n_ts'])
         return d
 
-    def randomize_init_parameters(self):
+    def randomize_init_parameters(self, append=True):
         """randomize the parameters at the beginning of a simulation
         """
         self.model.randomize_params(self.options['smin'], self.options['smax'])
         # always at tstep=0
-        self.add_to_trajectories(i_tstep=0)
+        if append:
+            self.add_to_trajectories(i_tstep=0)
 
-    def run(self, n_iter=None, n_core=4):
+    def run(self, n_iter=None, n_core=0):
         np.random.seed(self.options['seed'])
 
         if n_iter is None:
@@ -121,38 +122,69 @@ class ADAPT(object):
         else:
             self.options['n_iter'] = n_iter
 
-        # pool = Pool(n_core)
         self.logger.setLevel(self.options['log_level'])
-        self.time_points = np.linspace(self.model.predictor[0],
-                                        self.model.predictor[1],
-                                        self.options['n_ts'])
+        self.time_points = np.linspace(self.model.predictor[0], self.model.predictor[1], self.options['n_ts'])
 
-        self.trajectories = np.zeros((n_iter, len(self.model.parameters), self.options['n_ts']))
+        self.trajectories = np.zeros((n_iter, len(self.model.parameters), self.options['n_ts']+1))
         self.states = np.zeros((n_iter, len(self.model.states), self.options['n_ts']+1))
 
-        for i_iter in range(n_iter):
-            self.i_iter = i_iter
-            # self.trajectories.append(dict())
-            self.logger.debug(f"iteration {i_iter}")
-            # 1. randomize data (generate splines)
-            # d { s1: {value:[], std:[]}, s2: {value:[], std:[] } }
-            data = self.randomize_data()
-            # 2. randomize parameter (in place)
-            self.randomize_init_parameters()
-            self.states[i_iter, :, 0] = np.array(list(self.model.states.values()))
-            for i_tstep in range(self.options['n_ts']):
-                # self.logger.debug(f"timestep {ts}")
-                self.i_tstep = i_tstep
-                d = data[:, i_tstep, :]  # select all the data at ts
-                # FIXME x0 should be the last moment of previous time step
-                # `self.model.states` should always be the initial states
-                x0 = self.states[i_iter, :, i_tstep]
-                min_res = self.fit_timestep(x0, d, i_iter, i_tstep)
-                self.min_history.append(min_res)
-                self.add_to_trajectories()
+        if n_core > 1:
+            pool = Pool(n_core)
+            pool_results = []
+            # for i_iter in range(n_iter):
+            #     r_ = pool.apply_async(self.parallel_kernel, 
+            #             args=(i_iter,
+
+            #             )
+            #         )
+            #     pool_results.append(r_)
+            pool.close()
+            pool.join()
+            # for r_ in pool_results:
+            #     mtx = r_.get()
+        else:
+            for i_iter in range(n_iter):
+                self.i_iter = i_iter
+                self.logger.debug(f"iteration {i_iter}")
+                # 1. randomize data (generate splines)
+                # d [n step]
+                data = self.randomize_data()
+                # 2. randomize parameter (in place)
+                self.randomize_init_parameters()
+                self.states[i_iter, :, 0] = np.array(list(self.model.states.values()))
+                for i_tstep in range(self.options['n_ts']):
+                    # self.logger.debug(f"timestep {ts}")
+                    self.i_tstep = i_tstep
+                    d = data[:, i_tstep, :]  # select all the data at ts
+                    # FIXME x0 should be the last moment of previous time step
+                    # `self.model.states` should always be the initial states, `i_step` because init 
+                    x0 = self.states[i_iter, :, i_tstep]
+                    min_res = self.fit_timestep(x0, d, i_iter, i_tstep)
+                    # FIXME min_history has no iteration dimension
+                    self.min_history.append(min_res)
+                    self.add_to_trajectories()
 
             #TODO return AdaptedModel
 
+    def parallel_kernel(self, i_iter):
+        self.logger.debug(f"{current_process()}: iteration {i_iter}")
+        trajectory = np.zeros((len(self.model.parameters), self.options['n_ts']+1))
+        states = np.zeros((len(self.model.states), self.options['n_ts']+1))
+        data = self.randomize_data()
+        self.randomize_init_parameters(append=False)
+        trajectory[:, 0] = np.array( list(self.model.parameters.values()) )
+        states[:, 0] = np.array( list(self.model.states.values()) )
+        for i_tstep in range(self.options['n_ts']):
+            # self.logger.debug(f"timestep {ts}")
+            self.i_tstep = i_tstep
+            d = data[:, i_tstep, :]  # select all the data at i_tstep
+            x0 = self.states[i_iter, :, i_tstep]
+            _min_res = self.fit_timestep(x0, d, i_iter, i_tstep)
+            trajectory[:, i_tstep+1] = np.array( list(self.model.parameters.values()) )
+            states[:, i_tstep+1] = np.array( list(self.model.states.values()) )
+
+        return trajectory, states
+        
 
     def fit_timestep(self, x0, d, i_iter, i_tstep):
         # x0 is the simulation result from previous time span
@@ -175,7 +207,7 @@ class ADAPT(object):
                 rtol=self.options['rtol'],
                 atol=self.options['atol'],
                 t_eval=[t_span[-1]])
-        states = states[:, -1]
+        states = states[:, -1]  # select the last moment
         self.states[i_iter, :, i_tstep+1] = states
         f = self.model.compute_reactions(t_span[-1], states, p)
         # select observables

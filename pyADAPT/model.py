@@ -59,6 +59,7 @@ class Model(metaclass=ABCMeta):
         # ! of the array e.g. observables recorded are the same. (odict.values())
         instance.constants = OrderedDict()
         instance.parameters = Parameters()
+        instance._init_parameters = OrderedDict()
         # instance.reactions = list()
         instance.states = OrderedDict()
         instance.init_vary = []
@@ -66,7 +67,7 @@ class Model(metaclass=ABCMeta):
         instance.state_musk = list()  # observable state
         instance.flux_musk = list()  # observabel flux
         
-        instance.var_names = set()
+        instance.variable_names = set()
         # instance.i_tstep = 0
         # instance.i_iter = 0
         return instance
@@ -85,10 +86,11 @@ class Model(metaclass=ABCMeta):
         self.predictor: list
         self.constants: OrderedDict
         self.parameters: Parameters
+        self._init_parameters: OrderedDict
         self.states: OrderedDict
         self.init_vary: list
         self.observables: OrderedDict
-        self.var_names: set
+        self.variable_names: set
         self.state_musk: list
         self.flux_musk: list
         self.vary_flags = [p.vary for p in self.parameters.values()]
@@ -107,6 +109,12 @@ class Model(metaclass=ABCMeta):
     def odefunc(self, t, x, p):
         """ t: time, x: state, p: parameters, u: constant """
         raise NotImplementedError
+
+    def regfunc(self, p, p_prev, p_init, delta_t):
+        """ regfunc is not a abstract method because it provides a
+        default regularization.
+        """
+        pass
 
     def compute_states(self, t_span, x0, p=None,
             rtol=1e-7, atol=1e-7, t_eval=None):
@@ -145,6 +153,7 @@ class Model(metaclass=ABCMeta):
         self.add_name(name)
         self.parameters.add(name=name, value=value, vary=vary, min=lb, max=ub,
             expr=expr, brute_step=brute_step)
+        self._init_parameters[name] = value
 
     def add_constant(self, name="", value=None) -> None:
         self.add_name(name)
@@ -168,16 +177,17 @@ class Model(metaclass=ABCMeta):
         """
         # if params is None:
         #     params = self.init_vary
-        for k,v in self.parameters.items(): # TODO maybe change v.vary to initvary flags
+        for k, v in self.parameters.items(): # TODO maybe change v.vary to initvary flags
             if v.vary: # values of dict observables is boolean
-                 v.value = np.power(10, ((smax - smin) * np.random.rand() + smin))
+                 v.value = ( self._init_parameters[k]* 
+                        np.power(10, ( (smax - smin) * np.random.rand() + smin) ) )
 
     def add_name(self, name: str):
         # TODO: add reference to the variable
         if self.check_name(name):
-            self.var_names.add(name)
+            self.variable_names.add(name)
         else:
             raise Exception('%s is already define in the model' % name)
 
     def check_name(self, name):
-        return not name in self.var_names
+        return not name in self.variable_names
