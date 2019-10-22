@@ -27,6 +27,10 @@ class ADAPT(object):
         In `ADAPT` class, the identifier of a name should be key of the dictionary
         But in class `DataSet` and class `Model`, musks and flags should be used.
         """
+        # *3 model components
+        self.model = model
+        self.dataset = dataset
+
         # *2 default simulation options
         self.options: dict = dict()
         self.options['n_ts']=  100  # number of time steps
@@ -38,11 +42,9 @@ class ADAPT(object):
         self.options['lambda'] = 0.1  # regularization weight
         self.options['rtol'] = 1e-7
         self.options['atol'] = 1e-7
+        self.options['seed_list'] = np.arange(self.options['n_iter'])
 
 
-        # *3 model components
-        self.model = model
-        self.dataset = dataset
         # self.parameters = self.model.parameters.copy()
         # TODO check the names consistency in model and dataset
 
@@ -54,6 +56,7 @@ class ADAPT(object):
         self.current_timestep = 0
         self.states = np.zeros((1,))
         self.trajectories = np.zeros((1,))  # index being the iteration number
+        # FIXME min_history has no iteration dimension
         self.min_history:list = []
 
 
@@ -74,7 +77,7 @@ class ADAPT(object):
             tspan = [ self.model.predictor[0]-self.options['ss_time'],
                     self.model.predictor[0] ]
         else:
-            tspan = self.time_points[ts-1: ts+1]
+            tspan = self.time_points[ts-1: ts+1]  # ts-1 and ts
         return tspan
 
 
@@ -90,8 +93,8 @@ class ADAPT(object):
         return p
 
     def run(self, n_iter=None, n_core=0):
-        np.random.seed(self.options['seed'])
-
+        # np.random.seed(self.options['seed'])
+        self.options['seed_list'] = np.arange(self.options['n_iter'])
         if n_iter is None:
             n_iter = self.options['n_iter']
         else:
@@ -108,7 +111,7 @@ class ADAPT(object):
             pool_results = []
             for i_iter in range(n_iter):
                 r_ = pool.apply_async(self.iter_kernel, 
-                        args=(i_iter,)
+                        args=(i_iter, True)
                     )
                 pool_results.append(r_)
             pool.close()
@@ -117,32 +120,18 @@ class ADAPT(object):
                 traj, states = r_.get()
                 self.trajectories[i_iter,:,:] = traj
                 self.states[i_iter,:,:] = states
-
+        # SERIAL
         else:
             for i_iter in range(n_iter):
                 self.i_iter = i_iter
-                print(f"iteration {i_iter}")
-                # 1. randomize data (generate splines)
-                # d [n step]
-                data = self.randomize_data()
-                # 2. randomize parameter
-                params = self.randomize_init_parameters(i_iter)
-                self.states[i_iter, :, 0] = np.array(list(self.model.states.values()))
-                for i_tstep in range(self.options['n_ts']):
-                    self.i_tstep = i_tstep
-                    d = data[:, i_tstep, :]  # select all the data at ts
-                    # FIXME x0 should be the last moment of previous time step
-                    # `self.model.states` should always be the initial states, `i_step` because init 
-                    x0 = self.states[i_iter, :, i_tstep]
-                    min_res = self.fit_timestep(params, x0, d, i_iter, i_tstep)
-                    params = min_res.params
-                    # FIXME min_history has no iteration dimension
-                    # self.min_history.append(min_res)
-                    self.trajectories[i_iter, :, i_tstep] = np.array(list(params.values()))
+                self.iter_kernel(i_iter, False)
 
 
-    def iter_kernel(self, i_iter):
+    def iter_kernel(self, i_iter, isparallel):
+        # 1. randomize data (generate splines)
+        np.random.seed(self.options['seed_list'][i_iter])
         data   = self.randomize_data()
+        # 2. randomize parameter
         params = self.randomize_init_parameters(i_iter)
 
         self.states[i_iter, :, 0] = np.array( list(self.model.states.values()) )
@@ -154,8 +143,11 @@ class ADAPT(object):
             min_res = self.fit_timestep(params, x0, d, i_iter, i_tstep)
             params = min_res.params
             self.trajectories[i_iter, :, i_tstep+1] = np.array( list(params.values()) )
-        print(current_process(), i_iter)
-        return self.trajectories[i_iter,:,:], self.states[i_iter,:,:]
+        print(current_process(), '- iteration:', i_iter)
+        if isparallel:
+            return self.trajectories[i_iter,:,:], self.states[i_iter,:,:]
+        else:
+            return None
         
 
     def fit_timestep(self, params, x0, d, i_iter, i_tstep):
@@ -172,15 +164,15 @@ class ADAPT(object):
         return minimization_result
 
 
-    def objective_func(self, p, x0, d, t_span, i_iter, i_tstep):
+    def objective_func(self, params, x0, d, t_span, i_iter, i_tstep):
         # 1. solve the ode using `p` and initial condition `x0`
-        states = self.model.compute_states(t_span, x0, p,
+        states = self.model.compute_states(t_span, x0, params,
                     rtol=self.options['rtol'],
                     atol=self.options['atol'],
                     t_eval=[t_span[-1]])
         states = states[:, -1]  # select the last moment
         self.states[i_iter, :, i_tstep+1] = states
-        f = self.model.compute_reactions(t_span[-1], states, p)
+        f = self.model.compute_reactions(t_span[-1], states, params)
         # select observables
         observable_states = states[self.model.state_musk]
         observable_states_values = d[self.model.state_musk, 0]  # observable states from data (value)
@@ -189,7 +181,7 @@ class ADAPT(object):
         # FIXME fluxes are not computed
         # of = f[self.model.ofi]
         errors = (observable_states - observable_states_values) / observable_states_stds
-        reg = self.tiemann_regularization(p, i_iter, i_tstep)
+        reg = self.tiemann_regularization(params, i_iter, i_tstep)
         errors = np.concatenate([errors, reg])
         return errors
 
