@@ -99,7 +99,7 @@ class ADAPT(object):
         if i_iter is None:
             i_iter = self.i_iter
         if i_tstep is None:
-            i_tstep = self.i_tstep
+            i_tstep = self.i_tstep + 1
         self.trajectories[i_iter, :, i_tstep] = p
 
     def randomize_data(self):
@@ -127,7 +127,7 @@ class ADAPT(object):
                                         self.model.predictor[1],
                                         self.options['n_ts'])
 
-        self.trajectories = np.zeros((n_iter, len(self.model.parameters), self.options['n_ts']))
+        self.trajectories = np.zeros((n_iter, len(self.model.parameters), self.options['n_ts']+1))
         self.states = np.zeros((n_iter, len(self.model.states), self.options['n_ts']+1))
 
         for i_iter in range(n_iter):
