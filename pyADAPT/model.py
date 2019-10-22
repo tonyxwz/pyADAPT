@@ -175,12 +175,13 @@ class Model(metaclass=ABCMeta):
         
         smin, smax
         """
+        p = self.parameters.copy()
         # if params is None:
         #     params = self.init_vary
-        for k, v in self.parameters.items(): # TODO maybe change v.vary to initvary flags
+        for k, v in p.items(): # TODO maybe change v.vary to initvary flags
             if v.vary: # values of dict observables is boolean
-                 v.value = ( self._init_parameters[k]* 
-                        np.power(10, ( (smax - smin) * np.random.rand() + smin) ) )
+                 v.value = ( p[k]* np.power(10, ( (smax - smin) * np.random.rand() + smin) ) )
+        return p
 
     def add_name(self, name: str):
         # TODO: add reference to the variable
@@ -191,3 +192,7 @@ class Model(metaclass=ABCMeta):
 
     def check_name(self, name):
         return not name in self.variable_names
+
+
+if __name__ == "__main__":
+    pass

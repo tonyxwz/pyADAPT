@@ -6,6 +6,7 @@ from lmfit import Parameters, minimize
 from scipy.integrate import OdeSolver, odeint, solve_ivp
 from scipy.optimize import least_squares
 from cached_property import cached_property
+from numba import jit, njit
 
 from pyADAPT import DataSet, Model
 
@@ -42,6 +43,7 @@ class ADAPT(object):
         # *3 model components
         self.model = model
         self.dataset = dataset
+        # self.parameters = self.model.parameters.copy()
         # TODO check the names consistency in model and dataset
 
         # *4 preparation
@@ -75,27 +77,17 @@ class ADAPT(object):
             tspan = self.time_points[ts-1: ts+1]
         return tspan
 
-    def add_to_trajectories(self, p=None, i_iter=None, i_tstep=None):
-        # append the parameters to the latest trajectory (current iteration)
-        if p is None:
-            p = np.array(list(self.model.parameters.values()))
-        if i_iter is None:
-            i_iter = self.i_iter
-        if i_tstep is None:
-            i_tstep = self.i_tstep + 1
-        self.trajectories[i_iter, :, i_tstep] = p
 
     def randomize_data(self):
         d = self.dataset.interpolate(self.options['n_ts'])
         return d
 
-    def randomize_init_parameters(self, append=True):
+    def randomize_init_parameters(self, i_iter):
         """randomize the parameters at the beginning of a simulation
         """
-        self.model.randomize_params(self.options['smin'], self.options['smax'])
-        # always at tstep=0
-        if append:
-            self.add_to_trajectories(i_tstep=0)
+        p = self.model.randomize_params(self.options['smin'], self.options['smax'])
+        self.trajectories[i_iter, :, 0] = np.array( list(p.values()) )
+        return p
 
     def run(self, n_iter=None, n_core=0):
         np.random.seed(self.options['seed'])
@@ -110,18 +102,22 @@ class ADAPT(object):
         self.trajectories = np.zeros((n_iter, len(self.model.parameters), self.options['n_ts']+1))
         self.states = np.zeros((n_iter, len(self.model.states), self.options['n_ts']+1))
 
+        # PARALLEL
         if n_core > 1:
             pool = Pool(n_core)
             pool_results = []
             for i_iter in range(n_iter):
-                r_ = pool.apply_async(self.test_kernel, 
+                r_ = pool.apply_async(self.iter_kernel, 
                         args=(i_iter,)
                     )
                 pool_results.append(r_)
             pool.close()
             pool.join()
-            # for r_ in pool_results:
-            #     mtx = r_.get()
+            for i_iter, r_ in enumerate(pool_results):
+                traj, states = r_.get()
+                self.trajectories[i_iter,:,:] = traj
+                self.states[i_iter,:,:] = states
+
         else:
             for i_iter in range(n_iter):
                 self.i_iter = i_iter
@@ -129,8 +125,8 @@ class ADAPT(object):
                 # 1. randomize data (generate splines)
                 # d [n step]
                 data = self.randomize_data()
-                # 2. randomize parameter (in place)
-                self.randomize_init_parameters()
+                # 2. randomize parameter
+                params = self.randomize_init_parameters(i_iter)
                 self.states[i_iter, :, 0] = np.array(list(self.model.states.values()))
                 for i_tstep in range(self.options['n_ts']):
                     self.i_tstep = i_tstep
@@ -138,46 +134,39 @@ class ADAPT(object):
                     # FIXME x0 should be the last moment of previous time step
                     # `self.model.states` should always be the initial states, `i_step` because init 
                     x0 = self.states[i_iter, :, i_tstep]
-                    min_res = self.fit_timestep(x0, d, i_iter, i_tstep)
+                    min_res = self.fit_timestep(params, x0, d, i_iter, i_tstep)
+                    params = min_res.params
                     # FIXME min_history has no iteration dimension
-                    self.min_history.append(min_res)
-                    self.add_to_trajectories()
+                    # self.min_history.append(min_res)
+                    self.trajectories[i_iter, :, i_tstep] = np.array(list(params.values()))
 
-            #TODO return AdaptedModel
 
-    def test_kernel(self, i_iter):
-        n = np.random.rand(10000000)
-        print(f"{current_process()}: {i_iter}")
-        return n
+    def iter_kernel(self, i_iter):
+        data   = self.randomize_data()
+        params = self.randomize_init_parameters(i_iter)
 
-    def parallel_kernel(self, i_iter):
-        trajectory = np.zeros((len(self.model.parameters), self.options['n_ts']+1))
-        states = np.zeros((len(self.model.states), self.options['n_ts']+1))
-        data = self.randomize_data()
-        self.randomize_init_parameters(append=False)
-        trajectory[:, 0] = np.array( list(self.model.parameters.values()) )
-        states[:, 0] = np.array( list(self.model.states.values()) )
+        self.states[i_iter, :, 0] = np.array( list(self.model.states.values()) )
+
         for i_tstep in range(self.options['n_ts']):
-            self.i_tstep = i_tstep
             d = data[:, i_tstep, :]  # select all the data at i_tstep
             x0 = self.states[i_iter, :, i_tstep]
-            _min_res = self.fit_timestep(x0, d, i_iter, i_tstep)
-            trajectory[:, i_tstep+1] = np.array( list(self.model.parameters.values()) )
-            states[:, i_tstep+1] = np.array( list(self.model.states.values()) )
-        print(f'{i_iter}, {trajectory}')
-        return trajectory, states
+
+            min_res = self.fit_timestep(params, x0, d, i_iter, i_tstep)
+            params = min_res.params
+            self.trajectories[i_iter, :, i_tstep+1] = np.array( list(params.values()) )
+        print(current_process(), i_iter)
+        return self.trajectories[i_iter,:,:], self.states[i_iter,:,:]
         
 
-    def fit_timestep(self, x0, d, i_iter, i_tstep):
+    def fit_timestep(self, params, x0, d, i_iter, i_tstep):
         # x0 is the simulation result from previous time span
         # d is the interp data in current iteration
         # call objective function in minimizer here:
         t_span = self.get_tspan(i_tstep)
 
-        minimization_result = minimize(self.objective_func, self.model.parameters,
-                args=[x0, d, t_span, i_iter, i_tstep])
+        minimization_result = minimize(self.objective_func, params,
+                args=[x0, d, t_span, i_iter, i_tstep] )
         # FIXME model should be static in this project, also i_iter, i_tstep
-        self.model.parameters = minimization_result.params
         if not minimization_result.success:
             print(f'unsuccessful minimization, iter: {i_iter}, t_step: {i_tstep}')
         return minimization_result
@@ -186,9 +175,9 @@ class ADAPT(object):
     def objective_func(self, p, x0, d, t_span, i_iter, i_tstep):
         # 1. solve the ode using `p` and initial condition `x0`
         states = self.model.compute_states(t_span, x0, p,
-                rtol=self.options['rtol'],
-                atol=self.options['atol'],
-                t_eval=[t_span[-1]])
+                    rtol=self.options['rtol'],
+                    atol=self.options['atol'],
+                    t_eval=[t_span[-1]])
         states = states[:, -1]  # select the last moment
         self.states[i_iter, :, i_tstep+1] = states
         f = self.model.compute_reactions(t_span[-1], states, p)
