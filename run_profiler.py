@@ -1,9 +1,7 @@
-import matplotlib.pyplot as plt
-import numpy as np
+import cProfile
 
 from pyADAPT import ADAPT, DataSet
 from pyADAPT.models import ToyModel
-from logging import DEBUG
 
 if __name__ == '__main__':
     toy = ToyModel()
@@ -12,4 +10,5 @@ if __name__ == '__main__':
     # print(isinstance(toy, Model))
     adapt = ADAPT(toy, data)
     adapt.set_options(n_iter=20, n_ts=100)
-    adapt.run(n_core=4)
+
+    cProfile.run("adapt.run(n_core=1)")
