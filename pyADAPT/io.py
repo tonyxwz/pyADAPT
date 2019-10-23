@@ -58,7 +58,6 @@ def read_mat(matpath=""):
     return mat2
 
 def save_npy(data):
-    # TODO
     pass
 
 

@@ -12,7 +12,7 @@ if __name__ == "__main__":
     # print(isinstance(toy, Model))
     adapt = ADAPT(toy, data)
     adapt.set_options(n_iter=20, n_ts=100)
-    adapt.run(n_core=1)
+    adapt.run(n_core=4)
 
     n_traj = adapt.trajectories.shape[0]
     n_params = adapt.trajectories.shape[1]

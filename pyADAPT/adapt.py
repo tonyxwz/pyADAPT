@@ -143,7 +143,7 @@ class ADAPT(object):
             min_res = self.fit_timestep(params, x0, d, i_iter, i_tstep)
             params = min_res.params
             self.trajectories[i_iter, :, i_tstep+1] = np.array( list(params.values()) )
-        print(current_process(), '- iteration:', i_iter)
+        print(current_process().name, '- iteration:', i_iter)
         if isparallel:
             return self.trajectories[i_iter,:,:], self.states[i_iter,:,:]
         else:
@@ -172,12 +172,12 @@ class ADAPT(object):
                     t_eval=[t_span[-1]])
         states = states[:, -1]  # select the last moment
         self.states[i_iter, :, i_tstep+1] = states
-        f = self.model.compute_reactions(t_span[-1], states, params)
         # select observables
         observable_states = states[self.model.state_musk]
         observable_states_values = d[self.model.state_musk, 0]  # observable states from data (value)
         observable_states_stds = d[self.model.state_musk, 1]  # observable states from data (std)
 
+        fluxes = self.model.compute_reactions(t_span[-1], states, params)
         # FIXME fluxes are not computed
         # of = f[self.model.ofi]
         errors = (observable_states - observable_states_values) / observable_states_stds

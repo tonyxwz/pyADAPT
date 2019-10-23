@@ -51,7 +51,6 @@ class ToyModel(Model):
         return dxdt
 
     def reactions(self, t, x, p):
-        # TODO: find a way to share the code between `reactions` and `odefunc`
         u = self.inputs(t)
         u1 = u['u1']
         u2 = u['u2']
