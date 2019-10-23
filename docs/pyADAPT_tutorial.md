@@ -1,6 +1,6 @@
 # PyADAPT Tutorial
 
-ADAPT was originally writen in MATLAB and now we at CBio group would like to write it in python a.k.a, pyADAPT.
+ADAPT was originally writen in MATLAB and now we at CBio group would like to write it in python a.k.a, pyADAPT. To use pyADAPT, navigatet to the directory that contains `setup.py` and enter `pip install -e .` in the command prompt.
 
 There are mainly three classes in the python package, `DataSet`, `Model`, and `ADAPT`. You can find their equivalences in the MATLAB project.
 
