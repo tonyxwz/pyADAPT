@@ -1,0 +1,21 @@
+@startuml pyADAPT
+
+class Model {
+    array: ode()
+    array: reactions()
+    array:input()
+}
+
+class DataSet {
+    array: interpolate()
+
+}
+
+class ADAPT {
+    array: run()
+    array: randomize_data()
+    
+}
+Model <|-- SBMLModel
+Model <|-- ToyModel
+@enduml

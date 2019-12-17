@@ -94,12 +94,13 @@ class ADAPT(object):
 
     def run(self, n_iter=None, n_core=0):
         # np.random.seed(self.options['seed'])
-        self.options['seed_list'] = np.arange(self.options['n_iter'])
         if n_iter is None:
             n_iter = self.options['n_iter']
         else:
             self.options['n_iter'] = n_iter
 
+        self.options['seed_list'] = np.arange(self.options['n_iter'])
+        
         self.time_points = np.linspace(self.model.predictor[0], self.model.predictor[1], self.options['n_ts'])
 
         self.trajectories = np.zeros((n_iter, len(self.model.parameters), self.options['n_ts']+1))

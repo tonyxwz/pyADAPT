@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from pyADAPT import ADAPT, DataSet, Model
-from pyADAPT.bio import ToyModel
+from pyADAPT.examples import ToyModel
 
 
 if __name__ == "__main__":
