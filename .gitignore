@@ -132,3 +132,4 @@ dmypy.json
 # vender
 venders/
 .vscode/settings.json
+**/~$*.xlsx
