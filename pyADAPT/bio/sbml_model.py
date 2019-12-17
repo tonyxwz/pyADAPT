@@ -19,8 +19,8 @@ class SBMLModel(Model):
 
         self.__reaction_list = list(self.model.reactions)
         self.reaction_list = list()
-        self.__species_list = list(self.model.species)
-        self.species_list = list()
+        self.species_list = list(self.model.species)
+        # self.species_list = list()
 
         # stoichiometry matrix: row (effect, substrate), columns (cause, reaction)
         self.add_predictor(name='t', value=time_range)  # TODO move predictor to ADAPT
@@ -58,7 +58,7 @@ class SBMLModel(Model):
     
     def buildStates(self):
         # Following the convention of pyADAPT, the concentration of each species is a state
-        for s in self.__species_list:
+        for s in self.species_list:
             self.add_state(name=s.id, init=s.initial_concentration)
 
     def buildContext(self):
@@ -78,7 +78,7 @@ class SBMLModel(Model):
         return self.__reaction_list.index(r)
     
     def getSpeciesIndex(self, s):
-        return self.__species_list.index(s)
+        return self.species_list.index(s)
     
     
     def initAssign(self):
@@ -126,9 +126,9 @@ class SBMLModel(Model):
         """ using solve_ivp, odefunc must take the states as a list rather than dictionary. The code should guarantee 
         thatn x is in the same order as species list
         """
-        assert len(x) == len(self.__species_list)
-        for i in range(len(self.__species_list)):
-            s = self.__species_list[i].id
+        assert len(x) == len(self.species_list)
+        for i in range(len(self.species_list)):
+            s = self.species_list[i].id
             self.context[s] = x[i]
 
 
@@ -148,4 +148,6 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     for i in range(y.shape[0]):
         plt.plot(t_eval, y[i,:])
+    names = [x.name for x in smallbone.species_list]
+    plt.legend(names)
     plt.show()
