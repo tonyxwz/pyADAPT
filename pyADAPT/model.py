@@ -42,9 +42,9 @@ class Model(metaclass=ABCMeta):
     def __new__(cls, *args, **kwargs):
         # to use `super` in `__new__` method: issubclass(cls, Model) is True
         # super() is (object or type) args and kwargs should be handle in this method
-        instance = super().__new__(cls, *args, **kwargs)  # model instance
+        instance = super().__new__(cls) #, *args, **kwargs)  # model instance
         instance.name = "Base Model"
-        instance.description = " ".join([
+        instance.notes = " ".join([
             "This model should not be instantiated for it only",
             "serves as the base class of other models, please refer to the",
             "docstring about how to extend this class and define your own",
@@ -81,9 +81,9 @@ class Model(metaclass=ABCMeta):
         " parameters to fit.
         """
         self.name: str
-        self.description: str
+        self.notes: str
         self.spec: dict
-        self.predictor: list
+        self.predictor: list  #TODO predictor shouldn't be a part of the model, move to adapt instead
         self.constants: OrderedDict
         self.parameters: Parameters
         self._init_parameters: OrderedDict
