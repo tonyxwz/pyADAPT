@@ -100,7 +100,7 @@ class Model(metaclass=ABCMeta):
     def reactions(self, t, x, p):
         raise NotImplementedError
 
-    @abstractmethod
+    # @abstractmethod
     def inputs(self, t):
         raise NotImplementedError
 
