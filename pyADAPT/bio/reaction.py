@@ -1,7 +1,8 @@
 import libsbml
 import numpy as np
-from copy import deepcopy
 
+from copy import deepcopy
+import math
 
 class Reaction(object):
     def __init__(self, rnode:libsbml.Reaction):
@@ -11,7 +12,9 @@ class Reaction(object):
         self.products = rnode.getListOfProducts()
         self.modifiers = rnode.getListOfModifiers()  # inhibitors / activators
         self.reversible = rnode.getReversible()
+
         self.kl = rnode.getKineticLaw()
+        self.formula = compile(self.kl.formula, '<string>', 'eval')
 
         self.context = dict()
         for p in self.kl.getListOfParameters():
@@ -21,20 +24,23 @@ class Reaction(object):
         # evaluate the flux of Reaction given all the concentrations
         context = deepcopy(context)
         context.update(self.context)
-        return eval(self.kl.formula, globals(), context)
+        return eval(self.formula, globals(), context)
 
     def get_ce(self):
         # ce: chemical equation
         lhs = " + ".join([str(x.stoichiometry)+" "+x.species for x in self.reactants])
         rhs = " + ".join([str(x.stoichiometry)+" "+x.species for x in self.products])
-        arrow = ' -> '
+
         if self.reversible:
             arrow = ' <=> '
+        else:
+            arrow = ' -> '
+
         ce = arrow.join([lhs, rhs])
         if len(self.modifiers):
             ce += '; ' + ','.join([x.species for x in self.modifiers])
         return ce
-    
+
     def __repr__(self):
         # s = "{:>20}: {:>10}".format(f"Reaction {self.id}({self.name})", self.get_ce())
         s = f"Reaction {self.id}({self.name}): {self.get_ce()}"
