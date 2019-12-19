@@ -9,20 +9,28 @@ structure:
     means: s1_mean
     stds: s1_std
     time: t
+    unit: mM/L
+    time_unit: day
     observable: true
   s2:
     means: s2_mean
     stds: s2_std
     time: t
+    unit: mM/L
+    time_unit: day
     observable: true
   s3:
     means: s3_mean
     stds: s3_std
     time: t
+    unit: mM/L
+    time_unit: day
     observable: true
   s4:
     means: s4_mean
     stds: s4_std
     time: t
+    unit: mM/L
+    time_unit: day
     observable: true
 
