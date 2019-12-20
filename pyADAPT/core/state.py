@@ -20,10 +20,13 @@ class State(list):
     ]
     ```
     """
-    def __init__(self, name="", time=None, means=None, stds=None, observable=False):
+    def __init__(self, name="", time=None, time_unit=None,
+            means=None, stds=None, unit=None, observable=False):
         super().__init__()
         self.name = name  # s1
         self.time = np.array(time)  # e.g. toymodel, t1 from dataset
+        self.time_unit = time_unit
+        self.unit = unit
         self.sampled_values = None
         assert len(time) == len(stds) == len(means)
         for m, s in zip(means, stds):
@@ -35,7 +38,7 @@ class State(list):
         self.sampled_values = self.sample()
         pp = PchipInterpolator(self.time, self.sampled_values)
         return pp
-    
+
     def interp_values(self, n_ts=100, method='pchip'):
         tnew = np.linspace(self.time[0], self.time[-1], n_ts)
         values_interp = self.values_spline(tnew)
@@ -78,13 +81,56 @@ class State(list):
         repr_list = list(zip(self.time, self))
         return f"State({self.name}): {repr_list}"
 
+    @cached_property
+    def plt(self):
+        import matplotlib.pyplot as plt
+        plt.style.use('ggplot')
+        return plt
+
+    def errorbar(self, axes=None):
+        if axes is None:
+            import matplotlib.pyplot as plt
+            plt.style.use('ggplot')
+            _, axes = plt.subplots()
+        else:
+            plt = None
+
+        axes.set_title(self.name)
+        axes.set_xlabel(self.time_unit + '(s)')
+        axes.set_ylabel(self.unit)
+        axes.errorbar(self.time, [d.mean for d in self],
+                        yerr=[d.std for d in self],
+                        fmt='.b',
+                        uplims=True,
+                        lolims=True)
+        if plt is not None:
+            axes.bar(self.time, [d.mean for d in self])
+            plt.show()
+
+    def plot_samples(self, axes=None):
+        if axes is None:
+            import matplotlib.pyplot as plt
+            plt.style.use('ggplot')
+            _, axes = plt.subplots()
+        else:
+            plt = None
+
+        axes.plot(self.time, self.sampled_values, '.g', alpha=0.5, markersize=5)
+
+        if plt:
+            plt.show()
+
 
 if __name__ == "__main__":
-    from pprint import pprint, pformat
+    from pprint import pprint
     time  =  [0,   3,   4,   7,  10]
     means =  [6,   4,   2,   5,   3]
     stds  =  [1, 0.5, 1.7, 1.2, 0.9]
 
-    s = State(name='Hepatic TG', time=time, means=means, stds=stds)
+    time_unit = 'day'
+    unit = 'mM/L'
+
+    s = State(name='Hepatic TG', time=time, means=means, stds=stds,
+              time_unit=time_unit, unit=unit)
     pprint(s)
-    # print(s.means, s.stds, s.variances, sep='\n')
+    s.errorbar()

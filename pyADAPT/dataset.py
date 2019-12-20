@@ -34,16 +34,29 @@ class DataSet(list):
             self.__setattr__(k, v)
 
         for k, v in self.structure.items():
-            # !print(v)
             time = self.raw_data[v['time']]
             means = self.raw_data[v['means']]
             stds = self.raw_data[v['stds']]
-            s = State(name=k, time=time, means=means, stds=stds)
-            # self[k] = s
+
+            try:
+                time_unit = v['time_unit']
+            except KeyError as e:
+                time_unit = 'seconds'
+                print(f"Warning: undefined {e.args[0]}, fallback to default ({time_unit})")
+            
+            try:
+                unit = v['unit']
+            except KeyError as e:
+                unit = 'mM/L'
+                print(f"Warning: undefined {e.args[0]}, fallback to default ({unit})")
+
+            s = State(name=k, time=time, time_unit=time_unit,
+                      means=means, stds=stds, unit=unit)
+
             self.append(s)
             self.ordered_names.append(k)
 
-    def interpolate(self, n_ts=100, method='Hermite'):
+    def interpolate(self, n_ts=100, method='Hermite') -> np.ndarray: 
         """In every ADAPT iteration, this function is called once to get a new
         spline for the optimizer to fit (from t0 till the end). the length of
         the list of the splines should equal the number of states in the data.
@@ -61,8 +74,9 @@ class DataSet(list):
         ]
         ```
         """
-        # TODO: add different interp methods
-        # TODO: take care of states using different time points, t1, t2
+        # TODO 1. add different interp methods
+        #      2. take care of states using different time points, t1, t2
+        spline_map = {"Hermite": "PchipInterpolator"}
         inter_p = np.zeros((len(self), n_ts, 2))  #a stands for array
         # v = list(self.values())
         for i in range(len(self)):
@@ -85,7 +99,6 @@ class DataSets(list):
         data_info: instructions of the data, such as which time variable
             should be used for which state.
         """
-        # TODO: use DataSets in ADAPT
         self.data_specs = data_specs if data_specs else read_data_specs(data_specs_path)
         self.raw_data = raw_data if raw_data else read_data_raw(raw_data_path)
 
@@ -94,23 +107,54 @@ class DataSets(list):
         for g in groups:
             self.append(DataSet(raw_data=self.raw_data, data_specs=self.data_specs, name=g))
 
+def plot_splines(D, N, n_ts=100, axes=None, seed=0):
+    if axes is not None:
+        # assert axes.size == len(D)
+        ncols = axes.shape[1]
+        fig = axes.flatten()[0].get_figure()
+        plt = None
+    else:
+        import matplotlib.pyplot as plt
+        plt.style.use('ggplot')
+        ncols = get_cols(len(D))
+        nrows = int(np.ceil(len(D) / ncols))
+        fig, axes = plt.subplots(nrows, ncols, squeeze=False)
+        fig.canvas.set_window_title(f'Interpolation of {D.name}')
+
+    np.random.seed(seed)
+    for i in range(N):
+        idp = D.interpolate(n_ts=n_ts)
+        for j in range(idp.shape[0]):
+            ax = axes[j//ncols, j%ncols]
+            state = D[j]
+            t_ = state.time
+            t = np.linspace(t_[0], t_[-1], n_ts)
+            ax.plot(t, idp[j, :, 0], color='red', alpha=0.15)
+            state.plot_samples(ax)
+
+            if not ax.title.get_label():
+                state.errorbar(ax)
+    fig.tight_layout()
+    if plt:
+        plt.show()
+
+def get_cols(N, ratio=1):
+    return int(np.ceil(np.sqrt(N * ratio)))
 
 if __name__ == "__main__":
     from pprint import pprint, pformat
-    import matplotlib.pyplot as plt
-    # import seaborn as sns
-    plt.style.use('ggplot')
+
     D = DataSet(raw_data_path='data/toyModel/toyData.mat',
                 data_specs_path='data/toyModel/toyData.yaml')
     idp = D.interpolate(n_ts=10)
     # all for s1:
     pprint(idp[0, :, :])
-
     # select all the data from time step 3
     pprint(idp[:,3,:])
-
     # all for values
     pprint(idp[:, :, 0])
+    # all for stds
+    pprint(idp[:, :, 1])
 
     D2 = DataSets(raw_data_path='data/clampModelFinal/DataFinal2.mat',
                   data_specs_path='data/clampModelFinal/clampData.json')
@@ -118,29 +162,4 @@ if __name__ == "__main__":
 
     n_interp = 100
     n_ts = 200
-    fig, axes = plt.subplots(2, 2, figsize=(12, 10))  # 4 interpolations, 4 states
-    fig.canvas.set_window_title(f'DataSet Interpolation')
-    # fig.suptitle('Toy data interpolation (100)')
-    np.random.seed(725)
-    # plot all interpolations of values
-    for i_interp in range(n_interp):
-        idp = D.interpolate(n_ts=n_ts)
-        for i_state in range(idp.shape[0]):
-            ax:plt.Axes = axes[i_state//2, i_state%2]
-            state:State = D[i_state]
-            t_ = state.time
-            t = np.linspace(t_[0], t_[-1], n_ts)
-            ax.plot(t, idp[i_state, :, 0], color='red', alpha=0.15)  # values of s1
-            ax.plot(t_, state.sampled_values, '.g', alpha=0.5, markersize=5)
-
-            if not ax.title.get_label():
-                ax.set_title(f"{D.ordered_names[i_state]}")
-                ax.set_xlabel('days')
-                err = ax.errorbar(t_, [d.mean for d in state],
-                        yerr=[d.std for d in state],
-                        fmt='.b',
-                        uplims=True,
-                        lolims=True)
-
-    fig.tight_layout()
-    plt.show()
+    plot_splines(D, n_interp, n_ts)
