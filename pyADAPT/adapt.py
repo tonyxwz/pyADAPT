@@ -49,13 +49,13 @@ class ADAPT(object):
         # TODO check the names consistency in model and dataset
 
         # *4 preparation
-        # *5 simulation results
         self.i_iter = 0
         self.i_tstep = 0
         self.time_points:list = []
         self.current_timestep = 0
+        # *5 simulation results
         self.states = np.zeros((1,))
-        self.trajectories = np.zeros((1,))  # index being the iteration number
+        self.trajectories = np.zeros((1,))  # 1st index being the iteration number
         # FIXME min_history has no iteration dimension
         self.min_history:list = []
 
@@ -199,6 +199,5 @@ class ADAPT(object):
         penalty = self.options['lambda'] * ((p - p_previous) / self.delta_t / p_init)**2
         return penalty
 
-    def mkplot(self):
-        # TODO aggregate several plotting methods in here
+    def plot(self, *args, **kwargs):
         pass

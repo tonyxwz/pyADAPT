@@ -25,7 +25,7 @@ from lmfit import Parameters, minimize, Parameter
 
 from .io import read_data_specs
 
-
+# TODO consider rename to BaseModel
 class Model(metaclass=ABCMeta):
     """Abstract class for constructing ADAPT models
 
@@ -52,6 +52,8 @@ class Model(metaclass=ABCMeta):
         ])
         instance.specs = {}  # TODO
         # time, named as convention from matlab version
+        # TODO change predictor as a component of ADAPT
+        # with a default value, if cannot be deduced from the Dataset
         instance.predictor = []
 
         # ? why OrderedDict
@@ -83,7 +85,7 @@ class Model(metaclass=ABCMeta):
         self.name: str
         self.notes: str
         self.spec: dict
-        self.predictor: list  #TODO predictor shouldn't be a part of the model, move to adapt instead
+        self.predictor: list
         self.constants: OrderedDict
         self.parameters: Parameters
         self._init_parameters: OrderedDict

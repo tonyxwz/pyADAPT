@@ -31,7 +31,6 @@ def read_data_raw(path_str, group=""):
         if group:
             data_dict = data_dict[group]
     elif file_ext == 'npy':
-        # TODO: add group to npy data
         data_dict = np.load(path_str)
     elif file_ext == 'json':
         pass
