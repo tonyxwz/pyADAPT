@@ -1,12 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-TODO:
-add regular simulate along with ADAPT method
-update setup.py to compiled *.pyx into *.pyd
-Monte Carlo module in sampling
-    also Latin Hypercube sampling
-.core.species
-
+PyADAPT
 """
 
 from .dataset import DataSet

@@ -19,7 +19,7 @@ class ToyModel(Model):
         self.add_constant('u2', 1)
 
         self.add_parameter(name='k1', value=1, vary=True, lb=0)
-        self.add_parameter(name='k2', value=0.9, vary=False, lb=0)
+        self.add_parameter(name='k2', value=1, vary=False, lb=0)
         self.add_parameter(name='k3', value=0.1, vary=False, lb=0)
         self.add_parameter(name='k4', value=0.5, vary=False, lb=0)
         self.add_parameter(name='k5', value=1, vary=False, lb=0)
