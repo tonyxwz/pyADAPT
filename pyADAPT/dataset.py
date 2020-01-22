@@ -3,6 +3,7 @@ import numpy as np
 from pyADAPT.core import State
 from pyADAPT.io import read_data_specs, read_data_raw
 
+
 # TODO change to list of many datasets
 class DataSet(list):
     """
@@ -89,6 +90,7 @@ class DataSet(list):
             index = self.ordered_names.index(index)
         return super().__getitem__(index)
 
+
 class DataSets(list):
     """ `Datasets` is a list of `Dataset` """
     def __init__(self, raw_data_path="", data_specs_path="",
@@ -106,6 +108,7 @@ class DataSets(list):
 
         for g in groups:
             self.append(DataSet(raw_data=self.raw_data, data_specs=self.data_specs, name=g))
+
 
 def plot_splines(D, N, n_ts=100, axes=None, seed=0):
     if axes is not None:
@@ -138,8 +141,10 @@ def plot_splines(D, N, n_ts=100, axes=None, seed=0):
     if plt:
         plt.show()
 
+
 def get_cols(N, ratio=1):
     return int(np.ceil(np.sqrt(N * ratio)))
+
 
 if __name__ == "__main__":
     from pprint import pprint, pformat

@@ -11,7 +11,7 @@ from scipy.io import loadmat, savemat
 # np.random.randn(size)
 
 def add_noise(y_ss_i):
-    print(y_ss_i)
+    # print(y_ss_i)
     ub = np.array(x0) * 0.2
     lb = np.zeros(len(x0))
     sigmas = np.array([np.random.rand() * x for x in (ub - lb)])
@@ -21,7 +21,7 @@ def add_noise(y_ss_i):
 def generate_data(x_init):
     fig, axes = plt.subplots(2, 2)
     for i in np.arange(5):
-        x_init = add_noise(x_init)
+        # x_init = add_noise(x_init)
         print(x_init)
         t_span = [i*1000, (i+1) * 1000]
         sol = solve_ivp(lambda t, y: toyODE(t, y, i), t_span, x_init)

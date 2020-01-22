@@ -22,13 +22,13 @@ VERSION = '0.1.0'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    'numpy', 'scipy', 'sympy', 'matplotlib', 'pandas',
+    'numpy', 'scipy', 'sympy', 'matplotlib', 'pandas', 'python-libsbml', 
     'networkx', 'lmfit', 'numdifftools', 'pyyaml', 'cached-property'
 ]
 
 # What packages are optional?
 EXTRAS = {
-    'bio': ['cobra', 'python-libsbml'] ,
+    'bio': ['cobra'] ,
     'optimization':['scikit-optimize', 'scikit-image', 'scikit-learn', 'gurobipy']
 }
 

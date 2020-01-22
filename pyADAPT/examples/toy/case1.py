@@ -57,5 +57,3 @@ def toyODE(t, x, i):
     fx = reactions(t, x, k6)
     dxdt = N.dot(fx)
     return dxdt
-
-
