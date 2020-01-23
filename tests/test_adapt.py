@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from pyADAPT import Model, DataSet, ADAPT
-from pyADAPT.examples import ToyModel
+from examples import ToyModel
 
 
 class Test_ADAPT(unittest.TestCase):
