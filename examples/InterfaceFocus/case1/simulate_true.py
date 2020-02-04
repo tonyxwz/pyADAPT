@@ -65,7 +65,7 @@ for k6 in k6range:
     tspan1 = [-1e3, 5]
     sol1 = solve_ivp(lambda t, x: ode_true(t, x, k6),
                      tspan1, x0)
-    tspan2 = [5, 15];
+    tspan2 = [5, 15]
     sol2 = solve_ivp(lambda t, x: ode_true(t, x, k6),
                      tspan2, sol1.y[:, -1])
     y = np.concatenate( (sol1.y[0:4, :], sol2.y[0:4, 1:]), axis=1)
@@ -75,6 +75,5 @@ for k6 in k6range:
     plt.xlim(0, sol2.t[-1])
     plt.legend(['S1', 'S2', 'S3', 'S4'])
     plt.title(f"$k_6={k6}$")
-
 
 
