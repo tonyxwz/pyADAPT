@@ -8,6 +8,9 @@ Step 1:
 import numpy as np
 from scipy.integrate import solve_ivp
 from scipy.optimize import least_squares
+import os
+
+dirname = os.path.dirname(__file__)
 
 # initial state
 x0 = [1.03, .38, .62, .52, .52]
@@ -19,7 +22,7 @@ def u1(t):
 def u2(t):
     return 1
 
-N = np.loadtxt("pyADAPT/examples/toy/N.txt")
+N = np.loadtxt(os.path.join(dirname, "N.txt"))
 C = np.diag([1, 1, 1, 1, 0])
 
 def reactions(t, x, k6):

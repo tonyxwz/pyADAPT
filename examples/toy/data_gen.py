@@ -2,8 +2,7 @@ import numpy as np
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 
-from pyADAPT.examples.toy.case1 import toyODE
-from pyADAPT.examples.toy.case1 import x0
+from case1 import toyODE, x0
 from scipy.io import loadmat, savemat
 
 
@@ -36,10 +35,11 @@ def generate_data(x_init):
 
 if __name__ == "__main__":
     from pprint import pprint
-
+    from os.path import join, dirname
+    
     generate_data(np.array(x0))
 
-    toy_data = loadmat(r"D:\Git\InterfaceFocus\Matlab\data_toy.mat")
+    toy_data = loadmat(join(dirname(__file__),"data_toy.mat"))
     # pprint(toy_data)
     concdata = toy_data['concdata']
     fluxes = toy_data['fluxes']
