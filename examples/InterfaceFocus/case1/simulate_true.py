@@ -3,13 +3,16 @@ from scipy.optimize import least_squares
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 from numpy.random import rand, randn
+
+import os
+
 from ode_true import ode_true
 from fluxes_true import fluxes_true
 
 
-
+path = os.path.dirname(__file__)
 plt.figure()
-im = plt.imread('true_system.png')
+im = plt.imread(os.path.join(path, 'true_system.png'))
 plt.axis('off')
 plt.imshow(im)
 x0 = [1.03, .38, .62, .52, .52]
@@ -76,4 +79,4 @@ for k6 in k6range:
     plt.legend(['S1', 'S2', 'S3', 'S4'])
     plt.title(f"$k_6={k6}$")
 
-
+plt.show()
