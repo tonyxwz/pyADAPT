@@ -15,7 +15,7 @@ class DataSet(list):
     trajectories.
     """
     def __init__(self, raw_data_path="", data_specs_path="",
-                 raw_data={}, data_specs={}, name=""):
+                    raw_data={}, data_specs={}, name=""):
         """
         raw_data: phenotypes organized into a dictionary
 
@@ -52,7 +52,7 @@ class DataSet(list):
                 print(f"Warning: undefined {e.args[0]}, fallback to default ({unit})")
 
             s = State(name=k, time=time, time_unit=time_unit,
-                      means=means, stds=stds, unit=unit)
+                        means=means, stds=stds, unit=unit)
 
             self.append(s)
             self.ordered_names.append(k)
@@ -94,7 +94,7 @@ class DataSet(list):
 class DataSets(list):
     """ `Datasets` is a list of `Dataset` """
     def __init__(self, raw_data_path="", data_specs_path="",
-                 raw_data={}, data_specs={}):
+                    raw_data={}, data_specs={}):
         """
         raw_data: phenotypes organized into a dictionary
 
@@ -162,7 +162,7 @@ if __name__ == "__main__":
     pprint(idp[:, :, 1])
 
     D2 = DataSets(raw_data_path='data/clampModelFinal/DataFinal2.mat',
-                  data_specs_path='data/clampModelFinal/clampData.json')
+                    data_specs_path='data/clampModelFinal/clampData.json')
     pprint([d.name for d in D2])
 
     n_interp = 100

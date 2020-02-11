@@ -2,6 +2,7 @@ import libsbml
 import numpy as np
 from math import exp, pow, log, log10, log2
 from cached_property import cached_property
+
 # from bs4 import BeautifulSoup as bs
 from pyADAPT import Model
 from pyADAPT.bio import Reaction, Species
@@ -12,9 +13,10 @@ class SBMLModel(Model):
     Smallbone et al. For other Model of different structure, some further extending
     might be needed.
     """
+
     def __init__(self, sbml_path, time_range=[]):
-        self.sbml:libsbml.SBMLDocument = libsbml.readSBML(sbml_path)
-        self.model:libsbml.Model = self.sbml.getModel()
+        self.sbml: libsbml.SBMLDocument = libsbml.readSBML(sbml_path)
+        self.model: libsbml.Model = self.sbml.getModel()
         self.name = self.model.name
         self.notes = self.model.notes_string
 
@@ -24,8 +26,9 @@ class SBMLModel(Model):
         # self.species_list = list()
 
         # stoichiometry matrix: row (effect, substrate), columns (cause, reaction)
-        self.add_predictor(name='t', value=time_range)  # TODO move predictor to ADAPT
-        self.context = {'log': log, 'log10': log10, 'log2': log2, 'exp': exp}
+        # TODO move predictor to ADAPT
+        self.add_predictor(name="t", value=time_range)
+        self.context = {"log": log, "log10": log10, "log2": log2, "exp": exp}
         for c in self.model.compartments:
             self.context[c.id] = c.size
         for p in self.model.parameters:
@@ -41,8 +44,7 @@ class SBMLModel(Model):
 
     @cached_property
     def stoich_matrix(self):
-        stoich_matrix = np.zeros((len(self.model.species),
-                                  len(self.model.reactions)))
+        stoich_matrix = np.zeros((len(self.model.species), len(self.model.reactions)))
         for r in self.model.reactions:
             # ignore those boundary species
             r_index = self.getReactionIndex(r)
@@ -50,7 +52,7 @@ class SBMLModel(Model):
                 s = self.model.getSpecies(sr.species)
                 if not s.boundary_condition:
                     s_index = self.getSpeciesIndex(s)
-                    stoich_matrix[s_index, r_index] = - sr.stoichiometry
+                    stoich_matrix[s_index, r_index] = -sr.stoichiometry
             for sr in r.products:  # species reference of products
                 s = self.model.getSpecies(sr.species)
                 if not s.boundary_condition:
@@ -77,7 +79,7 @@ class SBMLModel(Model):
     def buildStates(self):
         # Following the convention of pyADAPT, the concentration of each species is a state
         # TODO observables in ADAPT convention is not taken into consideration
-        #      maybe check whether a state exists in the dataset or not, then set 
+        #      maybe check whether a state exists in the dataset or not, then set
         #      observable flags accordingly
         for s in self.sbml_species_list:
             self.add_state(name=s.id, init=s.initial_concentration)
@@ -87,7 +89,6 @@ class SBMLModel(Model):
 
     def getSpeciesIndex(self, s):
         return self.sbml_species_list.index(s)
-
 
     def initAssign(self):
         """libSBML.InitialAssignment
@@ -141,20 +142,29 @@ class SBMLModel(Model):
     def inputs(self, t):
         return super().inputs(t)
 
+
 if __name__ == "__main__":
     from pprint import pprint
+
     smallbone = SBMLModel(r"data\trehalose\BIOMD0000000380_url.xml")
     print(smallbone.stoich_matrix)
+    x = list()
+    for s in smallbone.model.getListOfSpecies():
+        x.append(s.initial_concentration)
+    x = np.array(x)
+    x[15] = 0.1
+
     # pprint(smallbone.reaction_list)
 
     # print('context:', smallbone.context)
     # x = np.random.rand(16) * 2
-    x = np.ones(16)
-    t_eval = np.linspace(0, 0.1, 3)
-    y = smallbone.compute_states([0, 0.1], x, t_eval=t_eval)
+    # x = np.ones(16)
+    t_eval = np.linspace(0, 10, 50)
+    y = smallbone.compute_states([0, 10], x, t_eval=t_eval)
     import matplotlib.pyplot as plt
+
     for i in range(y.shape[0]):
-        plt.plot(t_eval, y[i,:])
+        plt.plot(t_eval, y[i, :], "--")
     names = [x.name for x in smallbone.sbml_species_list]
     plt.legend(names)
     plt.show()
