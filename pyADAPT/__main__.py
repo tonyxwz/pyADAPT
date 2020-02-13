@@ -30,7 +30,15 @@ def Main():
         dest="sbml",
         help="a sbml file that contains the model to by analyzed",
     )
-    parser.add_argument("-p", "--parameters", metavar="p1 <p2>...<pn>", action="append")
+    parser.add_argument(
+        "-p",
+        "--parameters",
+        metavar=("p1", "p2"),
+        action="append",
+        nargs="+",
+        required=True,
+        help='the paramemters to "ADAPT"',
+    )
     parser.add_argument(
         "--gui", action="store_true", help="use command line interface only"
     )
