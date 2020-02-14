@@ -1,0 +1,188 @@
+\hypertarget{pyadapt-tutorial}{%
+\section{PyADAPT Tutorial}\label{pyadapt-tutorial}}
+
+ADAPT was originally written in MATLAB and now we at CBio group would
+like to write it in python a.k.a, pyADAPT. There are mainly three
+classes in the python package, \texttt{DataSet}, \texttt{Model}, and
+\texttt{ADAPT}. They are organized in basically the same way as the
+MATLAB version.
+
+\hypertarget{getting-started}{%
+\subsection{Getting started}\label{getting-started}}
+
+\hypertarget{python}{%
+\subsubsection{Python}\label{python}}
+
+To use pyADAPT, one should have some basic knowledge about python
+programming. Python is a dynamic programming language and is very
+similar to MATLAB (in which ADAPT was written originally). These are
+some good resources to learn python. I would recommend learning list
+comprehension, lambda expression and object oriented programming (class
+definition) \textbf{besides} basic syntax.
+
+\begin{itemize}
+\tightlist
+\item
+  lambda expression:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    used a lot in ODE solvers and optimizers
+  \item
+    \url{https://docs.python.org/3/reference/expressions.html\#lambda}
+  \end{itemize}
+\item
+  object oriented programming:
+
+  \begin{itemize}
+  \tightlist
+  \item
+    how to define a model for example the toy model
+  \item
+    \url{https://python.swaroopch.com/oop.html}
+  \end{itemize}
+\item
+  list comprehension
+
+  \begin{itemize}
+  \tightlist
+  \item
+    used a lot in this project for simplicity
+  \item
+    \url{https://www.python-course.eu/python3_list_comprehension.php}
+  \end{itemize}
+\end{itemize}
+
+\hypertarget{scipy-suite}{%
+\subsubsection{Scipy suite}\label{scipy-suite}}
+
+Python is free and open source. Unlike MATLAB, which is built to do
+scientific computing, python is a general purpose programming language.
+One can use it to write HTTP servers, image processing apps or instant
+messengers. But researchers are more interested in using python to do
+what MATLAB could do. Luckily, there's scipy suite for this purpose. It
+provides an alternative for almost everything in MATLAB. To make this
+tutorial more specific to pyADAPT, only those tools used will be
+covered.
+
+\begin{itemize}
+\tightlist
+\item
+  matplotlib: plotting in python
+\item
+  scipy.integrate.solve\_ivp: \texttt{ode15s} in python, solve a initial
+  value problem
+\item
+  scipy.optimize.least\_squares: \texttt{lsqnonlin} in python, optimize
+  the parameters using Levenberg--Marquardt algorithm. I am not using it
+  directly but through a wrapper called \texttt{lmfit.minimize}.
+\end{itemize}
+
+It is useful to check out these third-party libs briefly before writing
+you own model.
+
+\hypertarget{pyadapt}{%
+\subsubsection{pyADAPT}\label{pyadapt}}
+
+Either you get the source code of \texttt{pyADAPT} by downloading an
+archive or by cloning it from my github repo, what you get on should be
+a folder containing a file named ``setup.py''. Change to this directory
+in the terminal and type in:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\ExtensionTok{pip}\NormalTok{ install {-}e .}
+\end{Highlighting}
+\end{Shaded}
+
+\texttt{pip} will read the rules defined in ``setup.py'' and handle all
+the dependencies for you. This will install pyADAPT as a package, along
+with all the dependencies such as numpy and scipy, to your python
+environment in editable mode (what \texttt{-e} stands for). Make sure
+you have pip executable from the proper environment included in the path
+of the operating system. Python from official website or other
+scientific distribution should both work fine.
+
+Then you can try the toy model by running the script ``run\_toy.py''.
+Hopefully there's no error.
+
+\hypertarget{dataset}{%
+\subsection{DataSet}\label{dataset}}
+
+DataSet class contains the experimental data we obtained from different
+sources. It is organized into a list of all the states and fluxes in the
+data set. And It is able to produce a spline interpolation evaluated at
+different time intervals.
+
+To instantiate DataSet, a raw data and a corresponding data description
+file should be provided.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{data }\OperatorTok{=}\NormalTok{ DataSet(raw\_data\_path}\OperatorTok{=}\StringTok{\textquotesingle{}data/toyModel/toyData.mat\textquotesingle{}}\NormalTok{,}
+\NormalTok{            data\_specs\_path}\OperatorTok{=}\StringTok{\textquotesingle{}data/toyModel/toyData.yaml\textquotesingle{}}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+Since there's no way to standardize the way raw data is stored and
+defined, it is also possible for users to first read the raw data and
+the data specs as python dictionaries and the use them to instantiate
+the data set.
+
+Currently, this DataSet class meets all the needs of the toy model. For
+more complicated models which contains more than one measurement, such
+as the clamp model with four measurements, class \texttt{DataSets} will
+be a future solution.
+
+\hypertarget{model}{%
+\subsection{Model}\label{model}}
+
+\texttt{Model} is a abstract class that provide a convenient interface
+to define an ADAPT style model. The goal is to keep the definition of
+models in both ADAPT and pythonic way. In order to define a new model
+\texttt{NewModel}, one should first inherit it from
+\texttt{NewModel(Model)}, add parameters, constants, states in
+\texttt{\_\_init\_\_} method and extend three important methods:
+\texttt{odefunc}, \texttt{reactions} and \texttt{inputs}. Check
+\href{../pyADAPT/models/toy_model.py}{\texttt{pyADAPT.models.toy\_model.ToyModel}}
+for example.
+
+\hypertarget{odefunc}{%
+\subsubsection{odefunc}\label{odefunc}}
+
+\texttt{odefunc} will be passed as an argument of
+\texttt{scipy.integrate.solve\_ivp}. There's not much restriction on how
+\texttt{odefunc} should be implemented as long as the it takes time,
+initial values and parameters as the arguments. The \texttt{Model} class
+works by remembering the order of the states and parameters. Thus,
+\texttt{odefunc} should always return the derivatives in the same order
+as the initial values (\texttt{x0}).
+
+\hypertarget{reactions}{%
+\subsubsection{reactions}\label{reactions}}
+
+Reactions are actually any arbitrary expression that uses the components
+of the model to obtain a value. In the MATLAB implementation, it can be
+either real reaction fluxes or a interesting intermediate value in the
+simulation that we would like to keep track of. In some models, the
+model outcome is fitted to the experimentally measured fluxes. I will
+implement this function when dealing with clamp model.
+
+\hypertarget{inputs}{%
+\subsubsection{inputs}\label{inputs}}
+
+Inputs is not useful in the toy model but is important in the clamp
+model. It's function is overlapping with the constants in the model, so
+further inspection is needed. I will work on it after I learn more about
+the clamp model.
+
+\hypertarget{adapt}{%
+\subsection{ADAPT}\label{adapt}}
+
+ADAPT class contains all the procedure to perform an ADAPT simulation.
+It takes a model instance and a data set instance as the arguments. And
+it will calculate the parameter trajectory. It supports parallel
+computing with python multiprocessing module. In an ADAPT simulation,
+there are usually many iterations, class \texttt{ADAPT} is able to run
+multiple iterations at a time by assigning them to different processes.
