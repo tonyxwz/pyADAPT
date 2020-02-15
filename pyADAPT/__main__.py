@@ -37,7 +37,7 @@ def Main():
         action="append",
         nargs="+",
         required=True,
-        help='the paramemters to "ADAPT"',
+        help='the parameters to "ADAPT"',
     )
     parser.add_argument(
         "--gui", action="store_true", help="use command line interface only"

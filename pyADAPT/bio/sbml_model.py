@@ -17,6 +17,7 @@ class SBMLModel(Model):
     def __init__(self, sbml_path, time_range=[]):
         self.sbml: libsbml.SBMLDocument = libsbml.readSBML(sbml_path)
         self.model: libsbml.Model = self.sbml.getModel()
+        assert self.model is not None
         self.name = self.model.name
         self.notes = self.model.notes_string
 
@@ -161,6 +162,7 @@ if __name__ == "__main__":
     # x = np.ones(16)
     t_eval = np.linspace(0, 10, 50)
     y = smallbone.compute_states([0, 10], x, t_eval=t_eval)
+
     import matplotlib.pyplot as plt
 
     for i in range(y.shape[0]):
