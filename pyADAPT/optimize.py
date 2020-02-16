@@ -14,8 +14,8 @@ from lmfit import Parameter, minimize
 from scipy.integrate import solve_bvp, solve_ivp
 from scipy.optimize import least_squares, leastsq
 
-from .dataset import DataSet
-from .model import Model
+from pyADAPT.dataset import DataSet
+from pyADAPT.model import Model
 
 #%% define ADAPT outline function
 

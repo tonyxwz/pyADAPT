@@ -6,8 +6,8 @@ usage:
 """
 import argparse
 import click
-from .bio import SBMLModel
-from .adapt import ADAPT
+from pyADAPT.bio.sbml_model import SBMLModel
+from pyADAPT.adapt import ADAPT
 
 
 def Main():

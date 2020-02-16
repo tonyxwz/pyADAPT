@@ -1,2 +1,2 @@
 # -*- coding: utf-8 -*-
-from .distributions import *
+from pyADAPT.sampling.distributions import *

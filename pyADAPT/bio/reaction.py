@@ -56,7 +56,7 @@ class Reaction(object):
 if __name__ == "__main__":
     sbml = libsbml.readSBML(r"data\trehalose\BIOMD0000000380_url.xml")
     model = sbml.getModel()
-    hxk = model.getReaction("pgm")
+    hxk = model.getReaction("hxk")
     hxk = Reaction(hxk)
 
     context = dict()

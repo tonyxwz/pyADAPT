@@ -6,4 +6,4 @@
 4. Predictor
 5. Reaction (Flux)
 """
-from .state import State
+from pyADAPT.core.state import State

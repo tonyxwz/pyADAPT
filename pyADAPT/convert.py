@@ -4,7 +4,7 @@ import importlib
 import re
 import jinja2
 from jinja2 import PackageLoader, Environment
-from .bio.sbml_model import SBMLModel
+from pyADAPT.bio.sbml_model import SBMLModel
 
 
 class Converter(object):

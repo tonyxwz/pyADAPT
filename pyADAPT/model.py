@@ -23,7 +23,7 @@ import numpy as np
 from scipy.integrate import solve_ivp
 from lmfit import Parameters, minimize, Parameter
 
-from .io import read_data_specs
+from pyADAPT.io import read_data_specs
 
 # TODO consider rename to BaseModel
 class Model(metaclass=ABCMeta):
@@ -42,14 +42,16 @@ class Model(metaclass=ABCMeta):
     def __new__(cls, *args, **kwargs):
         # to use `super` in `__new__` method: issubclass(cls, Model) is True
         # super() is (object or type) args and kwargs should be handle in this method
-        instance = super().__new__(cls) #, *args, **kwargs)  # model instance
+        instance = super().__new__(cls)  # , *args, **kwargs)  # model instance
         instance.name = "Base Model"
-        instance.notes = " ".join([
-            "This model should not be instantiated for it only",
-            "serves as the base class of other models, please refer to the",
-            "docstring about how to extend this class and define your own",
-            "model."
-        ])
+        instance.notes = " ".join(
+            [
+                "This model should not be instantiated for it only",
+                "serves as the base class of other models, please refer to the",
+                "docstring about how to extend this class and define your own",
+                "model.",
+            ]
+        )
         instance.specs = {}  # TODO
         # time, named as convention from matlab version
         # TODO change predictor as a component of ADAPT
@@ -68,7 +70,7 @@ class Model(metaclass=ABCMeta):
         instance.observables = OrderedDict()
         instance.state_musk = list()  # observable state
         instance.flux_musk = list()  # observabel flux
-        
+
         instance.variable_names = set()
         # instance.i_tstep = 0
         # instance.i_iter = 0
@@ -118,8 +120,7 @@ class Model(metaclass=ABCMeta):
         """
         pass
 
-    def compute_states(self, t_span, x0, p=None,
-            rtol=1e-7, atol=1e-7, t_eval=None):
+    def compute_states(self, t_span, x0, p=None, rtol=1e-7, atol=1e-7, t_eval=None):
         """ no `uvec`: given time `t`, input should be determined as well.
         " From here, the odefunc is integrated to get the state variables.
         " Then state variables will be used to evaluate the reactions, and the
@@ -134,8 +135,14 @@ class Model(metaclass=ABCMeta):
         if type(x0) is OrderedDict or type(x0) is dict:
             x0 = np.array(list(x0.values()))
 
-        sol = solve_ivp(lambda t, x: self.odefunc(t, x, p), t_span, x0,
-                        t_eval=t_eval, rtol=rtol, atol=atol)
+        sol = solve_ivp(
+            lambda t, x: self.odefunc(t, x, p),
+            t_span,
+            x0,
+            t_eval=t_eval,
+            rtol=rtol,
+            atol=atol,
+        )
 
         # solve_ivp always return an array of shape(len(x0), len(t_eval))
         # so I have to squeeze the result if I want only the last row
@@ -147,21 +154,36 @@ class Model(metaclass=ABCMeta):
         # ? necessary
         return self.reactions(t, x, p)
 
-    def add_parameter(self, name="", value=None, vary=True,
-            lb=-np.inf, ub=np.inf, expr=None, brute_step=None) -> None:
+    def add_parameter(
+        self,
+        name="",
+        value=None,
+        vary=True,
+        lb=-np.inf,
+        ub=np.inf,
+        expr=None,
+        brute_step=None,
+    ) -> None:
         """Read the docs here:
         https://lmfit.github.io/lmfit-py/parameters.html#the-parameter-class
         """
         self.add_name(name)
-        self.parameters.add(name=name, value=value, vary=vary, min=lb, max=ub,
-            expr=expr, brute_step=brute_step)
+        self.parameters.add(
+            name=name,
+            value=value,
+            vary=vary,
+            min=lb,
+            max=ub,
+            expr=expr,
+            brute_step=brute_step,
+        )
         self._init_parameters[name] = value
 
     def add_constant(self, name="", value=None) -> None:
         self.add_name(name)
         self.constants[name] = value
 
-    def add_predictor(self, name='', value=[]) -> None:
+    def add_predictor(self, name="", value=[]) -> None:
         self.add_name(name)
         self.predictor = value
         self.predictor_name = name
@@ -180,9 +202,9 @@ class Model(metaclass=ABCMeta):
         p = self.parameters.copy()
         # if params is None:
         #     params = self.init_vary
-        for k, v in p.items(): # TODO maybe change v.vary to initvary flags
-            if v.vary: # values of dict observables is boolean
-                 v.value = ( p[k]* np.power(10, ( (smax - smin) * np.random.rand() + smin) ) )
+        for k, v in p.items():  # TODO maybe change v.vary to initvary flags
+            if v.vary:  # values of dict observables is boolean
+                v.value = p[k] * np.power(10, ((smax - smin) * np.random.rand() + smin))
         return p
 
     def add_name(self, name: str):
@@ -190,7 +212,7 @@ class Model(metaclass=ABCMeta):
         if self.check_name(name):
             self.variable_names.add(name)
         else:
-            raise Exception('%s is already define in the model' % name)
+            raise Exception("%s is already define in the model" % name)
 
     def check_name(self, name):
         return not name in self.variable_names

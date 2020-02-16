@@ -1,3 +1,3 @@
-from .reaction import Reaction
-from .species import Species
-from .sbml_model import SBMLModel
+from pyADAPT.bio.reaction import Reaction
+from pyADAPT.bio.species import Species
+from pyADAPT.bio.sbml_model import SBMLModel

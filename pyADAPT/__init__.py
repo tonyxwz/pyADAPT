@@ -3,9 +3,9 @@
 PyADAPT
 """
 
-from .dataset import DataSet
-from .model import Model
-from .adapt import ADAPT
+from pyADAPT.dataset import DataSet
+from pyADAPT.model import Model
+from pyADAPT.adapt import ADAPT
 
-# from .app.gui import GuiApp
-# from .app.cli import CliApp
+# from pyADAPT.app.gui import GuiApp
+# from pyADAPT.app.cli import CliApp

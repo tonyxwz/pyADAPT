@@ -4,8 +4,9 @@ from math import exp, pow, log, log10, log2
 from cached_property import cached_property
 
 # from bs4 import BeautifulSoup as bs
-from pyADAPT import Model
-from pyADAPT.bio import Reaction, Species
+from pyADAPT.model import Model
+from pyADAPT.bio.reaction import Reaction
+from pyADAPT.bio.species import Species
 
 
 class SBMLModel(Model):
@@ -28,6 +29,7 @@ class SBMLModel(Model):
 
         # stoichiometry matrix: row (effect, substrate), columns (cause, reaction)
         # TODO move predictor to ADAPT
+        # ! Maybe not considerting the definition of predictor
         self.add_predictor(name="t", value=time_range)
         self.context = {"log": log, "log10": log10, "log2": log2, "exp": exp}
         for c in self.model.compartments:
