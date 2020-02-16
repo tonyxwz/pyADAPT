@@ -1,22 +1,38 @@
+import os
+import re
+import sys
+from datetime import datetime
+
 import matplotlib.pyplot as plt
 import numpy as np
 
 from pyADAPT import ADAPT, DataSet, Model
 from toy_model import ToyModel
 
-
 if __name__ == "__main__":
     toy = ToyModel()
     # data = DataSet(raw_data_path=r"D:\Weizhou\ADAPT\AMF\models\toyModel\paperData.mat",
-    data = DataSet(raw_data_path="data/toyModel/toyData.mat",
-                data_specs_path='data/toyModel/toyData.yaml')
+    data = DataSet(
+        raw_data_path="data/toyModel/toyData.mat",
+        data_specs_path="data/toyModel/toyData.yaml",
+    )
     # print(isinstance(toy, Model))
     adapt = ADAPT(toy, data)
     adapt.set_options(n_iter=20, n_ts=100, smin=-2, smax=2, ss_time=1000, seed=124)
     adapt.run(n_core=4)
 
+    now = str(datetime.now())
+    now = re.sub(r":|\.", "-", now)
+    now = re.sub(r"\s", "_", now)
+    np.save(
+        os.path.join(os.path.dirname(__file__), "traj-" + now), adapt.trajectories,
+    )
+    np.save(os.path.join(os.path.dirname(__file__), "states-" + now), adapt.states)
+    sys.exit()
+
     n_traj = adapt.trajectories.shape[0]
     n_params = adapt.trajectories.shape[1]
+
     fig, axes = plt.subplots(ncols=5, nrows=4, figsize=(15, 10))
 
     for i in range(n_traj):
@@ -42,16 +58,16 @@ if __name__ == "__main__":
 
     fig3, axes3 = plt.subplots(ncols=2, nrows=2)
     for i in range(n_states):
-        ax = axes3[i//2, i%2]
+        ax = axes3[i // 2, i % 2]
         for l in range(n_plot):
             ax.plot(adapt.states[l, i, 1:])
-        ax.set_title('s'+str(i+1))
+        ax.set_title("s" + str(i + 1))
     fig3.tight_layout()
 
     fig4, axes3 = plt.subplots()
     for i in range(n_traj):
         axes3.plot(adapt.trajectories[i, 0, 1:])
-    axes3.set_title('k1')
+    axes3.set_title("k1")
     fig4.tight_layout()
 
     plt.show()
