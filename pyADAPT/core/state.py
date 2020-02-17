@@ -7,7 +7,8 @@ from cached_property import cached_property
 
 from pyADAPT.sampling import NormalDist
 
-__all__ = ['State']
+__all__ = ["State"]
+
 
 class State(list):
     """ species, x, implemented as list of NormalDist
@@ -20,8 +21,17 @@ class State(list):
     ]
     ```
     """
-    def __init__(self, name="", time=None, time_unit=None,
-            means=None, stds=None, unit=None, observable=False):
+
+    def __init__(
+        self,
+        name="",
+        time=None,
+        time_unit=None,
+        means=None,
+        stds=None,
+        unit=None,
+        observable=False,
+    ):
         super().__init__()
         self.name = name  # s1
         self.time = np.array(time)  # e.g. toymodel, t1 from dataset
@@ -39,14 +49,14 @@ class State(list):
         pp = PchipInterpolator(self.time, self.sampled_values)
         return pp
 
-    def interp_values(self, n_ts=100, method='pchip'):
+    def interp_values(self, n_ts=100, method="pchip"):
         tnew = np.linspace(self.time[0], self.time[-1], n_ts)
         values_interp = self.values_spline(tnew)
         return values_interp
 
     #  between iterations at all
     @cached_property
-    def stds_spline(self):
+    def variances_spline(self):
         """ interpolate standard deviation
         To be used to calculate the objective (error) function
         interpolate linearly on variance
@@ -55,9 +65,9 @@ class State(list):
         pp = PchipInterpolator(self.time, self.variances)
         return pp
 
-    def interp_stds(self, n_ts=100, method='pchip'):
+    def interp_stds(self, n_ts=100, method="pchip"):
         tnew = np.linspace(self.time[0], self.time[-1], n_ts)
-        variances_interp = self.stds_spline(tnew)
+        variances_interp = self.variances_spline(tnew)
         stds_interp = np.sqrt(variances_interp)
         return stds_interp
 
@@ -75,7 +85,7 @@ class State(list):
 
     def sample(self):
         """ random sample of all the data points as an array """
-        return np.asarray([ d.sample() for d in self ])
+        return np.asarray([d.sample() for d in self])
 
     def __repr__(self):
         repr_list = list(zip(self.time, self))
@@ -84,53 +94,74 @@ class State(list):
     @cached_property
     def plt(self):
         import matplotlib.pyplot as plt
-        plt.style.use('ggplot')
+
+        plt.style.use("ggplot")
         return plt
 
     def errorbar(self, axes=None):
         if axes is None:
             import matplotlib.pyplot as plt
-            plt.style.use('ggplot')
+
+            plt.style.use("ggplot")
             _, axes = plt.subplots()
         else:
             plt = None
 
         axes.set_title(self.name)
-        axes.set_xlabel(self.time_unit + '(s)')
+        axes.set_xlabel(self.time_unit + "(s)")
         axes.set_ylabel(self.unit)
-        axes.errorbar(self.time, [d.mean for d in self],
-                        yerr=[d.std for d in self],
-                        fmt='.b',
-                        uplims=True,
-                        lolims=True)
+        axes.errorbar(
+            self.time,
+            [d.mean for d in self],
+            yerr=[d.std for d in self],
+            fmt=".b",
+            uplims=True,
+            lolims=True,
+            elinewidth=1,
+        )
         if plt is not None:
             axes.bar(self.time, [d.mean for d in self])
-            plt.show()
+        return axes
 
     def plot_samples(self, axes=None):
         if axes is None:
             import matplotlib.pyplot as plt
-            plt.style.use('ggplot')
+
+            plt.style.use("ggplot")
             _, axes = plt.subplots()
         else:
             plt = None
+        axes.plot(self.time, self.sampled_values, ".g", alpha=0.5, markersize=5)
 
-        axes.plot(self.time, self.sampled_values, '.g', alpha=0.5, markersize=5)
-
-        if plt:
-            plt.show()
+        return axes
 
 
 if __name__ == "__main__":
     from pprint import pprint
-    time  =  [0,   3,   4,   7,  10]
-    means =  [6,   4,   2,   5,   3]
-    stds  =  [1, 0.5, 1.7, 1.2, 0.9]
+    import matplotlib.pyplot as plt
 
-    time_unit = 'day'
-    unit = 'mM/L'
+    fig, axes = plt.subplots()
 
-    s = State(name='Hepatic TG', time=time, means=means, stds=stds,
-              time_unit=time_unit, unit=unit)
+    time = [0, 3, 4, 7, 10]
+    means = [6, 4, 2, 5, 3]
+    stds = [1, 0.5, 1.7, 1.2, 0.9]
+
+    time_unit = "day"
+    unit = "mM/L"
+
+    s = State(
+        name="Hepatic TG",
+        time=time,
+        means=means,
+        stds=stds,
+        time_unit=time_unit,
+        unit=unit,
+    )
     pprint(s)
-    s.errorbar()
+
+    s.errorbar(axes=axes)
+    _ = s.interp_values()
+    s.plot_samples(axes=axes)
+
+    plt.show()
+
