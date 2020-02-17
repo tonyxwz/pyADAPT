@@ -27,6 +27,7 @@ REQUIRED = [
     "sympy",
     "matplotlib",
     "pandas",
+    "xarray",
     "python-libsbml",
     "networkx",
     "lmfit",

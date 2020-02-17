@@ -7,7 +7,7 @@ verify_ssl = true
 
 [packages]
 pyadapt = {editable = true,path = "."}
-pyqt5 = "==5.14"
+xarray = "*"
 
 [requires]
 python_version = "3.7"
