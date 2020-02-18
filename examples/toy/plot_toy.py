@@ -17,7 +17,6 @@ n_params = traj.shape[1]
 n_plot = states.shape[0]
 n_states = states.shape[1]
 
-
 fig3, axes3 = plt.subplots(ncols=2, nrows=2)
 for i in range(n_states):
     ax = axes3[i // 2, i % 2]

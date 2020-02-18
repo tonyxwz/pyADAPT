@@ -5,5 +5,7 @@
 3. Constant
 4. Predictor
 5. Reaction (Flux)
+
+# TODO to remove core module, every thing in one dir
 """
 from pyADAPT.core.state import State

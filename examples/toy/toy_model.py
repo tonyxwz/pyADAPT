@@ -78,4 +78,3 @@ class ToyModel(Model):
     def inputs(self, t):
         # let's skip `t` for the ToyModel
         return {"u1": 1, "u2": 1}
-

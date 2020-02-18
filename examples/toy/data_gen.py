@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 from case1 import toyODE, x0
 from scipy.io import loadmat, savemat
 
-
 # noise:
 # np.random.randn(size)
 
