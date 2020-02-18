@@ -52,6 +52,7 @@ def Main():
     parser.add_argument("--version", action="version", version="%(prog)s 1.0")
 
     args = parser.parse_args()
+    print(args)
 
     if (args.job != "gui"):
         if ((args.parameters is None) or (args.sbml is None)):
@@ -61,18 +62,15 @@ def Main():
             )
             parser.print_help()
             sys.exit()
+        # pass argument to the analysis or convert routine
+        elif args.job == "convert":
+            print("converting")
+        elif args.job == "analysis":
+            print("analyzing")
+        else:
+            raise Exception(f"error: pyADAPT: unknown task {args.job}")
     else:
-        # gui will simply prepare the paremters for minimize or convert
         print("start gui")
-    if args.job == "convert":
-        print("converting")
-    elif args.job == "analysis":
-        print("analyzing")
-    else:
-        raise Exception(f"error: pyADAPT: unknown task {args.job}")
-    # prepare arguments and call optimize here
-    print(args)
-    # pass argument to the analysis or convert routine
 
 
 if __name__ == "__main__":
