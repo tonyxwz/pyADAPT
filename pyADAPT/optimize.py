@@ -1,6 +1,9 @@
-""" # optimize module just runs ADAPT [^1]
+"""
+optimize module just runs ADAPT [^1]
+===============================
 
-## Motivation
+Motivation
+----------
 
 Our system of interest is composed of both the information from metabolic
 network and the gene and protein networks. Although metabolic networks are well
@@ -18,7 +21,8 @@ various attempt of implementation gives a clear problem solving step of the
 algorithm. The paper is ambiguous and the MATLAB® implementations are only
 tailored for the authors' own need. I hope this project can change this mess.
 
-## What do we have?
+What do we have?
+----------------
 
 1. experimental data from a true system
 2. kinetic information of the metabolic network (incomplete and possibly flawed)
@@ -26,7 +30,8 @@ tailored for the authors' own need. I hope this project can change this mess.
 We would like to use the time dependent parameter to compensate the possible
 errors in our model.
 
-## Procedure
+Procedure
+---------
 
 Foundamentally, this is a minimization problem, but separated into small time
 steps. The first thing we need to consider is still to define the objective
@@ -71,23 +76,24 @@ class Optimizer(object):
         self.model = model
         self.dataset = dataset
 
+    def run(self):
+        pass
+
     def report(self):
         pass
 
+    def find_init_guesses(self):
+        """ Find the initial guess of the parameters at the start of each iteration.
+        Problem statement: the data need to be randomized at time 0. we would like to find a set of parameters that will lead to a steady states of the randomized states at t0.
+        """
+
 
 #%% define ADAPT outline function
-def optimize():
+def optimize(model, dataset):
     """ the main optimization (ADAPT) procedure
     """
     # 1. randomize
     # 2.
-
-
-def fit_timestep():
-    """ fit the model to the data at time step t.
-    """
-
-    pass
 
 
 #%% TODO follow the naming convention in lmfit
