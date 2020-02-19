@@ -21,7 +21,6 @@ class State(list):
     ]
     ```
     """
-
     def __init__(
         self,
         name="",
@@ -46,6 +45,7 @@ class State(list):
     def values_spline(self):
         """ interpolate the values """
         self.sampled_values = self.sample()
+        self.sampled_values[0] = self[0].mean
         pp = PchipInterpolator(self.time, self.sampled_values)
         return pp
 
@@ -81,7 +81,7 @@ class State(list):
 
     @cached_property
     def variances(self):
-        return self.stds ** 2
+        return self.stds**2
 
     def sample(self):
         """ random sample of all the data points as an array """
@@ -111,9 +111,9 @@ class State(list):
         axes.set_xlabel(self.time_unit + "(s)")
         axes.set_ylabel(self.unit)
         axes.errorbar(
-            self.time,
-            [d.mean for d in self],
-            yerr=[d.std for d in self],
+            self.time[1:],
+            [d.mean for d in self[1:]],
+            yerr=[d.std for d in self[1:]],
             fmt=".b",
             uplims=True,
             lolims=True,
@@ -131,7 +131,11 @@ class State(list):
             _, axes = plt.subplots()
         else:
             plt = None
-        axes.plot(self.time, self.sampled_values, ".g", alpha=0.5, markersize=5)
+        axes.plot(self.time,
+                  self.sampled_values,
+                  ".g",
+                  alpha=0.5,
+                  markersize=5)
 
         return axes
 
@@ -164,4 +168,3 @@ if __name__ == "__main__":
     s.plot_samples(axes=axes)
 
     plt.show()
-
