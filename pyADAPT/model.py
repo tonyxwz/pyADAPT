@@ -25,6 +25,7 @@ from lmfit import Parameters, minimize, Parameter
 
 from pyADAPT.io import read_data_specs
 
+
 # TODO consider rename to BaseModel
 class Model(metaclass=ABCMeta):
     """Abstract class for constructing ADAPT models
@@ -38,20 +39,17 @@ class Model(metaclass=ABCMeta):
     3. Define model input function.
     4. Define reactions function.
     """
-
     def __new__(cls, *args, **kwargs):
         # to use `super` in `__new__` method: issubclass(cls, Model) is True
         # super() is (object or type) args and kwargs should be handle in this method
         instance = super().__new__(cls)  # , *args, **kwargs)  # model instance
         instance.name = "Base Model"
-        instance.notes = " ".join(
-            [
-                "This model should not be instantiated for it only",
-                "serves as the base class of other models, please refer to the",
-                "docstring about how to extend this class and define your own",
-                "model.",
-            ]
-        )
+        instance.notes = " ".join([
+            "This model should not be instantiated for it only",
+            "serves as the base class of other models, please refer to the",
+            "docstring about how to extend this class and define your own",
+            "model.",
+        ])
         instance.specs = {}  # TODO
         # time, named as convention from matlab version
         # TODO change predictor as a component of ADAPT
@@ -77,7 +75,7 @@ class Model(metaclass=ABCMeta):
         return instance
 
     def __init__(self):
-        """REMARK: The differences between a parameter that will not be fitted 
+        """REMARK: The differences between a parameter that will not be fitted
         " and a constant in the model:
         "
         " the parameters are still possible to be optimized by minimizer but the
@@ -120,7 +118,13 @@ class Model(metaclass=ABCMeta):
         """
         pass
 
-    def compute_states(self, t_span, x0, p=None, rtol=1e-7, atol=1e-7, t_eval=None):
+    def compute_states(self,
+                       t_span,
+                       x0,
+                       p=None,
+                       rtol=1e-7,
+                       atol=1e-7,
+                       t_eval=None):
         """ no `uvec`: given time `t`, input should be determined as well.
         " From here, the odefunc is integrated to get the state variables.
         " Then state variables will be used to evaluate the reactions, and the
@@ -155,14 +159,14 @@ class Model(metaclass=ABCMeta):
         return self.reactions(t, x, p)
 
     def add_parameter(
-        self,
-        name="",
-        value=None,
-        vary=True,
-        lb=-np.inf,
-        ub=np.inf,
-        expr=None,
-        brute_step=None,
+            self,
+            name="",
+            value=None,
+            vary=True,
+            lb=-np.inf,
+            ub=np.inf,
+            expr=None,
+            brute_step=None,
     ) -> None:
         """Read the docs here:
         https://lmfit.github.io/lmfit-py/parameters.html#the-parameter-class
@@ -196,7 +200,7 @@ class Model(metaclass=ABCMeta):
     def randomize_params(self, smin, smax, params=None):
         """using the formula in van Beek's thesis and matlab function in:
         `AMF.Model.randomizeParameters`
-        
+
         smin, smax
         """
         p = self.parameters.copy()
@@ -204,7 +208,8 @@ class Model(metaclass=ABCMeta):
         #     params = self.init_vary
         for k, v in p.items():  # TODO maybe change v.vary to initvary flags
             if v.vary:  # values of dict observables is boolean
-                v.value = p[k] * np.power(10, ((smax - smin) * np.random.rand() + smin))
+                v.value = p[k] * np.power(10, (
+                    (smax - smin) * np.random.rand() + smin))
         return p
 
     def add_name(self, name: str):
