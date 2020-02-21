@@ -3,7 +3,6 @@ import numpy as np
 from math import exp, pow, log, log10, log2
 from cached_property import cached_property
 
-# from bs4 import BeautifulSoup as bs
 from pyADAPT.basemodel import BaseModel
 from pyADAPT.bio.reaction import Reaction
 from pyADAPT.bio.species import Species
