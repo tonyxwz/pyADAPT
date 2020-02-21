@@ -53,7 +53,6 @@ certain call signature and return value.
 from this lame paper.
 """
 
-#%%
 import datetime
 import multiprocessing as mp  # consider dask
 import os
@@ -75,6 +74,7 @@ class Optimizer(object):
     def __init__(self, model, dataset):
         self.model = model
         self.dataset = dataset
+        self.lamda = 1  # weight of the regularization
 
     def run(self):
         pass
@@ -85,10 +85,11 @@ class Optimizer(object):
     def find_init_guesses(self):
         """ Find the initial guess of the parameters at the start of each iteration.
         Problem statement: the data need to be randomized at time 0. we would like to find a set of parameters that will lead to a steady states of the randomized states at t0.
+
+        # TODO solve problem above
         """
 
 
-#%% define ADAPT outline function
 def optimize(model, dataset):
     """ the main optimization (ADAPT) procedure
     """
@@ -96,7 +97,7 @@ def optimize(model, dataset):
     # 2.
 
 
-#%% TODO follow the naming convention in lmfit
+# TODO move to Optimizer
 def objective_function(params, model: Model, x_begin, d_end, time_span, R, L):
     """Objective function
 
@@ -129,7 +130,7 @@ def objective_function(params, model: Model, x_begin, d_end, time_span, R, L):
     x_end = states[:, -1]
     # select those observable/measurable states to compare with the data
     ox_end = x_end[model.state_musk]
-
+    # TODO use pandas for array musking
     s = d_end[model.state_musk, 0]
     v = d_end[model.state_musk, 1]
 
@@ -146,11 +147,14 @@ def objective_function(params, model: Model, x_begin, d_end, time_span, R, L):
     return residual
 
 
-# %%
 def reg_example(p=None, ):
     # TODO find literatures about regularization, to replace eq3.5
     pass
 
 
 def steady_states(model, s):
+    pass
+
+
+if __name__ == "__main__":
     pass
