@@ -4,10 +4,15 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+jupyterlab = "*"
+pylint = "*"
+rope = "*"
+pyqt5 = "*"
+yapf = "*"
+pyadapt = {editable = true,path = "."}
 
 [packages]
 pyadapt = {editable = true,path = "."}
-xarray = "*"
 
 [requires]
-python_version = "3.7"
+python_version = "3"
