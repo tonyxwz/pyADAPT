@@ -1,14 +1,13 @@
 import unittest
 import numpy as np
-from pyADAPT import Model, DataSet, ADAPT
-from examples import ToyModel
+from pyADAPT import BaseModel, DataSet, ADAPT
 
 
 class Test_ADAPT(unittest.TestCase):
     def setUp(self):
         model = ToyModel()
         data = DataSet(raw_data_path='data/toyModel/toyData.npy',
-            data_specs_path='data/toyModel/toyData.yaml')
+                       data_specs_path='data/toyModel/toyData.yaml')
         self.app = ADAPT(model, data)
 
     def test_set_options(self):

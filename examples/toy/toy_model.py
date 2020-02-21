@@ -5,10 +5,10 @@ fit the model to the data using constant parameters
 
 import numpy as np
 
-from pyADAPT import Model
+from pyADAPT import BaseModel
 
 
-class ToyModel(Model):
+class ToyModel(BaseModel):
     def __init__(self):
         self.name = "Toy Model"
         self.description = "Toy Model as appeared in the 2013 paper by Natal van Riel"

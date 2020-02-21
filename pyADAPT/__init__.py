@@ -4,7 +4,7 @@ PyADAPT
 """
 
 from pyADAPT.dataset import DataSet
-from pyADAPT.model import Model
+from pyADAPT.basemodel import BaseModel
 from pyADAPT.adapt import ADAPT
 
 # from pyADAPT.app.gui import GuiApp

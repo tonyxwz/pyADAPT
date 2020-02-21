@@ -6,10 +6,9 @@ from lmfit import Parameters, minimize
 from scipy.integrate import OdeSolver, odeint, solve_ivp
 from scipy.optimize import least_squares
 from cached_property import cached_property
-from numba import jit, njit
 
 from pyADAPT.dataset import DataSet
-from pyADAPT.model import Model
+from pyADAPT.basemodel import BaseModel
 
 
 class ADAPTOptions(object):
@@ -22,8 +21,7 @@ class ADAPT(object):
     """ implementation of ADAPT algorithm
     Encapsulates all the methods required to perform ADAPT simulation
     """
-
-    def __init__(self, model: Model, dataset: DataSet):
+    def __init__(self, model: BaseModel, dataset: DataSet):
         """ Design paradigm: the model and dataset should not store any
         runtime data, ADAPT instance handles everything else
 
@@ -56,16 +54,16 @@ class ADAPT(object):
         self.time_points: list = []
         self.current_timestep = 0
         # *5 simulation results
-        self.states = np.zeros((1,))
-        self.trajectories = np.zeros((1,))  # 1st index being the iteration number
+        self.states = np.zeros((1, ))
+        self.trajectories = np.zeros(
+            (1, ))  # 1st index being the iteration number
         # FIXME min_history has no iteration dimension
         self.min_history: list = []
 
     @cached_property
     def delta_t(self):
-        return (self.model.predictor[-1] - self.model.predictor[0]) / self.options[
-            "n_ts"
-        ]
+        return (self.model.predictor[-1] -
+                self.model.predictor[0]) / self.options["n_ts"]
 
     def set_options(self, **kwargs):
         for k, v in kwargs.items():
@@ -82,7 +80,7 @@ class ADAPT(object):
                 self.model.predictor[0],
             ]
         else:
-            tspan = self.time_points[ts - 1 : ts + 1]  # ts-1 and ts
+            tspan = self.time_points[ts - 1:ts + 1]  # ts-1 and ts
         return tspan
 
     def randomize_data(self):
@@ -92,7 +90,8 @@ class ADAPT(object):
     def randomize_init_parameters(self, i_iter):
         """randomize the parameters at the beginning of a simulation
         """
-        p = self.model.randomize_params(self.options["smin"], self.options["smax"])
+        p = self.model.randomize_params(self.options["smin"],
+                                        self.options["smax"])
         self.trajectories[i_iter, :, 0] = np.array(list(p.values()))
         return p
 
@@ -105,16 +104,14 @@ class ADAPT(object):
 
         self.options["seed_list"] = np.arange(self.options["n_iter"])
 
-        self.time_points = np.linspace(
-            self.model.predictor[0], self.model.predictor[1], self.options["n_ts"]
-        )
+        self.time_points = np.linspace(self.model.predictor[0],
+                                       self.model.predictor[1],
+                                       self.options["n_ts"])
 
         self.trajectories = np.zeros(
-            (n_iter, len(self.model.parameters), self.options["n_ts"] + 1)
-        )
+            (n_iter, len(self.model.parameters), self.options["n_ts"] + 1))
         self.states = np.zeros(
-            (n_iter, len(self.model.states), self.options["n_ts"] + 1)
-        )
+            (n_iter, len(self.model.states), self.options["n_ts"] + 1))
 
         # PARALLEL
         if n_core > 1:
@@ -150,7 +147,8 @@ class ADAPT(object):
 
             min_res = self.fit_timestep(params, x0, d, i_iter, i_tstep)
             params = min_res.params
-            self.trajectories[i_iter, :, i_tstep + 1] = np.array(list(params.values()))
+            self.trajectories[i_iter, :, i_tstep + 1] = np.array(
+                list(params.values()))
         print(current_process().name, "- iteration:", i_iter)
         if isparallel:
             return self.trajectories[i_iter, :, :], self.states[i_iter, :, :]
@@ -163,12 +161,14 @@ class ADAPT(object):
         # call objective function in minimizer here:
         t_span = self.get_tspan(i_tstep)
 
-        minimization_result = minimize(
-            self.objective_func, params, args=[x0, d, t_span, i_iter, i_tstep]
-        )
+        minimization_result = minimize(self.objective_func,
+                                       params,
+                                       args=[x0, d, t_span, i_iter, i_tstep])
         # FIXME model should be static in this project, also i_iter, i_tstep
         if not minimization_result.success:
-            print(f"unsuccessful minimization, iter: {i_iter}, t_step: {i_tstep}")
+            print(
+                f"unsuccessful minimization, iter: {i_iter}, t_step: {i_tstep}"
+            )
         return minimization_result
 
     def objective_func(self, params, x0, d, t_span, i_iter, i_tstep):
@@ -185,17 +185,16 @@ class ADAPT(object):
         self.states[i_iter, :, i_tstep + 1] = states
         # select observables
         observable_states = states[self.model.state_musk]
-        observable_states_values = d[
-            self.model.state_musk, 0
-        ]  # observable states from data (value)
-        observable_states_stds = d[
-            self.model.state_musk, 1
-        ]  # observable states from data (std)
+        observable_states_values = d[self.model.state_musk,
+                                     0]  # observable states from data (value)
+        observable_states_stds = d[self.model.state_musk,
+                                   1]  # observable states from data (std)
 
         fluxes = self.model.compute_reactions(t_span[-1], states, params)
         # FIXME fluxes are not computed
         # of = f[self.model.ofi]
-        errors = (observable_states - observable_states_values) / observable_states_stds
+        errors = (observable_states -
+                  observable_states_values) / observable_states_stds
         reg = self.tiemann_regularization(params, i_iter, i_tstep)
         errors = np.concatenate([errors, reg])
         return errors
@@ -210,9 +209,8 @@ class ADAPT(object):
         """
         p_init = self.trajectories[i_iter, :, 0]
         p_previous = self.trajectories[i_iter, :, i_tstep]
-        penalty = (
-            self.options["lambda"] * ((p - p_previous) / self.delta_t / p_init) ** 2
-        )
+        penalty = (self.options["lambda"] *
+                   ((p - p_previous) / self.delta_t / p_init)**2)
         return penalty
 
     def plot(self, *args, **kwargs):
