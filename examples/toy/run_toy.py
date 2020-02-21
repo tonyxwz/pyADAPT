@@ -6,7 +6,7 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pyADAPT import ADAPT, DataSet, Model
+from pyADAPT import ADAPT, DataSet
 from toy_model import ToyModel
 
 if __name__ == "__main__":
@@ -18,16 +18,23 @@ if __name__ == "__main__":
     )
     # print(isinstance(toy, Model))
     adapt = ADAPT(toy, data)
-    adapt.set_options(n_iter=20, n_ts=100, smin=-2, smax=2, ss_time=1000, seed=124)
+    adapt.set_options(n_iter=20,
+                      n_ts=100,
+                      smin=-2,
+                      smax=2,
+                      ss_time=1000,
+                      seed=124)
     adapt.run(n_core=4)
 
     now = str(datetime.now())
     now = re.sub(r":|\.", "-", now)
     now = re.sub(r"\s", "_", now)
     np.save(
-        os.path.join(os.path.dirname(__file__), "traj-" + now), adapt.trajectories,
+        os.path.join(os.path.dirname(__file__), "traj-" + now),
+        adapt.trajectories,
     )
-    np.save(os.path.join(os.path.dirname(__file__), "states-" + now), adapt.states)
+    np.save(os.path.join(os.path.dirname(__file__), "states-" + now),
+            adapt.states)
     sys.exit()
 
     n_traj = adapt.trajectories.shape[0]

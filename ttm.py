@@ -5,10 +5,10 @@ This model is created with the intention to provide an easier tutorial model oth
 
 import numpy as np
 import cobra
-from pyADAPT import Model
+from pyADAPT import BaseModel
 
 
-class TonysToyModel(Model):
+class TonysToyModel(BaseModel):
     """ 
     # Tony's Toy Model
     A kinetic model of Trehalose biosynthesis in Saccharomyces Cerevisiae
@@ -18,7 +18,6 @@ class TonysToyModel(Model):
     # References
     https://www.ncbi.nlm.nih.gov/pubmed/21943906
     """
-
     def __init__(self):
         """substrates:
         1. GLC: cellular glucose
@@ -44,10 +43,9 @@ class TonysToyModel(Model):
         self.name = 'Tony\'s toy model'
         self.description = self.__doc__
         self.add_predictor(name="time", value=[0, 10])
-        
+
         #
         super().__init__()
-
 
     def reactions(self, t, x, p):
         """
@@ -70,19 +68,16 @@ class TonysToyModel(Model):
         UDP = x['UDP']
         UDG = x['UDG']
         PPi = x['PPi']
-        Pi  = x['Pi']
+        Pi = x['Pi']
         T6P = x['T6P']
         TRH = x['TRH']
-        H1  = x['H1']
+        H1 = x['H1']
         ATP = x['ATP']
         ADP = x['ADP']
         H2O = x['H2O']
 
         Vcell = 1  # volume of the cell
 
-        
-
-        
         v_hexokinase = V_max_hexokinase * d
 
     def input(self, t):

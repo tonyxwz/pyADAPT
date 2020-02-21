@@ -3,18 +3,16 @@ import numpy as np
 from math import exp, pow, log, log10, log2
 from cached_property import cached_property
 
-# from bs4 import BeautifulSoup as bs
-from pyADAPT.model import Model
+from pyADAPT.basemodel import BaseModel
 from pyADAPT.bio.reaction import Reaction
 from pyADAPT.bio.species import Species
 
 
-class SBMLModel(Model):
+class SBMLModel(BaseModel):
     """The main purpose of this class is to support the yeast trehalose model from
     Smallbone et al. For other Model of different structure, some further extending
     might be needed.
     """
-
     def __init__(self, sbml_path, time_range=[]):
         self.sbml: libsbml.SBMLDocument = libsbml.readSBML(sbml_path)
         self.model: libsbml.Model = self.sbml.getModel()
@@ -47,7 +45,8 @@ class SBMLModel(Model):
 
     @cached_property
     def stoich_matrix(self):
-        stoich_matrix = np.zeros((len(self.model.species), len(self.model.reactions)))
+        stoich_matrix = np.zeros(
+            (len(self.model.species), len(self.model.reactions)))
         for r in self.model.reactions:
             # ignore those boundary species
             r_index = self.getReactionIndex(r)

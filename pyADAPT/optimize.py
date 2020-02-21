@@ -66,7 +66,7 @@ from scipy.optimize import least_squares, leastsq
 
 # ? tentative, as model and data set should be pass as arguments to the function in this module, these will only be used as type hint
 from pyADAPT.dataset import DataSet
-from pyADAPT.model import Model
+from pyADAPT.basemodel import BaseModel
 
 
 class Optimizer(object):
@@ -98,7 +98,8 @@ def optimize(model, dataset):
 
 
 # TODO move to Optimizer
-def objective_function(params, model: Model, x_begin, d_end, time_span, R, L):
+def objective_function(params, model: BaseModel, x_begin, d_end, time_span, R,
+                       L):
     """Objective function
 
     The function that is called by the minimizers. In the case of ADAPT, the

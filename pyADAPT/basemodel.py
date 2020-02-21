@@ -26,8 +26,7 @@ from lmfit import Parameters, minimize, Parameter
 from pyADAPT.io import read_data_specs
 
 
-# TODO consider rename to BaseModel
-class Model(metaclass=ABCMeta):
+class BaseModel(metaclass=ABCMeta):
     """Abstract class for constructing ADAPT models
 
     One should inherit from this class and extend the constructor method and the
