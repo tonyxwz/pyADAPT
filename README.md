@@ -62,4 +62,4 @@ and showing result is not good enough as a master thesis.
 ### What should be included?
 
 So far, the project has been very "programming" focus, such as writing python
-package for `pyADAPT`. The package doesn't give the correct results yet.
+package for `pyADAPT`. The package doesn't give the correct results yet. 

@@ -123,6 +123,7 @@ class Species(object):
 
 
 class Parameter(LMFIT_Parameter):
+    # TODO define parameter
     pass
 
 
