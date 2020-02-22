@@ -98,7 +98,7 @@ class BaseModel(metaclass=ABCMeta):
 
     # @staticmethod
     @abstractmethod
-    def reactions(self, t, x, p):
+    def fluxes(self, t, x, p):
         raise NotImplementedError
 
     # @abstractmethod
@@ -154,8 +154,8 @@ class BaseModel(metaclass=ABCMeta):
         return sol.y
 
     def compute_reactions(self, t, x, p):
-        # ? necessary
-        return self.reactions(t, x, p)
+        # ? necessary to be in consistent with the matlab api?
+        return self.fluxes(t, x, p)
 
     def add_parameter(
             self,
