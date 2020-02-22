@@ -1,3 +1,24 @@
+"""
+The parameters that could be potentially changed during a simulation might
+have two sources, the parameters in the model "model > listOfParameters"
+and the parameters under a reaction "reaction > kineticLaw > 
+listOfParameters".  
+
+this can be problematic if the same name is defined in many reactions such
+as "Vmax". In SBMl, the parameters have a scoop to operate. In pyADAPT,
+the fluxes of a reaction is calculated with a context.
+
+A proposed syntax for specifying the parent of the parameters
+when calling from the command line is:
+
+```sh
+python -m pyADAPT analysis -f trehalose.xml -p R:hxt/Vmax
+```
+
+Where `hxt` is the name of the reaction and `Vmax` is the parameter that
+the use want to "ADAPT"
+"""
+
 import libsbml
 import numpy as np
 from math import exp, pow, log, log10, log2
@@ -19,16 +40,14 @@ class SBMLModel(BaseModel):
         assert self.model is not None
         self.name = self.model.name
         self.notes = self.model.notes_string
-
+        # TODO, think I don't need the `sbml_reaction_list`, just convert em
         self.sbml_reaction_list = list(self.model.reactions)
-
+        # TODO also here
         self.sbml_species_list = list(self.model.species)
         # self.species_list = list()
 
-        # stoichiometry matrix: row (effect, substrate), columns (cause, reaction)
-        # TODO move predictor to ADAPT
-        # ! Maybe not considerting the definition of predictor
         self.add_predictor(name="t", value=time_range)
+
         self.context = {"log": log, "log10": log10, "log2": log2, "exp": exp}
         for c in self.model.compartments:
             self.context[c.id] = c.size
@@ -45,6 +64,10 @@ class SBMLModel(BaseModel):
 
     @cached_property
     def stoich_matrix(self):
+        """
+        stoichiometry matrix: row (effect or substrate)
+                              columns (cause or reaction)
+        """
         stoich_matrix = np.zeros(
             (len(self.model.species), len(self.model.reactions)))
         for r in self.model.reactions:
@@ -65,6 +88,7 @@ class SBMLModel(BaseModel):
     @cached_property
     def reaction_list(self):
         # convert libsbml.Reaction into pyADAPT.bio.Reaction, in a specific order
+        # TODO don't use this fancy cached property, I need to update the paramters in the reactions during the simulation, which means I need them all to be pyADAPT.bio.reaction.Reaction
         rl = list()
         for r in self.sbml_reaction_list:
             # r_index = self.reaction_list.index(r)
@@ -105,7 +129,7 @@ class SBMLModel(BaseModel):
         for ia in self.model.getListOfInitialAssignments():
             symbol = ia.symbol
             formula = libsbml.formulaToString(ia.math)
-            self.states[symbol] = eval(formula, globals(), self.context)
+            self.states[symbol] = eval(formula, {}, self.context)
 
     def rulesToLambda(self):
         """libSBML.AssignmentRule
@@ -113,6 +137,13 @@ class SBMLModel(BaseModel):
         in pyADAPT, libSBML::rule -> PyADAPT::Reactions
         """
         # TODO rules seems to be useless right now
+        pass
+
+    def get_unit(self, x):
+        """ forget about the units for now
+        they are only useful when i need to plot
+        """
+        pass
 
     def odefunc(self, t, x, p):
         """
@@ -122,20 +153,25 @@ class SBMLModel(BaseModel):
         and states concentrations. If states is calculated from self, the ode
         function can only return one result.
         """
-        v = self.reactions(t, x, p)
+        v = self.fluxes(t, x, p)
         dxdt = self.stoich_matrix.dot(v)
         return dxdt
 
-    def reactions(self, t, x, p):
+    def fluxes(self, t, x, p):
         # evaluate each reaction's flux(rate)
         self.updateContext(x)
-        return [r.eval(self.context) for r in self.reaction_list]
+        v = list()
+        for r in self.reaction_list:
+            # TODO if you want the parameters to be ADAPT, do it here
+            v.append(r.compute_flux(self.context))
+        return np.array(v)
 
     def updateContext(self, x):
         """ To use solve_ivp, odefunc must take the states as a list rather than
         dictionary. The code should guarantee that x is in the same order as species
         list.
         """
+        # TODO this should be "update species"
         assert len(x) == len(self.sbml_species_list)
         for i in range(len(self.sbml_species_list)):
             s = self.sbml_species_list[i].id
@@ -161,7 +197,7 @@ if __name__ == "__main__":
     # print('context:', smallbone.context)
     # x = np.random.rand(16) * 2
     # x = np.ones(16)
-    t_eval = np.linspace(0, 10, 50)
+    t_eval = np.linspace(0, 10, 1000)
     y = smallbone.compute_states([0, 10], x, t_eval=t_eval)
 
     import matplotlib.pyplot as plt
