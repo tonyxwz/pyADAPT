@@ -78,6 +78,27 @@ class BaseNode(object):
     def __isub__(self, other):
         self.value -= other
 
+    def __eq__(self, other):
+        return self.value == other
+
+    def __ne__(self, other):
+        return self.value != other
+
+    def __lt__(self, other):
+        return self.value < other
+
+    def __le__(self, other):
+        return self.value <= other
+
+    def __gt__(self, other):
+        return self.value > other
+
+    def __ge__(self, other):
+        return self.value >= other
+
+    def __str__(self):
+        return str((self.name, self.id, self.value))
+
 
 class Compartment(BaseNode):
     def __init__(self, comp: libsbml.Compartment):
@@ -128,3 +149,8 @@ if __name__ == "__main__":
         cell**4 == cell.value**4,
         4**cell == 4**cell.value,
     )
+
+    medium = Compartment(compartments.getElementBySId('medium'))
+    print(cell == medium, cell > medium, cell < medium, cell <= medium,
+          cell >= medium, cell != medium)
+    print(cell, medium)
