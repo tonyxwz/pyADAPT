@@ -23,10 +23,11 @@ import libsbml
 import numpy as np
 from math import exp, pow, log, log10, log2
 from cached_property import cached_property
+from collections import OrderedDict
 
 from pyADAPT.basemodel import BaseModel
+from pyADAPT.bio.wrappers import Species, Compartment
 from pyADAPT.bio.reaction import Reaction
-from pyADAPT.bio.species import Species
 
 
 class SBMLModel(BaseModel):
@@ -44,22 +45,32 @@ class SBMLModel(BaseModel):
         self.sbml_reaction_list = list(self.model.reactions)
         # TODO also here
         self.sbml_species_list = list(self.model.species)
-        # self.species_list = list()
-
-        self.add_predictor(name="t", value=time_range)
 
         self.context = {"log": log, "log10": log10, "log2": log2, "exp": exp}
-        for c in self.model.compartments:
-            self.context[c.id] = c.size
-        for p in self.model.parameters:
-            self.context[p.id] = p.value
+        # ! DO it
+        self.reactions = OrderedDict()
+        self.species = OrderedDict()
+        # compartment sizes are constant for sure
+        self.compartments = []
+        for c_ in self.model.compartments:
+            c = Compartment(c_)
+            self.compartments.append(c)
+            self.context[c.id] = c
+
+        # self.parameters = list()
+        for p_ in self.model.parameters:
+            self.context[p_.id] = p_.value
+
         for s in self.model.species:
             self.context[s.id] = s.initial_concentration
 
-        self.buildStates()
+        for s in self.sbml_species_list:
+            self.add_state(name=s.id, init=s.initial_concentration)
+        # self.buildStates()
         # self.context.update(self.states)
         self.initAssign()
 
+        self.add_predictor(name="t", value=time_range)
         super().__init__()
 
     @cached_property
@@ -184,7 +195,7 @@ class SBMLModel(BaseModel):
 if __name__ == "__main__":
     from pprint import pprint
 
-    smallbone = SBMLModel(r"data\trehalose\BIOMD0000000380_url.xml")
+    smallbone = SBMLModel("data/trehalose/BIOMD0000000380_url.xml")
     print(smallbone.stoich_matrix)
     x = list()
     for s in smallbone.model.getListOfSpecies():

@@ -19,7 +19,7 @@ class BaseNode(object):
         self.id = node.id
         self.meta_id = node.meta_id
         self.name = node.name
-        self.value: float
+        self.value: float = None
 
     def __add__(self, other):
         return self.value + other
@@ -96,7 +96,7 @@ class BaseNode(object):
     def __ge__(self, other):
         return self.value >= other
 
-    def __str__(self):
+    def __repr__(self):
         return str((self.name, self.id, self.value))
 
 

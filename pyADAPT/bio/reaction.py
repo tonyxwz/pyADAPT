@@ -1,18 +1,20 @@
+import math
+from copy import deepcopy
+
 import libsbml
 import numpy as np
-from pyADAPT.bio.wrappers import BaseNode
-from copy import deepcopy
-import math
+
+from pyADAPT.bio.wrappers import BaseNode, Compartment, Species
 
 
 class Reaction(BaseNode):
     def __init__(self, reaction: libsbml.Reaction):
         super().__init__(reaction)
-        self.reactants = reaction.getListOfReactants()
-        self.products = reaction.getListOfProducts()
+        self.reactants = list(reaction.getListOfReactants())
+        self.products = list(reaction.getListOfProducts())
         # inhibitors / activators
-        self.modifiers = reaction.getListOfModifiers()
-        self.reversible = reaction.getReversible()
+        self.modifiers = list(reaction.getListOfModifiers())
+        self.reversible: bool = reaction.getReversible()
 
         self.kl = reaction.getKineticLaw()
         self.unit = libsbml.UnitDefinition.printUnits(
@@ -23,6 +25,7 @@ class Reaction(BaseNode):
         self.context = dict()
         for p in self.kl.getListOfParameters():
             self.context[p.id] = p.value
+        # TODO: listofspecies in Reaction actually stores the reference
 
     def compute_flux(self, context={}):
         """
@@ -32,10 +35,10 @@ class Reaction(BaseNode):
             calculate the flux.
         :return: flux (Float)
         """
-        # evaluate the flux of Reaction given all the concentrations
-        context = deepcopy(context)
-        context.update(self.context)  # update the context
-        return eval(self.formula, {}, context)  # just leave `global` empty
+        # TODO find out is `deepcopy` necessary?
+        # context = deepcopy(context)
+        self.context.update(context)  # update the context
+        return eval(self.formula, {}, self.context)
 
     def get_ce(self):
         # ce: chemical equation
@@ -60,7 +63,7 @@ class Reaction(BaseNode):
 
 
 if __name__ == "__main__":
-    sbml = libsbml.readSBML(r"data\trehalose\BIOMD0000000380_url.xml")
+    sbml = libsbml.readSBML("data/trehalose/BIOMD0000000380_url.xml")
     model = sbml.getModel()
     context = dict()
     for c in model.getListOfCompartments():
