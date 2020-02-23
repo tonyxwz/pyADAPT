@@ -81,6 +81,7 @@ class BaseModel(metaclass=ABCMeta):
         " constant are not. This provides the flexibility to select which
         " parameters to fit.
         """
+        # The following placeholders are just to suppress linter complaints, delete after the project is finished
         self.name: str
         self.notes: str
         self.spec: dict

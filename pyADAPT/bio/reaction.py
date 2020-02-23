@@ -10,6 +10,7 @@ from pyADAPT.bio.wrappers import BaseNode, Compartment, Species
 class Reaction(BaseNode):
     def __init__(self, reaction: libsbml.Reaction):
         super().__init__(reaction)
+        # references, not actual species
         self.reactants = list(reaction.getListOfReactants())
         self.products = list(reaction.getListOfProducts())
         # inhibitors / activators
@@ -25,7 +26,6 @@ class Reaction(BaseNode):
         self.context = dict()
         for p in self.kl.getListOfParameters():
             self.context[p.id] = p.value
-        # TODO: listofspecies in Reaction actually stores the reference
 
     def compute_flux(self, context={}):
         """

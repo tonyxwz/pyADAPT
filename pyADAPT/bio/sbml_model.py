@@ -35,39 +35,48 @@ class SBMLModel(BaseModel):
     Smallbone et al. For other Model of different structure, some further extending
     might be needed.
     """
-    def __init__(self, sbml_path, time_range=[]):
+    def __init__(self, sbml_path, time_range=[], adapt_params=[]):
+        """Initialize a ADAPT model from a sbml file
+        
+        Parameters
+        ----------
+        sbml_path : String
+            The path to the sbml model 'xml' file
+        time_range : array(2), optional
+            array([t0, tf]), by default []
+        adapt_params : list of strings, optional
+            the parameter that need to be "adapted", for example,
+            ['glc_0', 'hxt/Vmax'], by default []
+        """
         self.sbml: libsbml.SBMLDocument = libsbml.readSBML(sbml_path)
-        self.model: libsbml.Model = self.sbml.getModel()
-        assert self.model is not None
-        self.name = self.model.name
-        self.notes = self.model.notes_string
-        # TODO, think I don't need the `sbml_reaction_list`, just convert em
-        self.sbml_reaction_list = list(self.model.reactions)
-        # TODO also here
-        self.sbml_species_list = list(self.model.species)
+        self.sbml_model: libsbml.Model = self.sbml.getModel()
+        assert self.sbml_model is not None
 
-        self.context = {"log": log, "log10": log10, "log2": log2, "exp": exp}
-        # ! DO it
+        # Start to parse the sbml into an ADAPT model
+        self.name = self.sbml_model.name
+        self.notes = self.sbml_model.notes_string
+        # math functions in the sbml formulas
+        self.math_functions = {
+            "log": log,
+            "log10": log10,
+            "log2": log2,
+            "exp": exp
+        }
+        # add reactions which are ordered and whose states are updatable
         self.reactions = OrderedDict()
+        for r in self.sbml_model.getListOfReactions():
+            self.reactions[r.id] = Reaction(r)
+
+        # species only stores the order and the initial concentrations
         self.species = OrderedDict()
-        # compartment sizes are constant for sure
-        self.compartments = []
-        for c_ in self.model.compartments:
-            c = Compartment(c_)
-            self.compartments.append(c)
-            self.context[c.id] = c
-
-        # self.parameters = list()
-        for p_ in self.model.parameters:
-            self.context[p_.id] = p_.value
-
-        for s in self.model.species:
-            self.context[s.id] = s.initial_concentration
-
-        for s in self.sbml_species_list:
+        for s in self.sbml_model.getListOfSpecies():
+            self.species[s.id] = Species(s)
             self.add_state(name=s.id, init=s.initial_concentration)
-        # self.buildStates()
-        # self.context.update(self.states)
+        print(self.stoich_matrix)
+        self.compartments = OrderedDict()
+        for c in self.sbml_model.compartments:
+            self.compartments[c.id] = Compartment(c)
+
         self.initAssign()
 
         self.add_predictor(name="t", value=time_range)
@@ -75,57 +84,44 @@ class SBMLModel(BaseModel):
 
     @cached_property
     def stoich_matrix(self):
+        return self.get_stoich_matrix()
+
+    def get_stoich_matrix(self):
         """
-        stoichiometry matrix: row (effect or substrate)
+        stoichiometry matrix: row (effect or substrate/species)
                               columns (cause or reaction)
         """
-        stoich_matrix = np.zeros(
-            (len(self.model.species), len(self.model.reactions)))
-        for r in self.model.reactions:
-            # ignore those boundary species
-            r_index = self.getReactionIndex(r)
-            for sr in r.reactants:  # species reference of reactants
-                s = self.model.getSpecies(sr.species)
-                if not s.boundary_condition:
-                    s_index = self.getSpeciesIndex(s)
-                    stoich_matrix[s_index, r_index] = -sr.stoichiometry
-            for sr in r.products:  # species reference of products
-                s = self.model.getSpecies(sr.species)
-                if not s.boundary_condition:
-                    s_index = self.getSpeciesIndex(s)
-                    stoich_matrix[s_index, r_index] = sr.stoichiometry
-        return stoich_matrix
+        mat = np.zeros((len(self.species), len(self.reactions)))
+        species_list = list(self.species)  # list of keys
+        for j, r in enumerate(self.reactions.values()):
+            for species_ref in r.reactants:
+                reactant = self.species[species_ref.species]
+                if not reactant.boundary_condition:
+                    i = species_list.index(species_ref.species)
+                    mat[i, j] = -species_ref.stoichiometry
+            for species_ref in r.products:
+                product = self.species[species_ref.species]
+                if not product.boundary_condition:
+                    i = species_list.index(species_ref.species)
+                    mat[i, j] = species_ref.stoichiometry
+        return mat
 
-    @cached_property
-    def reaction_list(self):
-        # convert libsbml.Reaction into pyADAPT.bio.Reaction, in a specific order
-        # TODO don't use this fancy cached property, I need to update the paramters in the reactions during the simulation, which means I need them all to be pyADAPT.bio.reaction.Reaction
-        rl = list()
-        for r in self.sbml_reaction_list:
-            # r_index = self.reaction_list.index(r)
-            rl.append(Reaction(r))
-        return rl
+    @property
+    def context(self):
+        return self.get_context()
 
-    @cached_property
-    def species_list(self):
-        sl = list()
-        for s in self.sbml_species_list:
-            sl.append(Species(s))
-        return sl
-
-    def buildStates(self):
-        # Following the convention of pyADAPT, the concentration of each species is a state
-        # TODO observables in ADAPT convention is not taken into consideration
-        #      maybe check whether a state exists in the dataset or not, then set
-        #      observable flags accordingly
-        for s in self.sbml_species_list:
-            self.add_state(name=s.id, init=s.initial_concentration)
-
-    def getReactionIndex(self, r):
-        return self.sbml_reaction_list.index(r)
-
-    def getSpeciesIndex(self, s):
-        return self.sbml_species_list.index(s)
+    def get_context(self):
+        """
+        TODO automatically update all the context
+        - compartment sizes
+        - species states concentrations
+        - parameters (glc_0)
+        - reaction parameters
+        """
+        context = {}
+        context.update(self.compartments)
+        context.update()
+        pass
 
     def initAssign(self):
         """libSBML.InitialAssignment
@@ -137,7 +133,8 @@ class SBMLModel(BaseModel):
         to an entity such as substrate (concentration).
         A initial assignment can assign to a constant (default property of a parameter)
         """
-        for ia in self.model.getListOfInitialAssignments():
+        # TODO throw this into __init__
+        for ia in self.sbml_model.getListOfInitialAssignments():
             symbol = ia.symbol
             formula = libsbml.formulaToString(ia.math)
             self.states[symbol] = eval(formula, {}, self.context)
@@ -146,6 +143,8 @@ class SBMLModel(BaseModel):
         """libSBML.AssignmentRule
         the definition of Rule in SBML is identical to the definition of reactions
         in pyADAPT, libSBML::rule -> PyADAPT::Reactions
+        glc_change = log10(glc / glc_0) at any time
+        self.rules['glc_change'] = compile('log10(glc/glc_0)', '<string>', 'eval')
         """
         # TODO rules seems to be useless right now
         pass
@@ -170,9 +169,9 @@ class SBMLModel(BaseModel):
 
     def fluxes(self, t, x, p):
         # evaluate each reaction's flux(rate)
-        self.updateContext(x)
+        # self.updateContext(x)
         v = list()
-        for r in self.reaction_list:
+        for r in self.reactions:
             # TODO if you want the parameters to be ADAPT, do it here
             v.append(r.compute_flux(self.context))
         return np.array(v)
@@ -183,12 +182,13 @@ class SBMLModel(BaseModel):
         list.
         """
         # TODO this should be "update species"
-        assert len(x) == len(self.sbml_species_list)
-        for i in range(len(self.sbml_species_list)):
-            s = self.sbml_species_list[i].id
+        assert len(x) == len(self.species)
+        for i in range(len(self.species)):
+            s = self.species[i].id
             self.context[s] = x[i]
 
     def inputs(self, t):
+        # Not supported
         return super().inputs(t)
 
 
@@ -198,23 +198,18 @@ if __name__ == "__main__":
     smallbone = SBMLModel("data/trehalose/BIOMD0000000380_url.xml")
     print(smallbone.stoich_matrix)
     x = list()
-    for s in smallbone.model.getListOfSpecies():
+    for s in smallbone.species:
         x.append(s.initial_concentration)
     x = np.array(x)
     x[15] = 0.1
 
-    # pprint(smallbone.reaction_list)
-
-    # print('context:', smallbone.context)
-    # x = np.random.rand(16) * 2
-    # x = np.ones(16)
-    t_eval = np.linspace(0, 10, 1000)
+    t_eval = np.linspace(0, 10, 100)
     y = smallbone.compute_states([0, 10], x, t_eval=t_eval)
 
     import matplotlib.pyplot as plt
 
     for i in range(y.shape[0]):
         plt.plot(t_eval, y[i, :], "--")
-    names = [x.name for x in smallbone.sbml_species_list]
+    names = [x.name for x in smallbone.species]
     plt.legend(names)
     plt.show()

@@ -11,7 +11,7 @@ create a shadow class for every node
 """
 
 import libsbml
-from lmfit import Parameter as LMFIT_Parameter
+from lmfit import Parameter as Lmfit_Parameter
 
 
 class BaseNode(object):
@@ -116,13 +116,14 @@ class Species(BaseNode):
         super().__init__(sp)
         self.value = sp.initial_concentration
         self.compartment = sp.compartment
+        self.boundary_condition = sp.getBoundaryCondition()
 
     @property
-    def conc(self):
+    def initial_concentration(self):
         return self.value
 
 
-class Parameter(LMFIT_Parameter):
+class Parameter(Lmfit_Parameter):
     # TODO define parameter
     pass
 
