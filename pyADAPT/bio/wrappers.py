@@ -111,7 +111,7 @@ class Compartment(BaseNode):
         return self.value
 
 
-class Species(object):
+class Species(BaseNode):
     def __init__(self, sp: libsbml.Species):
         super().__init__(sp)
         self.value = sp.initial_concentration
