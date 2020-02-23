@@ -147,8 +147,8 @@ class ADAPT(object):
 
             min_res = self.fit_timestep(params, x0, d, i_iter, i_tstep)
             params = min_res.params
-            self.trajectories[i_iter, :, i_tstep + 1] = np.array(
-                list(params.values()))
+            self.trajectories[i_iter, :,
+                              i_tstep + 1] = np.array(list(params.values()))
         print(current_process().name, "- iteration:", i_iter)
         if isparallel:
             return self.trajectories[i_iter, :, :], self.states[i_iter, :, :]

@@ -84,7 +84,7 @@ class BaseModel(metaclass=ABCMeta):
         # The following placeholders are just to suppress linter complaints, delete after the project is finished
         self.name: str
         self.notes: str
-        self.spec: dict
+        self.specs: dict
         self.predictor: list
         self.constants: OrderedDict
         self.parameters: Parameters
