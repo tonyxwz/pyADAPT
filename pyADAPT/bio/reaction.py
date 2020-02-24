@@ -1,5 +1,6 @@
 import math
 from copy import deepcopy
+import re
 
 import libsbml
 import numpy as np
@@ -19,13 +20,14 @@ class Reaction(BaseNode):
 
         self.kl = reaction.getKineticLaw()
         self.unit = libsbml.UnitDefinition.printUnits(
-            self.kl.getDerivedUnitDefinition())
-        self.formula = compile(self.kl.formula, "<string>", "eval")
-
-        # TODO context need to be updated during the simulation
-        self.context = dict()
-        for p in self.kl.getListOfParameters():
-            self.context[p.id] = p.value
+            self.kl.getDerivedUnitDefinition()
+        )
+        self.regex = re.compile(
+            "(" + "|".join([p.id for p in self.kl.getListOfParameters()]) + ")",
+            re.VERBOSE,
+        )
+        self.formula_no_compile = self.regex.sub(f"{self.id}_\\1", self.kl.formula)
+        self.formula = compile(self.formula_no_compile, "<string>", "eval")
 
     def compute_flux(self, context={}):
         """
@@ -35,17 +37,16 @@ class Reaction(BaseNode):
             calculate the flux.
         :return: flux (Float)
         """
-        # TODO find out is `deepcopy` necessary?
-        # context = deepcopy(context)
-        self.context.update(context)  # update the context
-        return eval(self.formula, {}, self.context)
+        return eval(self.formula, {}, context)
 
     def get_ce(self):
         # ce: chemical equation
         lhs = " + ".join(
-            [str(x.stoichiometry) + " " + x.species for x in self.reactants])
+            [str(x.stoichiometry) + " " + x.species for x in self.reactants]
+        )
         rhs = " + ".join(
-            [str(x.stoichiometry) + " " + x.species for x in self.products])
+            [str(x.stoichiometry) + " " + x.species for x in self.products]
+        )
 
         if self.reversible:
             arrow = " <=> "
@@ -74,4 +75,8 @@ if __name__ == "__main__":
         context[s.id] = s.initial_concentration
     for r_ in model.getListOfReactions():
         r = Reaction(r_)
-        print(r.name, ":", r, r.compute_flux(context))
+        print(r.name, ":", r)
+        print(r.id, ":", r.formula_no_compile)
+        for p in r.kl.getListOfParameters():
+            print((p.id, p.value), end=" ")
+        print("\n")
