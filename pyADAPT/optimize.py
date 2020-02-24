@@ -60,7 +60,6 @@ import sys
 
 import numpy as np
 import pandas as pd
-from lmfit import Parameter, minimize
 from scipy.integrate import solve_bvp, solve_ivp
 from scipy.optimize import least_squares, leastsq
 
@@ -71,6 +70,7 @@ from pyADAPT.basemodel import BaseModel
 
 class Optimizer(object):
     """optimizes an ADAPT model"""
+
     def __init__(self, model, dataset):
         self.model = model
         self.dataset = dataset
@@ -98,8 +98,7 @@ def optimize(model, dataset):
 
 
 # TODO move to Optimizer
-def objective_function(params, model: BaseModel, x_begin, d_end, time_span, R,
-                       L):
+def objective_function(params, model: BaseModel, x_begin, d_end, time_span, R, L):
     """Objective function
 
     The function that is called by the minimizers. In the case of ADAPT, the
@@ -148,7 +147,7 @@ def objective_function(params, model: BaseModel, x_begin, d_end, time_span, R,
     return residual
 
 
-def reg_example(p=None, ):
+def reg_example(p=None,):
     # TODO find literatures about regularization, to replace eq3.5
     pass
 
