@@ -11,6 +11,7 @@ yapf = "*"
 scikit-learn = "*"
 pyqt5 = "==5.12.3"
 pyqt5-tools = "==5.12.3.1.5"
+black = "==19.10b0"
 
 [packages]
 pyadapt = {editable = true,path = "."}
