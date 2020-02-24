@@ -58,10 +58,10 @@ class BaseNode(object):
         return other % self.value
 
     def __pow__(self, other):
-        return self.value**other
+        return self.value ** other
 
     def __rpow__(self, other):
-        return other**self.value
+        return other ** self.value
 
     def __neg__(self):
         return -self.value
@@ -129,11 +129,11 @@ class Parameter(Lmfit_Parameter):
 
 
 if __name__ == "__main__":
-    sbml = libsbml.readSBML('data/trehalose/BIOMD0000000380_url.xml')
+    sbml = libsbml.readSBML("data/trehalose/smallbone.xml")
     model = sbml.model
     compartments = model.getListOfCompartments()
     # print(compartments[0], compartments[1])
-    cell = Compartment(compartments.getElementBySId('cell'))
+    cell = Compartment(compartments.getElementBySId("cell"))
 
     print(
         cell + 0.5 == cell.value + 0.5,
@@ -148,11 +148,17 @@ if __name__ == "__main__":
         8.3 // cell == 8.3 // cell.value,
         cell % 4 == cell.value % 4,
         4 % cell == 4 % cell.value,
-        cell**4 == cell.value**4,
-        4**cell == 4**cell.value,
+        cell ** 4 == cell.value ** 4,
+        4 ** cell == 4 ** cell.value,
     )
 
-    medium = Compartment(compartments.getElementBySId('medium'))
-    print(cell == medium, cell > medium, cell < medium, cell <= medium,
-          cell >= medium, cell != medium)
+    medium = Compartment(compartments.getElementBySId("medium"))
+    print(
+        cell == medium,
+        cell > medium,
+        cell < medium,
+        cell <= medium,
+        cell >= medium,
+        cell != medium,
+    )
     print(cell, medium)

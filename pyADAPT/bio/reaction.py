@@ -64,7 +64,7 @@ class Reaction(BaseNode):
 
 
 if __name__ == "__main__":
-    sbml = libsbml.readSBML("data/trehalose/BIOMD0000000380_url.xml")
+    sbml = libsbml.readSBML("data/trehalose/smallbone.xml")
     model = sbml.getModel()
     context = dict()
     for c in model.getListOfCompartments():

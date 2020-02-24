@@ -72,5 +72,5 @@ class Converter(object):
 
 
 if __name__ == "__main__":
-    converter = Converter(r"data\trehalose\BIOMD0000000380_url.xml")
+    converter = Converter(r"data\trehalose\smallbone.xml")
     print(converter.convert())

@@ -4,7 +4,7 @@ from pyADAPT.convert import Converter
 
 class Test_Templates(unittest.TestCase):
     def setUp(self):
-        self.sbml_path = "data/trehalose/BIOMD0000000380_url.xml"
+        self.sbml_path = "data/trehalose/smallbone.xml"
         self.converter = Converter(self.sbml_path)
 
     def test_converted_model(self):
