@@ -26,8 +26,8 @@ class Reaction(BaseNode):
             "(" + "|".join([p.id for p in self.kl.getListOfParameters()]) + ")",
             re.VERBOSE,
         )
-        self.formula_no_compile = self.regex.sub(f"{self.id}_\\1", self.kl.formula)
-        self.formula = compile(self.formula_no_compile, "<string>", "eval")
+        self.text_formula = self.regex.sub(f"{self.id}_\\1", self.kl.formula)
+        self.formula = compile(self.text_formula, "<string>", "eval")
 
     def compute_flux(self, context={}):
         """
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     for r_ in model.getListOfReactions():
         r = Reaction(r_)
         print(r.name, ":", r)
-        print(r.id, ":", r.formula_no_compile)
+        print(r.id, ":", r.text_formula)
         for p in r.kl.getListOfParameters():
             print((p.id, p.value), end=" ")
         print("\n")

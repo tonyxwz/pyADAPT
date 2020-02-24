@@ -23,5 +23,4 @@ class TestRegex(unittest.TestCase):
         # output = {}
         smallbone = SBMLModel(xml)
         for k, r in smallbone.reactions.items():
-            self.assertEqual(test_formulas[k], r.uncompiled_formula)
-
+            self.assertEqual(test_formulas[k], r.text_formula)
