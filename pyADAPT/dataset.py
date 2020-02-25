@@ -14,7 +14,7 @@ import pickle
 
 import numpy as np
 
-from pyADAPT.core.state import State
+from pyADAPT.state import State
 from pyADAPT.io import read_data_raw, read_data_specs
 
 
@@ -28,23 +28,23 @@ class DataSet(list):
     yields new interpolant data. Model stores the interpolants as the
     trajectories.
     """
-    def __init__(self,
-                 raw_data_path="",
-                 data_specs_path="",
-                 raw_data={},
-                 data_specs={},
-                 name=""):
+
+    def __init__(
+        self, raw_data_path="", data_specs_path="", raw_data={}, data_specs={}, name=""
+    ):
         """
         raw_data: phenotypes organized into a dictionary
 
         data_info: instructions of the data, such as which time variable
             should be used for which state.
         """
-        self.data_specs = data_specs if data_specs else read_data_specs(
-            data_specs_path)
+        self.data_specs = data_specs if data_specs else read_data_specs(data_specs_path)
         self.name = name if name else self.data_specs["groups"][0]
-        self.raw_data = (raw_data[self.name] if raw_data else read_data_raw(
-            raw_data_path, group=self.name))
+        self.raw_data = (
+            raw_data[self.name]
+            if raw_data
+            else read_data_raw(raw_data_path, group=self.name)
+        )
 
         self.structure = {}
         self.ordered_names = []
@@ -71,9 +71,7 @@ class DataSet(list):
                 unit = v["unit"]
             except KeyError as e:
                 unit = "mM/L"
-                print(
-                    f"Warning: undefined {e.args[0]}, fallback to default ({unit})"
-                )
+                print(f"Warning: undefined {e.args[0]}, fallback to default ({unit})")
 
             s = State(
                 name=k,
@@ -120,32 +118,6 @@ class DataSet(list):
         if type(index) is str:
             index = self.ordered_names.index(index)
         return super().__getitem__(index)
-
-
-class DataSets(list):
-    """ `Datasets` is a list of `Dataset` """
-    def __init__(self,
-                 raw_data_path="",
-                 data_specs_path="",
-                 raw_data={},
-                 data_specs={}):
-        """
-        raw_data: phenotypes organized into a dictionary
-
-        data_info: instructions of the data, such as which time variable
-            should be used for which state.
-        """
-        self.data_specs = data_specs if data_specs else read_data_specs(
-            data_specs_path)
-        self.raw_data = raw_data if raw_data else read_data_raw(raw_data_path)
-
-        groups = self.data_specs["groups"]
-
-        for g in groups:
-            self.append(
-                DataSet(raw_data=self.raw_data,
-                        data_specs=self.data_specs,
-                        name=g))
 
 
 def plot_splines(D, N, n_ts=100, axes=None, seed=0):
@@ -201,12 +173,6 @@ if __name__ == "__main__":
     pprint(idp[:, :, 0])
     # all for stds
     pprint(idp[:, :, 1])
-
-    D2 = DataSets(
-        raw_data_path="data/clampModelFinal/DataFinal2.mat",
-        data_specs_path="data/clampModelFinal/clampData.json",
-    )
-    pprint([d.name for d in D2])
 
     n_interp = 100
     n_ts = 200
