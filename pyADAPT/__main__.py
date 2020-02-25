@@ -23,9 +23,9 @@ def Main():
 
     parser.add_argument(
         "job",
-        choices=["analyze", "convert", "gui"],
+        choices=["analyze", "convert", "new", "gui"],
         help="analyze/convert a model or start the GUI",
-    )
+    )  # TODO write a model cookiecutter
     parser.add_argument(
         "-f",
         "--sbml",
