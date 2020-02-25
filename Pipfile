@@ -15,6 +15,7 @@ spyder = "*"
 
 [packages]
 pyadapt = {editable = true,path = "."}
+tables = "*"
 
 [requires]
 python_version = "3"

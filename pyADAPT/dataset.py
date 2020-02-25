@@ -1,11 +1,15 @@
 """ Data set format specification
-ADAPT as a stochastic simulation method, depends heavily on the data set format. The following dataset is good enough for the toy model, but depends heavily on the MATLAB data file format.
+ADAPT as a stochastic simulation method, depends heavily on the data set format.
+The following dataset is good enough for the toy model, but depends heavily on
+the MATLAB data file format.
 
 Current, xarray/pandas and pickle seems promising
 
-The dataset provided to ADAPT procedure should always be a list of distributions. But the storing and exchanging format should be pandas pickle.
+The dataset provided to ADAPT procedure should always be a list of distributions.
+But the storing and exchanging format should be pandas pickle.
 
-This is not an urgent problem to solve, I should first try to use hard coded script to provide the data set structures.
+This is not an urgent problem to solve, I should first try to use hard coded
+script to provide the data set structures.
 
 TODO: routine `read_pandas` (read_data)
 """
@@ -103,9 +107,6 @@ class DataSet(list):
         ]
         ```
         """
-        # TODO 1. add different interp methods
-        #      2. take care of states using different time points, t1, t2
-        spline_map = {"Hermite": "PchipInterpolator"}
         inter_p = np.zeros((len(self), n_ts, 2))  # a stands for array
         # inter_p [0,:, 0] = np.ones(n_ts) * self
         # v = list(self.values())
