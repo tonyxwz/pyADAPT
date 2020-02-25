@@ -9,6 +9,8 @@ from pyADAPT.sampling import NormalDist
 
 __all__ = ["State"]
 
+spline_map = {"Hermite": PchipInterpolator, "Cubic": CubicHermiteSpline}
+
 
 class State(list):
     """ species, x, implemented as list of NormalDist
@@ -21,6 +23,7 @@ class State(list):
     ]
     ```
     """
+
     def __init__(
         self,
         name="",
@@ -81,7 +84,7 @@ class State(list):
 
     @cached_property
     def variances(self):
-        return self.stds**2
+        return self.stds ** 2
 
     def sample(self):
         """ random sample of all the data points as an array """
@@ -131,11 +134,7 @@ class State(list):
             _, axes = plt.subplots()
         else:
             plt = None
-        axes.plot(self.time,
-                  self.sampled_values,
-                  ".g",
-                  alpha=0.5,
-                  markersize=5)
+        axes.plot(self.time, self.sampled_values, ".g", alpha=0.5, markersize=5)
 
         return axes
 
