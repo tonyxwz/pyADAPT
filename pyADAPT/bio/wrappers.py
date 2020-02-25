@@ -1,9 +1,9 @@
 """the SBML components we need to consider in this project
 create a shadow class for every node
 
-    - Reaction
-    - Compartment
-    - Species
+    - Reaction: compute_flux(context)
+    - Compartment: cell=1, medium=1
+    - Species: 
     - Rules
     - UnitDefinition
     - Parameter
@@ -11,7 +11,6 @@ create a shadow class for every node
 """
 
 import libsbml
-from lmfit import Parameter as Lmfit_Parameter
 
 
 class BaseNode(object):
@@ -19,7 +18,7 @@ class BaseNode(object):
         self.id = node.id
         self.meta_id = node.meta_id
         self.name = node.name
-        self.value: float = None
+        self.value: float
 
     def __add__(self, other):
         return self.value + other
@@ -123,9 +122,29 @@ class Species(BaseNode):
         return self.value
 
 
-class Parameter(Lmfit_Parameter):
-    # TODO define parameter
-    pass
+class AssignmentRule(BaseNode):
+    def __init__(self, rule: libsbml.AssignmentRule):
+        super().__init__(rule)
+        self.variable = rule.getVariable()  # target variable
+        self.formula_string = libsbml.formulaToString(rule.math)
+        self.formula = compile(self.formula_string, "<string>", "eval")
+
+    def __repr__(self):
+        return f"pyADAPT AssginmentRule: {self.variable} = {self.formula_string}"
+
+    def get_value(self, context):
+        return eval(self.formula, {}, context)
+
+
+class SParameter(BaseNode):
+    def __init__(self, pnode: libsbml.Parameter):
+        """ 'S' for SBML
+        http://sbml.org/Software/libSBML/docs/python-api/classlibsbml_1_1_parameter.html
+        By default, a SBML parameter 
+        A wrapper over sbml parameters to provide the support for assignment rule
+        """
+        super().__init__(pnode)
+        self.units = pnode.units
 
 
 if __name__ == "__main__":
