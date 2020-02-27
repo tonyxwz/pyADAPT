@@ -12,10 +12,14 @@ scikit-learn = "*"
 black = "==19.10b0"
 pyqt5 = "*"
 spyder = "*"
+pysnooper = "*"
+vprof = "*"
+snakeviz = "*"
 
 [packages]
 pyadapt = {editable = true,path = "."}
 tables = "*"
+pydoe = "*"
 
 [requires]
-python_version = "3"
+python_version = "3.7"
