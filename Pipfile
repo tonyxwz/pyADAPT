@@ -20,6 +20,7 @@ snakeviz = "*"
 pyadapt = {editable = true,path = "."}
 tables = "*"
 pydoe = "*"
+py-spy = "*"
 
 [requires]
 python_version = "3.7"
