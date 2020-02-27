@@ -92,8 +92,8 @@ if __name__ == "__main__":
     noise = 0.2 * np.random.randn(2, n) * y
     data = noise + y
 
-    plt.plot(np.linspace(t0, tf, n), data.T[:, 0])
-    plt.plot(np.linspace(t0, tf, n), data.T[:, 1], "--")
+    plt.plot(np.linspace(t0, tf, n), data[0, :])
+    plt.plot(np.linspace(t0, tf, n), data[1, :], "--")
     plt.legend(lotka.states["name"])
     plt.title("True model output")
 
@@ -106,5 +106,7 @@ if __name__ == "__main__":
     plt.plot(np.linspace(t0, tf, n), y2[1, :], "--")
     plt.legend(wrong_lotka.states["name"])
     plt.title("Wrong model output")
-    dataset = DataSet()
+
+    # TODO apply adapt here
+    # dataset = DataSet()
     plt.show()

@@ -22,7 +22,7 @@
             "name": "Run Toy Model",
             "type": "python",
             "request": "launch",
-            "module": "run_toy"
+            "module": "pyADAPT.examples.toy"
         },
         {
             "name": "Python: Current File",
