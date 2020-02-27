@@ -1,8 +1,8 @@
 """
-Module `sbml_model`
+Module sbml_model
 ===================
 
-This module offers an ADAPT model that can be converted from a SBML model.
+This module offers an model that can be converted from a SBML document.
 
 The parameters that could be potentially changed during a simulation have two
 sources, the parameters in the model "model > listOfParameters"
@@ -27,15 +27,17 @@ Where `hxt` is the name of the reaction and `Vmax` is the parameter that
 the use want to "ADAPT"
 """
 
+from collections import OrderedDict
+from math import exp, log, log2, log10, pow
+
 import libsbml
 import numpy as np
-from math import exp, pow, log, log10, log2
+from asteval import Interpreter
 from cached_property import cached_property
-from collections import OrderedDict
 
 from pyADAPT.basemodel import BaseModel
-from pyADAPT.bio.wrappers import Species, Compartment
 from pyADAPT.bio.reaction import Reaction
+from pyADAPT.bio.wrappers import Compartment, Species
 
 
 class SBMLModel(BaseModel):
@@ -43,6 +45,7 @@ class SBMLModel(BaseModel):
     Smallbone et al. For other Model of different structure, some further extending
     might be needed.
     """
+
     def __init__(self, sbml_path, time_range=[], adapt_params=[]):
         """Initialize a ADAPT model from a sbml file
         
@@ -59,47 +62,55 @@ class SBMLModel(BaseModel):
         self.sbml: libsbml.SBMLDocument = libsbml.readSBML(sbml_path)
         self.sbml_model: libsbml.Model = self.sbml.getModel()
         assert self.sbml_model is not None
-
-        # Start to parse the sbml into an ADAPT model
         self.name = self.sbml_model.name
         self.notes = self.sbml_model.notes_string
 
         # math functions in the sbml formulas
-        self.math_functions = {
-            "log": log,
-            "log10": log10,
-            "log2": log2,
-            "exp": exp
-        }
-        # TODO add parameters (dummy)
-        # rules -> sbml.parameter
+        self.math_functions = {"log": log, "log10": log10, "log2": log2, "exp": exp}
+        # keep track of all the symbols
+        # make use the symbols table
+        self.interpreter = Interpreter(minimal=True, use_numpy=True)
+
+        # Parameter with expr, (ast)eval the rule-constrained parameters
         rules = self.sbml_model.getListOfRules()
+        for r in rules:
+            self
+
+        # parameter without rule -> constants
         for p in self.sbml_model.getListOfParameters():
             rule_tmp = rules.get(p.id)
             if rule_tmp is None:
                 # constant parameter
                 self.constants[p.id] = p.value
 
-        # ? consider use BaseModel.constants
-        # self.compartments = OrderedDict()
+        # compartments are also constant
+        self.compartments = OrderedDict()
         for c in self.sbml_model.compartments:
-            self.constants[c.id] = c.size
-            # self.compartments[c.id] = Compartment(c)
+            self.compartments[c.id] = Compartment(c)
 
-        # add reactions which are ordered and whose states are updatable
+        # add reactions as pyADAPT.bio.reaction.Reaction
         self.reactions = OrderedDict()
-        for r in self.sbml_model.getListOfReactions():
-            self.reactions[r.id] = Reaction(r)
+        for sbml_rxn in self.sbml_model.getListOfReactions():
+            r = Reaction(sbml_rxn)
+            self.reactions[r.id] = r
+            # move parameters from reaction to model scope, by add prefix
+            for param in r.kl.getListOfParameters():
+                param_name = "_".join([r.id, param.id])
+                self.add_parameter(
+                    name=param_name,
+                    value=param.value,
+                    vary=("/".join([r.id, param.id]) in adapt_params),
+                    user_data={"parent": r.id},
+                )
 
-        # initial_assignment -> species.initial_concentration
+        # libsbml.InitialAssignment -> pyADAPT.species.initial_concentration
         self.species = OrderedDict()  # remember the order
         ia_list = self.sbml_model.getListOfInitialAssignments()
         for s in self.sbml_model.getListOfSpecies():
             sp = Species(s)
             ia = ia_list.get(sp.id)
             if ia is not None:
-                formula = compile(libsbml.formulaToString(ia.math), "<string>",
-                                  "eval")
+                formula = compile(libsbml.formulaToString(ia.math), "<string>", "eval")
                 init_conc = eval(formula, {}, self.context)
             else:
                 init_conc = s.initial_concentration
@@ -108,12 +119,6 @@ class SBMLModel(BaseModel):
 
         self.add_predictor(name="t", value=time_range)
         super().__init__()
-
-    def add_species(self, s: libsbml.Species):
-        pass
-
-    def add_reaction(self, r: libsbml.Reaction):
-        pass
 
     @cached_property
     def stoich_matrix(self):
@@ -217,8 +222,9 @@ class SBMLModel(BaseModel):
 if __name__ == "__main__":
     from pprint import pprint
 
-    smallbone = SBMLModel("data/trehalose/BIOMD0000000380_url.xml")
-    print(smallbone.stoich_matrix)
+    smallbone = SBMLModel("data/trehalose/smallbone.xml")
+    pprint(smallbone.stoich_matrix)
+    pprint(smallbone.parameters)
     x = list()
     for s in smallbone.species.values():
         x.append(s.initial_concentration)
