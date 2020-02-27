@@ -130,7 +130,7 @@ class Optimizer(object):
             # params = self.find_init_guesses()
             parameter_trajectory.iloc[0] = self.parameters["init"]
             # ! 👇 is probably wrong because there's no unobservables
-            state_trajectory.iloc[0] = data[:, 0, 1]
+            state_trajectory.iloc[0] = data[:, 0, 0]
             for i_ts in range(1, n_ts):
                 print(f"time step: {i_ts}")
                 (
@@ -225,8 +225,6 @@ class Optimizer(object):
         interp_states = interp_data[:, 0]
         interp_stds = interp_data[:, 1]
 
-        # ? I think it only makes sense in fake data that the data interpolation
-        # ? can contain unmeasurable data. otherwise, the following should be used.
         # ? assertion is needed to check ox_end, s and v have the same dimension.
 
         # equation 3.4 [ADAPT 2013]
@@ -276,6 +274,12 @@ def steady_states(model, s):
 
 if __name__ == "__main__":
     from pyADAPT.examples.lotka import LotkaVolterra
-
-    model = LotkaVolterra()
-
+    from pyADAPT.examples.toy import ToyModel
+    from pyADAPT.dataset import DataSet
+    
+    model = ToyModel()
+    data = DataSet(
+        raw_data_path="data/toyModel/toyData.mat",
+        data_specs_path="data/toyModel/toyData.yaml",
+    )
+    ptraj, straj = optimize(model, data, "k1", n_iter=1, n_tstep=10)
