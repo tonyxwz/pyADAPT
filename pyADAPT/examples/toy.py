@@ -87,4 +87,4 @@ if __name__ == "__main__":
     # print("begin")
     # k = model.compute_states(0.2, [0, 2], d[:, 0, 0], new_param_names=["k1"])
     # print(k)
-    ptraj, straj = optimize(model, data, "k1", n_iter=1, n_tstep=10)
+    ptraj, straj = optimize(model, data, "k1", n_iter=10, n_tstep=100)

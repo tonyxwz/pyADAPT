@@ -132,7 +132,8 @@ class Optimizer(object):
             # ! 👇 is probably wrong because there's no unobservables
             state_trajectory.iloc[0] = data[:, 0, 0]
             for i_ts in range(1, n_ts):
-                print(f"time step: {i_ts}")
+                if (i_ts % 10) == 0:
+                    print(f"time step: {i_ts}")
                 (
                     parameter_trajectory.iloc[i_ts],
                     state_trajectory.iloc[i_ts],
@@ -276,7 +277,7 @@ if __name__ == "__main__":
     from pyADAPT.examples.lotka import LotkaVolterra
     from pyADAPT.examples.toy import ToyModel
     from pyADAPT.dataset import DataSet
-    
+
     model = ToyModel()
     data = DataSet(
         raw_data_path="data/toyModel/toyData.mat",
