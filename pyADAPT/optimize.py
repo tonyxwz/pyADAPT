@@ -96,7 +96,7 @@ class Optimizer(object):
         self.model = model
         self.dataset = dataset
         self.parameter_names = parameter_names
-        self.parameters: pd.DataFrame = self.model.parameters.loc[parameter_names]
+        self.parameters: pd.DataFrame = self.model.parameters.loc[list(parameter_names)]
         self.options = {  # TODO: a method to set options
             "method": "trf",
             "lambda": 1,
@@ -258,14 +258,18 @@ def optimize(model, dataset, *params, n_iter=10, n_tstep=100):
     model: a model instance of subclass of BaseModel
     dataset: dataset
     params: list of parameters to be optimized
+
+    Return
+    ------
+    (parameter trajectories, state trajectories)
     """
+
     optim = Optimizer(model, dataset, params)
     optim.run(n_iter=n_iter, n_ts=n_tstep)
     return optim.list_of_parameter_trajectories, optim.list_of_state_trajectories
 
 
-def reg_example(p=None,):
-    # TODO find literatures about regularization, to replace eq3.5
+def tiemanns_regularization(parameter_trajectory, states_trajectory, i_iter, i_tstep):
     pass
 
 
