@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-# from cobra.core import Species
-
 import numpy as np
 from scipy.interpolate import PchipInterpolator, CubicHermiteSpline
 from cached_property import cached_property
@@ -28,15 +26,15 @@ class State(list):
         self,
         name="",
         time=None,
-        time_unit=None,
+        time_unit="second",
         means=None,
         stds=None,
         unit=None,
         observable=False,
     ):
         super().__init__()
-        self.name = name  # s1
-        self.time = np.array(time)  # e.g. toymodel, t1 from dataset
+        self.name = name
+        self.time = np.array(time)
         self.time_unit = time_unit
         self.unit = unit
         self.sampled_values = None
@@ -44,11 +42,12 @@ class State(list):
         for m, s in zip(means, stds):
             self.append(NormalDist(m, s))
 
-    @property  # cannot be cached because sampling is different each time
+    @property
     def values_spline(self):
         """ interpolate the values """
         self.sampled_values = self.sample()
-        self.sampled_values[0] = self[0].mean
+        # remove this line if the first interpolation should be random
+        # self.sampled_values[0] = self[0].mean
         pp = PchipInterpolator(self.time, self.sampled_values)
         return pp
 
@@ -57,11 +56,11 @@ class State(list):
         values_interp = self.values_spline(tnew)
         return values_interp
 
-    #  between iterations at all
+    #  doesn't change between iterations at all
     @cached_property
     def variances_spline(self):
         """ interpolate standard deviation
-        To be used to calculate the objective (error) function
+        to calculate the objective (error) function
         interpolate linearly on variance
         """
         # variances = np.asarray([d.std for d in self]) ** 2

@@ -49,12 +49,27 @@ certain call signature and return value.
     and trehalose model meets such requirements. The first time step data is
     the steady state of the model simulated using the initial parameters.
 
+Program workflow
+----------------
+
+optimize
+    optim = new Optimizer(model, data, parameter_names)
+        optim.run(iteration_number)
+            for i in iteration_number:
+                for ts in range(n_ts):
+                    optim.fit_timestep()
+                        scipy:least_square()
+                            optim.objective_function
+                                optim.model.compute_states
+                                    scipy:solve_ivp()
+print & plotting
+
 [^1]: I am considering renaming ADAPT to Optimizer in order to be distant away
 from this lame paper.
 """
 
 import datetime
-import multiprocessing as mp  # consider dask
+import multiprocessing as mp
 import os
 import sys
 
@@ -63,88 +78,191 @@ import pandas as pd
 from scipy.integrate import solve_bvp, solve_ivp
 from scipy.optimize import least_squares, leastsq
 
-# ? tentative, as model and data set should be pass as arguments to the function in this module, these will only be used as type hint
 from pyADAPT.dataset import DataSet
 from pyADAPT.basemodel import BaseModel
+
+
+class ADAPTResult(object):
+    def __init__(self):
+        pass
 
 
 class Optimizer(object):
     """optimizes an ADAPT model"""
 
-    def __init__(self, model, dataset):
+    def __init__(self, model: BaseModel, dataset: DataSet, parameter_names: list):
+        # we are being naive by assuming the user will give the states
+        # in the model and the dataset in the same order.
         self.model = model
         self.dataset = dataset
-        self.lamda = 1  # weight of the regularization
+        self.parameter_names = parameter_names
+        self.parameters: pd.DataFrame = self.model.parameters.loc[parameter_names]
+        self.options = {  # TODO: a method to set options
+            "method": "trf",
+            "lambda": 1,
+            "odesolver": "RK45",
+            "regularization": "tiemann",
+            "interpolation": "Hermite",
+        }
 
-    def run(self):
-        pass
+    def run(self, begin_time=None, end_time=None, n_iter=5, n_ts=5):
+        if begin_time is None:
+            begin_time = self.dataset.begin_time
+        if end_time is None:
+            end_time = self.dataset.end_time
+        print(begin_time, end_time)
+        self.list_of_parameter_trajectories = list()
+        self.list_of_state_trajectories = list()
+        # endtime should be the last available time from dataset
+        self.time = np.linspace(begin_time, end_time, n_ts)
+        for i_iter in range(n_iter):
+            print(f"iteration: {i_iter}")
+            parameter_trajectory = pd.DataFrame(
+                data=np.zeros((n_ts, len(self.parameter_names))),
+                columns=self.parameter_names,
+            )
+            state_trajectory = pd.DataFrame(
+                data=np.zeros((n_ts, len(self.dataset))),
+                columns=self.dataset.get_state_names(),
+            )
 
-    def report(self):
-        pass
+            data = self.dataset.interpolate(n_ts=n_ts)
+            # params = self.find_init_guesses()
+            parameter_trajectory.iloc[0] = self.parameters["init"]
+            # ! 👇 is probably wrong because there's no unobservables
+            state_trajectory.iloc[0] = data[:, 0, 1]
+            for i_ts in range(1, n_ts):
+                print(f"time step: {i_ts}")
+                (
+                    parameter_trajectory.iloc[i_ts],
+                    state_trajectory.iloc[i_ts],
+                ) = self.fit_timestep(
+                    initial_guess=parameter_trajectory.iloc[i_ts - 1],
+                    begin_states=state_trajectory.iloc[i_ts - 1],
+                    interp_data=data[:, i_ts, :],
+                    i_iter=i_iter,
+                    i_ts=i_ts,
+                )
+
+            self.list_of_parameter_trajectories.append(parameter_trajectory)
+            self.list_of_state_trajectories.append(state_trajectory)
+
+    def lhs_init(self):
+        """ Latin hypercube sampling of initial values as described in P. van Beek's
+        master thesis, though not indicated in the code
+        """
+
+    def fit_timestep(self, initial_guess, begin_states, interp_data, i_iter, i_ts):
+        """call least_squares
+        access Optimizer options via `i_iter` and `i_ts` and `self`
+        """
+        time_span = self.time[i_ts - 1 : i_ts + 1]
+        bounds = (self.parameters["lb"], self.parameters["ub"])
+
+        lsq_result = least_squares(
+            self.objective_function,
+            initial_guess,
+            bounds=bounds,
+            method=self.options["method"],
+            kwargs={
+                "begin_states": begin_states,
+                "interp_data": interp_data,
+                "time_span": time_span,
+            },
+        )
+        new_state_traj = self.model.compute_states(
+            lsq_result.x, time_span, begin_states, new_param_names=self.parameter_names
+        )
+        return (lsq_result.x, new_state_traj[:, -1])
+
+    def objective_function(
+        self, params, begin_states=None, interp_data=None, time_span=None
+    ):
+        """ Objective function
+        
+            The function minimized by least squares method. For ADAPT, an objective
+            should:
+
+            1. `end_state` = compute the states at the end of the `timespan`, using the give `parameters`, `begin_states`. 
+            2. choose those `end_states` and `interp_states` which are "observable"
+            3. TODO calculate and choose observable fluxes
+            4. calculate residual
+            5. calculate regularization term
+            6. np.concatenate
+
+            Parameters
+            ----------
+            params
+                the parameters θ of the model, or x in scipy's term
+                it should be the length of the parameters to be varied
+            begin_states
+                the begin states of this time step (end of previous time step)
+            interp_data
+                shape(len(states), 2), states, stds
+                the interpolated experimental DATA at the end of the time span,
+                containing the states and corresponding standard deviations.
+            time_span
+                the time span to solve the ODE
+            R
+                callable, regularization function
+            parameter_names
+                list of strings, names of the parameters to optimize, other parameters
+                are set as fixed (constant) parameters
+            
+            Return
+            ------
+            np.ndarray: shape(len(states)+len(parameter panelty))
+        """
+
+        end_states = self.model.compute_states(
+            params, time_span, begin_states, self.parameter_names
+        )
+        end_states = end_states[:, -1]
+        # observable: choose those observable to compare with the data
+        end_states = end_states[self.model.states["observable"]]
+
+        # data doesn't contain unobservables, for sure
+        interp_states = interp_data[:, 0]
+        interp_stds = interp_data[:, 1]
+
+        # ? I think it only makes sense in fake data that the data interpolation
+        # ? can contain unmeasurable data. otherwise, the following should be used.
+        # ? assertion is needed to check ox_end, s and v have the same dimension.
+
+        # equation 3.4 [ADAPT 2013]
+        errors = (end_states - interp_states) / interp_stds
+        # reg_term = L * R()  # TODO add regularization and errors of fluxes
+        # residual = np.concatenate([errors, reg_term])
+        return errors
 
     def find_init_guesses(self):
         """ Find the initial guess of the parameters at the start of each iteration.
-        Problem statement: the data need to be randomized at time 0. we would like to find a set of parameters that will lead to a steady states of the randomized states at t0.
+        Problem statement: the data need to be randomized at time 0. we would like
+        to find a set of parameters that will lead to a steady states of the
+        randomized states at t0.
 
+        only do this once at the beginning of each iteration. afterwards, the
+        initial guesses are just the optimization result from previous timestep.
         # TODO solve problem above
         """
 
+    def steady_states(self):
+        """ the data interpolation is assumed to be in steady states"""
+        pass
 
-def optimize(model, dataset):
+
+def optimize(model, dataset, *params, n_iter=10, n_tstep=100):
     """ the main optimization (ADAPT) procedure
+    
+    Parameter
+    ---------
+    model: a model instance of subclass of BaseModel
+    dataset: dataset
+    params: list of parameters to be optimized
     """
-    # 1. randomize
-    # 2.
-
-
-# TODO move to Optimizer
-def objective_function(params, model: BaseModel, x_begin, d_end, time_span, R, L):
-    """Objective function
-
-    The function that is called by the minimizers. In the case of ADAPT, the
-    objective function should first simulate the model from the begin of
-    `time_span` till the end, using `x_begin` as the initial state (ivp). After
-    the simulation, the ode solver should return an array of states. We only
-    want the last column (snapshot) to be compared with the experimental data
-    `d_end`.
-
-    Parameters
-    ----------
-    params
-        the parameters θ of the model
-    model
-        pyADAPT.model.Model instance
-    x_begin
-        the initial states
-    d_end
-        the experimental data at the end of the time span, containing the
-        states and corresponding standard deviations.
-    time_span
-        the time span to solve the ODE
-    R
-        callable, regularization function
-    L
-        lambda, the weight of the regularization term
-    """
-    states = model.compute_states(time_span, x_begin, params)
-    x_end = states[:, -1]
-    # select those observable/measurable states to compare with the data
-    ox_end = x_end[model.state_musk]
-    # TODO use pandas for array musking
-    s = d_end[model.state_musk, 0]
-    v = d_end[model.state_musk, 1]
-
-    # ? I think it only makes sense in fake data that the data interpolation
-    # ? can contain unmeasurable data. otherwise, the following should be used.
-    # ? assertion is needed to check ox_end, s and v have the same dimension.
-    # s = d_end[0]
-    # v = d_end[1]
-
-    # ? equation 3.4 [ADAPT 2013]
-    errors = (ox_end - s) / v
-    reg_term = L * R()  # TODO parameters of `R`
-    residual = np.concatenate([errors, reg_term])
-    return residual
+    optim = Optimizer(model, dataset, params)
+    optim.run(n_iter=n_iter, n_ts=n_tstep)
+    return optim.list_of_parameter_trajectories, optim.list_of_state_trajectories
 
 
 def reg_example(p=None,):
@@ -157,4 +275,7 @@ def steady_states(model, s):
 
 
 if __name__ == "__main__":
-    pass
+    from pyADAPT.examples.lotka import LotkaVolterra
+
+    model = LotkaVolterra()
+

@@ -89,6 +89,24 @@ class DataSet(list):
             self.append(s)
             self.ordered_names.append(k)
 
+    def get_time(self, when):
+        if when == "end":
+            time = min([s.time[-1] for s in self])
+        elif when == "begin":
+            time = max([s.time[0] for s in self])
+        return time
+
+    @property
+    def end_time(self):
+        return self.get_time("end")
+
+    @property
+    def begin_time(self):
+        return self.get_time("begin")
+
+    def get_state_names(self):
+        return [s.name for s in self]
+
     def interpolate(self, n_ts=100, method="Hermite") -> np.ndarray:
         """In every ADAPT iteration, this function is called once to get a new
         spline for the optimizer to fit (from t0 till the end). the length of
