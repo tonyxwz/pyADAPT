@@ -80,6 +80,32 @@ from scipy.optimize import least_squares, leastsq
 
 from pyADAPT.dataset import DataSet
 from pyADAPT.basemodel import BaseModel
+import pysnooper
+
+
+# @pysnooper.snoop()
+def default_regularization(params=None,
+                           parameter_trajectory=None,
+                           time_span=None,
+                           i_iter=None,
+                           i_ts=None,
+                           **kw):
+    """ tiemann & natal's regularization term in ADAPT 2013 paper
+    TODO a consistent calling signature for regularization functions
+    the objective have no idea what a regularization function needs, but it can
+    offer all the knowledge it have.
+        - the parameter trajectory so far, `parameter_trajectory`
+        - the state trajectory so far, `state_trajectory`
+        - which iteration number, i_iter
+        - which time step is it, i_ts
+        - errors between data and prediction, error
+        - time span, if regularization function want to be time dependent, time_span
+        - T.B.C
+    """
+    old_params = parameter_trajectory.iloc[i_ts - 1]
+    delta_t = time_span[-1] - time_span[0]
+    reg = (params - old_params) / delta_t / old_params
+    return reg
 
 
 class ADAPTResult(object):
@@ -89,14 +115,15 @@ class ADAPTResult(object):
 
 class Optimizer(object):
     """optimizes an ADAPT model"""
-
-    def __init__(self, model: BaseModel, dataset: DataSet, parameter_names: list):
-        # we are being naive by assuming the user will give the states
-        # in the model and the dataset in the same order.
+    def __init__(self, model: BaseModel, dataset: DataSet,
+                 parameter_names: list):
+        # I am being naive by assuming the user will give the states in the
+        # model and the dataset in the same order, maybe warn in the manual.
         self.model = model
         self.dataset = dataset
         self.parameter_names = parameter_names
-        self.parameters: pd.DataFrame = self.model.parameters.loc[list(parameter_names)]
+        self.parameters: pd.DataFrame = self.model.parameters.loc[list(
+            parameter_names)]
         self.options = {  # TODO: a method to set options
             "method": "trf",
             "lambda": 1,
@@ -105,7 +132,15 @@ class Optimizer(object):
             "interpolation": "Hermite",
         }
 
-    def run(self, begin_time=None, end_time=None, n_iter=5, n_ts=5):
+    def run_mp(self):
+        pass
+
+    def run(self,
+            begin_time=None,
+            end_time=None,
+            n_iter=5,
+            n_ts=5,
+            verbose=True):
         if begin_time is None:
             begin_time = self.dataset.begin_time
         if end_time is None:
@@ -117,47 +152,49 @@ class Optimizer(object):
         self.time = np.linspace(begin_time, end_time, n_ts)
         for i_iter in range(n_iter):
             print(f"iteration: {i_iter}")
-            parameter_trajectory = pd.DataFrame(
+            self.parameter_trajectory = pd.DataFrame(
                 data=np.zeros((n_ts, len(self.parameter_names))),
                 columns=self.parameter_names,
             )
-            state_trajectory = pd.DataFrame(
+            self.state_trajectory = pd.DataFrame(
                 data=np.zeros((n_ts, len(self.dataset))),
                 columns=self.dataset.get_state_names(),
             )
 
             data = self.dataset.interpolate(n_ts=n_ts)
             # params = self.find_init_guesses()
-            parameter_trajectory.iloc[0] = self.parameters["init"]
+            self.parameter_trajectory.iloc[0] = self.parameters["init"]
             # ! 👇 is probably wrong because there's no unobservables
-            state_trajectory.iloc[0] = data[:, 0, 0]
+            self.state_trajectory.iloc[0] = data[:, 0, 0]
             for i_ts in range(1, n_ts):
                 if (i_ts % 10) == 0:
                     print(f"time step: {i_ts}")
                 (
-                    parameter_trajectory.iloc[i_ts],
-                    state_trajectory.iloc[i_ts],
+                    self.parameter_trajectory.iloc[i_ts],
+                    self.state_trajectory.iloc[i_ts],
                 ) = self.fit_timestep(
-                    initial_guess=parameter_trajectory.iloc[i_ts - 1],
-                    begin_states=state_trajectory.iloc[i_ts - 1],
+                    initial_guess=self.parameter_trajectory.iloc[i_ts - 1],
+                    begin_states=self.state_trajectory.iloc[i_ts - 1],
                     interp_data=data[:, i_ts, :],
                     i_iter=i_iter,
                     i_ts=i_ts,
                 )
 
-            self.list_of_parameter_trajectories.append(parameter_trajectory)
-            self.list_of_state_trajectories.append(state_trajectory)
+            self.list_of_parameter_trajectories.append(
+                self.parameter_trajectory)
+            self.list_of_state_trajectories.append(self.state_trajectory)
 
     def lhs_init(self):
         """ Latin hypercube sampling of initial values as described in P. van Beek's
         master thesis, though not indicated in the code
         """
 
-    def fit_timestep(self, initial_guess, begin_states, interp_data, i_iter, i_ts):
+    def fit_timestep(self, initial_guess, begin_states, interp_data, i_iter,
+                     i_ts):
         """call least_squares
         access Optimizer options via `i_iter` and `i_ts` and `self`
         """
-        time_span = self.time[i_ts - 1 : i_ts + 1]
+        time_span = self.time[i_ts - 1:i_ts + 1]
         bounds = (self.parameters["lb"], self.parameters["ub"])
 
         lsq_result = least_squares(
@@ -169,16 +206,29 @@ class Optimizer(object):
                 "begin_states": begin_states,
                 "interp_data": interp_data,
                 "time_span": time_span,
+                "i_iter": i_iter,
+                "i_ts": i_ts
             },
         )
+
+        # now compute the states using new parameters from lsq (a bit tedious yeah...)
+        # but adding `begin_states` and `lsq_result.fun` can be confusing to users
         new_state_traj = self.model.compute_states(
-            lsq_result.x, time_span, begin_states, new_param_names=self.parameter_names
-        )
+            lsq_result.x,
+            time_span,
+            begin_states,
+            new_param_names=self.parameter_names)
         return (lsq_result.x, new_state_traj[:, -1])
 
-    def objective_function(
-        self, params, begin_states=None, interp_data=None, time_span=None
-    ):
+    def objective_function(self,
+                           params,
+                           begin_states=None,
+                           interp_data=None,
+                           time_span=None,
+                           R=default_regularization,
+                           i_iter=None,
+                           i_ts=None,
+                           **kw):
         """ Objective function
         
             The function minimized by least squares method. For ADAPT, an objective
@@ -186,10 +236,10 @@ class Optimizer(object):
 
             1. `end_state` = compute the states at the end of the `timespan`, using the give `parameters`, `begin_states`. 
             2. choose those `end_states` and `interp_states` which are "observable"
-            3. TODO calculate and choose observable fluxes
+            3. calculate and choose observable fluxes
             4. calculate residual
             5. calculate regularization term
-            6. np.concatenate
+            6. concatenate errors and regularizations
 
             Parameters
             ----------
@@ -215,9 +265,8 @@ class Optimizer(object):
             np.ndarray: shape(len(states)+len(parameter panelty))
         """
 
-        end_states = self.model.compute_states(
-            params, time_span, begin_states, self.parameter_names
-        )
+        end_states = self.model.compute_states(params, time_span, begin_states,
+                                               self.parameter_names)
         end_states = end_states[:, -1]
         # observable: choose those observable to compare with the data
         end_states = end_states[self.model.states["observable"]]
@@ -226,13 +275,17 @@ class Optimizer(object):
         interp_states = interp_data[:, 0]
         interp_stds = interp_data[:, 1]
 
-        # ? assertion is needed to check ox_end, s and v have the same dimension.
-
         # equation 3.4 [ADAPT 2013]
         errors = (end_states - interp_states) / interp_stds
-        # reg_term = L * R()  # TODO add regularization and errors of fluxes
-        # residual = np.concatenate([errors, reg_term])
-        return errors
+        reg_term = self.options['lambda'] * R(
+            params=params,
+            parameter_trajectory=self.parameter_trajectory,
+            state_trajectory=self.state_trajectory,
+            i_iter=i_iter,
+            i_ts=i_ts,
+            time_span=time_span)
+        residual = np.concatenate([errors, reg_term])
+        return residual
 
     def find_init_guesses(self):
         """ Find the initial guess of the parameters at the start of each iteration.
@@ -250,7 +303,7 @@ class Optimizer(object):
         pass
 
 
-def optimize(model, dataset, *params, n_iter=10, n_tstep=100):
+def optimize(model, dataset, *params, n_iter=10, n_tstep=100, verbose=True):
     """ the main optimization (ADAPT) procedure
     
     Parameter
@@ -267,10 +320,6 @@ def optimize(model, dataset, *params, n_iter=10, n_tstep=100):
     optim = Optimizer(model, dataset, params)
     optim.run(n_iter=n_iter, n_ts=n_tstep)
     return optim.list_of_parameter_trajectories, optim.list_of_state_trajectories
-
-
-def tiemanns_regularization(parameter_trajectory, states_trajectory, i_iter, i_tstep):
-    pass
 
 
 def steady_states(model, s):
