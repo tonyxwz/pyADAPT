@@ -15,12 +15,12 @@ spyder = "*"
 pysnooper = "*"
 vprof = "*"
 snakeviz = "*"
+py-spy = "*"
 
 [packages]
 pyadapt = {editable = true,path = "."}
 tables = "*"
 pydoe = "*"
-py-spy = "*"
 
 [requires]
 python_version = "3.7"
