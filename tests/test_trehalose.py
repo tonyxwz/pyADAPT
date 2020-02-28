@@ -5,16 +5,15 @@ Test the smallbone2011 model
 """
 
 import unittest
-from pyADAPT.bio.sbml_model import SBMLModel
+from pyADAPT.sbml.sbml_model import SBMLModel
 import os
 import sys
 
 
 class TestSmallbone2011(unittest.TestCase):
     def setUp(self):
-        sbml_path = os.path.join(
-            os.path.dirname(__file__), "..", "data", "trehalose", "smallbone.xml"
-        )
+        sbml_path = os.path.join(os.path.dirname(__file__), "..", "data",
+                                 "trehalose", "smallbone.xml")
         self.model = SBMLModel(sbml_path)
 
     def test_basic(self):

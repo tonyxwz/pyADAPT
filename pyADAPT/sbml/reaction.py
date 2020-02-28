@@ -5,7 +5,7 @@ import re
 import libsbml
 import numpy as np
 
-from pyADAPT.bio.wrappers import BaseNode, Compartment, Species
+from pyADAPT.sbml.wrappers import BaseNode, Compartment, Species
 
 
 class Reaction(BaseNode):
@@ -20,10 +20,10 @@ class Reaction(BaseNode):
 
         self.kl = reaction.getKineticLaw()
         self.unit = libsbml.UnitDefinition.printUnits(
-            self.kl.getDerivedUnitDefinition()
-        )
+            self.kl.getDerivedUnitDefinition())
         self.regex = re.compile(
-            "(" + "|".join([p.id for p in self.kl.getListOfParameters()]) + ")",
+            "(" + "|".join([p.id
+                            for p in self.kl.getListOfParameters()]) + ")",
             re.VERBOSE,
         )
         self.text_formula = self.regex.sub(f"{self.id}_\\1", self.kl.formula)
@@ -42,11 +42,9 @@ class Reaction(BaseNode):
     def get_ce(self):
         # ce: chemical equation
         lhs = " + ".join(
-            [str(x.stoichiometry) + " " + x.species for x in self.reactants]
-        )
+            [str(x.stoichiometry) + " " + x.species for x in self.reactants])
         rhs = " + ".join(
-            [str(x.stoichiometry) + " " + x.species for x in self.products]
-        )
+            [str(x.stoichiometry) + " " + x.species for x in self.products])
 
         if self.reversible:
             arrow = " <=> "

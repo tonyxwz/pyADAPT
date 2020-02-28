@@ -7,7 +7,7 @@ usage:
 import sys
 import argparse
 import click
-from pyADAPT.bio.sbml_model import SBMLModel
+from pyADAPT.sbml.sbml_model import SBMLModel
 from pyADAPT.adapt import ADAPT
 from pyADAPT.optimize import optimize
 
@@ -15,10 +15,12 @@ from pyADAPT.optimize import optimize
 def Main():
     parser = argparse.ArgumentParser(
         prog="pyADAPT",
-        description="Run analysis of dynamic adaptations of parameter trajectories on a given SBML model.",
+        description=
+        "Run analysis of dynamic adaptations of parameter trajectories on a given SBML model.",
         allow_abbrev=True,
         add_help=True,
-        epilog="For bug report or suggestions: <https://github.com/tonyxwz/pyADAPT>",
+        epilog=
+        "For bug report or suggestions: <https://github.com/tonyxwz/pyADAPT>",
     )
 
     parser.add_argument(
@@ -40,9 +42,9 @@ def Main():
         nargs="+",
         help='the parameters to "ADAPT"',
     )
-    parser.add_argument(
-        "--quiet", action="store_true", help="don't print result to console"
-    )
+    parser.add_argument("--quiet",
+                        action="store_true",
+                        help="don't print result to console")
     parser.add_argument(
         "--output",
         metavar="results.txt",

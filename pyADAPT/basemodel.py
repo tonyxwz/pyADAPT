@@ -119,7 +119,7 @@ class BaseModel(metaclass=ABCMeta):
 
         return sol.y
 
-    # TODO move this method to Optimizer
+    # move this method to Optimizer
     def randomize_params(self, smin, smax, params=None):
         """using the formula in van Beek's thesis and matlab function in:
         `AMF.Model.randomizeParameters`
@@ -129,7 +129,7 @@ class BaseModel(metaclass=ABCMeta):
         p = self.parameters.copy()
         # if params is None:
         #     params = self.init_vary
-        for k, v in p.items():  # TODO maybe change v.vary to initvary flags
+        for k, v in p.items():  # maybe change v.vary to initvary flags
             if v.vary:  # values of dict observables is boolean
                 v.value = p[k] * np.power(10, (
                     (smax - smin) * np.random.rand() + smin))
@@ -151,7 +151,7 @@ class BaseModel(metaclass=ABCMeta):
 
     def psa(self):
         """Parameter sensitivity analysis"""
-        # TODO
+        # TODO Parameter sensitivity analysis
 
     def draw(self):
         """ Draw the model using networkx """

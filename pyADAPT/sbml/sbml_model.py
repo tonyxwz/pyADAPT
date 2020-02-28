@@ -36,8 +36,8 @@ from asteval import Interpreter
 from cached_property import cached_property
 
 from pyADAPT.basemodel import BaseModel
-from pyADAPT.bio.reaction import Reaction
-from pyADAPT.bio.wrappers import Compartment, Species
+from pyADAPT.sbml.reaction import Reaction
+from pyADAPT.sbml.wrappers import Compartment, Species
 
 
 class SBMLModel(BaseModel):
@@ -45,7 +45,6 @@ class SBMLModel(BaseModel):
     Smallbone et al. For other Model of different structure, some further extending
     might be needed.
     """
-
     def __init__(self, sbml_path, time_range=[], adapt_params=[]):
         """Initialize a ADAPT model from a sbml file
         
@@ -66,7 +65,12 @@ class SBMLModel(BaseModel):
         self.notes = self.sbml_model.notes_string
 
         # math functions in the sbml formulas
-        self.math_functions = {"log": log, "log10": log10, "log2": log2, "exp": exp}
+        self.math_functions = {
+            "log": log,
+            "log10": log10,
+            "log2": log2,
+            "exp": exp
+        }
         # keep track of all the symbols
         # make use the symbols table
         self.interpreter = Interpreter(minimal=True, use_numpy=True)
@@ -88,7 +92,7 @@ class SBMLModel(BaseModel):
         for c in self.sbml_model.compartments:
             self.compartments[c.id] = Compartment(c)
 
-        # add reactions as pyADAPT.bio.reaction.Reaction
+        # add reactions as pyADAPT.sbml.reaction.Reaction
         self.reactions = OrderedDict()
         for sbml_rxn in self.sbml_model.getListOfReactions():
             r = Reaction(sbml_rxn)
@@ -110,7 +114,8 @@ class SBMLModel(BaseModel):
             sp = Species(s)
             ia = ia_list.get(sp.id)
             if ia is not None:
-                formula = compile(libsbml.formulaToString(ia.math), "<string>", "eval")
+                formula = compile(libsbml.formulaToString(ia.math), "<string>",
+                                  "eval")
                 init_conc = eval(formula, {}, self.context)
             else:
                 init_conc = s.initial_concentration
