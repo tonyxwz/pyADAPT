@@ -132,16 +132,57 @@ class Optimizer(object):
             "interpolation": "Hermite",
         }
 
-    def run_mp(self):
-        # TODO parallel
-        pass
+    def run_mp(self,
+               begin_time=None,
+               end_time=None,
+               n_iter=5,
+               n_ts=5,
+               verbose=True,
+               n_core=4):
+
+        if n_core > 1:
+            pool = mp.Pool(n_core)
+            pool_results = []
+            for i in range(n_iter):
+                pool_results.append(
+                    pool.apply_async(self.run,
+                                     kwds={
+                                         "begin_time": begin_time,
+                                         "end_time": end_time,
+                                         "n_iter": 1,
+                                         "n_ts": n_ts,
+                                         "verbose": verbose,
+                                         "mp": {
+                                             "mp_i_iter": i,
+                                             "n_core": n_core
+                                         }
+                                     }))
+            pool.close()
+            pool.join()
+            self.list_of_parameter_trajectories = []
+            self.list_of_state_trajectories = []
+            for res_obj in pool_results:
+                ptraj, straj = res_obj.get()
+                assert len(ptraj) == 1
+                assert len(straj) == 1
+                self.list_of_parameter_trajectories.append(ptraj[0])
+                self.list_of_state_trajectories.append(straj[0])
+            return self.list_of_parameter_trajectories, self.list_of_state_trajectories
+
+        else:
+            return self.run(begin_time=begin_time,
+                            end_time=end_time,
+                            n_iter=n_iter,
+                            n_ts=n_ts,
+                            verbose=verbose)
 
     def run(self,
             begin_time=None,
             end_time=None,
             n_iter=5,
             n_ts=5,
-            verbose=True):
+            verbose=True,
+            **kw):
         if begin_time is None:
             begin_time = self.dataset.begin_time
         if end_time is None:
@@ -154,7 +195,12 @@ class Optimizer(object):
         self.time = np.linspace(begin_time, end_time, n_ts)
         for i_iter in range(n_iter):
             if verbose:
-                print(f"iteration: {i_iter}")
+                if "mp" in kw:
+                    print(
+                        f"iteration: {kw['mp']['mp_i_iter']} ({ mp.current_process().name })"
+                    )
+                else:
+                    print(f"iteration: {i_iter}")
             self.parameter_trajectory = pd.DataFrame(
                 data=np.zeros((n_ts, len(self.parameter_names))),
                 columns=self.parameter_names,
@@ -186,6 +232,7 @@ class Optimizer(object):
             self.list_of_parameter_trajectories.append(
                 self.parameter_trajectory)
             self.list_of_state_trajectories.append(self.state_trajectory)
+        return self.list_of_parameter_trajectories, self.list_of_state_trajectories
 
     def lhs_init(self):
         """ Latin hypercube sampling of initial values as described in P. van Beek's
@@ -234,11 +281,11 @@ class Optimizer(object):
                            i_ts=None,
                            **kw):
         """ Objective function
-        
+
             The function minimized by least squares method. For ADAPT, an objective
             should:
 
-            1. `end_state` = compute the states at the end of the `timespan`, using the give `parameters`, `begin_states`. 
+            1. `end_state` = compute the states at the end of the `timespan`, using the give `parameters`, `begin_states`.
             2. choose those `end_states` and `interp_states` which are "observable"
             3. calculate and choose observable fluxes
             4. calculate residual
@@ -264,10 +311,10 @@ class Optimizer(object):
             parameter_names
                 list of strings, names of the parameters to optimize, other parameters
                 are set as fixed (constant) parameters
-            
+
             Return
             ------
-            np.ndarray: shape(len(states)+len(parameter panelty))
+            np.ndarray: shape(len(states)+len(parameter penalty))
         """
 
         end_states = self.model.compute_states(params, time_span, begin_states,
@@ -308,14 +355,21 @@ class Optimizer(object):
         pass
 
 
-def optimize(model, dataset, *params, n_iter=10, n_tstep=100, verbose=True):
+def optimize(model,
+             dataset,
+             *params,
+             n_iter=10,
+             n_tstep=100,
+             n_core=4,
+             verbose=True):
     """ the main optimization (ADAPT) procedure
-    
+
     Parameter
     ---------
     model: a model instance of subclass of BaseModel
     dataset: dataset
     params: list of parameters to be optimized
+    n_core: number of processes to spawn
 
     Return
     ------
@@ -323,7 +377,7 @@ def optimize(model, dataset, *params, n_iter=10, n_tstep=100, verbose=True):
     """
 
     optim = Optimizer(model, dataset, params)
-    optim.run(n_iter=n_iter, n_ts=n_tstep, verbose=verbose)
+    optim.run_mp(n_iter=n_iter, n_ts=n_tstep, n_core=n_core, verbose=verbose)
     return optim.list_of_parameter_trajectories, optim.list_of_state_trajectories
 
 
