@@ -133,6 +133,7 @@ class Optimizer(object):
         }
 
     def run_mp(self):
+        # TODO parallel
         pass
 
     def run(self,
@@ -145,13 +146,15 @@ class Optimizer(object):
             begin_time = self.dataset.begin_time
         if end_time is None:
             end_time = self.dataset.end_time
-        print(begin_time, end_time)
+        if verbose:
+            print(begin_time, end_time)
         self.list_of_parameter_trajectories = list()
         self.list_of_state_trajectories = list()
         # endtime should be the last available time from dataset
         self.time = np.linspace(begin_time, end_time, n_ts)
         for i_iter in range(n_iter):
-            print(f"iteration: {i_iter}")
+            if verbose:
+                print(f"iteration: {i_iter}")
             self.parameter_trajectory = pd.DataFrame(
                 data=np.zeros((n_ts, len(self.parameter_names))),
                 columns=self.parameter_names,
@@ -167,7 +170,7 @@ class Optimizer(object):
             # ! 👇 is probably wrong because there's no unobservables
             self.state_trajectory.iloc[0] = data[:, 0, 0]
             for i_ts in range(1, n_ts):
-                if (i_ts % 10) == 0:
+                if (i_ts % 10) == 0 and verbose:
                     print(f"time step: {i_ts}")
                 (
                     self.parameter_trajectory.iloc[i_ts],
@@ -256,7 +259,8 @@ class Optimizer(object):
             time_span
                 the time span to solve the ODE
             R
-                callable, regularization function
+                callable, regularization function. ❓: is it necessary to pass R
+                as an argument?
             parameter_names
                 list of strings, names of the parameters to optimize, other parameters
                 are set as fixed (constant) parameters
@@ -296,7 +300,7 @@ class Optimizer(object):
 
         only do this once at the beginning of each iteration. afterwards, the
         initial guesses are just the optimization result from previous timestep.
-        # TODO solve problem above
+        # TODO the initial value problem 🔥
         """
 
     def steady_states(self):
@@ -319,7 +323,7 @@ def optimize(model, dataset, *params, n_iter=10, n_tstep=100, verbose=True):
     """
 
     optim = Optimizer(model, dataset, params)
-    optim.run(n_iter=n_iter, n_ts=n_tstep)
+    optim.run(n_iter=n_iter, n_ts=n_tstep, verbose=verbose)
     return optim.list_of_parameter_trajectories, optim.list_of_state_trajectories
 
 
