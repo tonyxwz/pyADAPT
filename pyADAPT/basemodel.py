@@ -28,7 +28,6 @@ class BaseModel(metaclass=ABCMeta):
     One should inherit from this class and extend the constructor method and the
     `ode` method to specify the structure of the model
     """
-
     def __new__(cls, *args, **kwargs):
         instance = super().__new__(cls)
         instance.name = "Base Model"
@@ -132,7 +131,8 @@ class BaseModel(metaclass=ABCMeta):
         #     params = self.init_vary
         for k, v in p.items():  # TODO maybe change v.vary to initvary flags
             if v.vary:  # values of dict observables is boolean
-                v.value = p[k] * np.power(10, ((smax - smin) * np.random.rand() + smin))
+                v.value = p[k] * np.power(10, (
+                    (smax - smin) * np.random.rand() + smin))
         return p
 
     def sync_from_optimizer(self, optimizer):
@@ -146,9 +146,12 @@ class BaseModel(metaclass=ABCMeta):
 
     def reset(self):
         """ reset to initial conditions """
+        self.parameters['values'] = self.parameters['init']
+        self.states['value'] = self.states['init']
 
     def psa(self):
         """Parameter sensitivity analysis"""
+        # TODO
 
     def draw(self):
         """ Draw the model using networkx """

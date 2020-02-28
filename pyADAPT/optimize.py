@@ -128,7 +128,7 @@ class Optimizer(object):
             "method": "trf",
             "lambda": 1,
             "odesolver": "RK45",
-            "regularization": "tiemann",
+            "regularization": default_regularization,
             "interpolation": "Hermite",
         }
 
@@ -206,6 +206,7 @@ class Optimizer(object):
                 "begin_states": begin_states,
                 "interp_data": interp_data,
                 "time_span": time_span,
+                "R": self.options['regularization'],
                 "i_iter": i_iter,
                 "i_ts": i_ts
             },
