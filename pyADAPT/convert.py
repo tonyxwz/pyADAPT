@@ -12,7 +12,6 @@ class Converter(object):
     - pyADAPT convert --sbml XXX.sbml --parameters p1 p2 --output mymodel.py
     """
     def __init__(self, sbml, params=[], output=""):
-        # TODO: consider Jinja objects:  http://zetcode.com/python/jinja/
         # since I already have the SBMLModel implemented
         # self.fsloader = jinja2.FileSystemLoader(searchpath="./templates")
         self.pkgloader = jinja2.PackageLoader(package_name="pyADAPT",

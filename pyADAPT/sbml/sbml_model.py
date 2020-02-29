@@ -47,7 +47,7 @@ class SBMLModel(BaseModel):
     """
     def __init__(self, sbml_path, time_range=[], adapt_params=[]):
         """Initialize a ADAPT model from a sbml file
-        
+
         Parameters
         ----------
         sbml_path : String
@@ -202,7 +202,7 @@ class SBMLModel(BaseModel):
         self.update_states(x)
         v = list()
         for r in self.reactions.values():
-            # TODO if you want the parameters to be ADAPT, do it here
+            # if you want the parameters to be ADAPT, do it here
             v.append(r.compute_flux(self.context))
         return np.array(v)
 
@@ -214,7 +214,7 @@ class SBMLModel(BaseModel):
         dictionary. The code should guarantee that x is in the same order as species
         list.
         """
-        # TODO this should be "update species"
+        # this should be "update species"
         assert len(x) == len(self.species)
         for species_id, new_state in zip(self.species.keys(), x):
             self.states[species_id] = new_state

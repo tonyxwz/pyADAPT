@@ -1,7 +1,8 @@
-""" This module provides some pre-defined regularization functions for ADAPT
-TODO a consistent calling signature for regularization functions
-the objective have no idea what a regularization function needs, but it can
-offer all the knowledge it have.
+""" This module provides some pre-defined regularization functions for ADAPT.
+
+A consistent calling signature for regularization functions should be defined.
+The objective function have no idea what a regularization function needs, but
+it can offer all the knowledge it have.
     - the parameter trajectory so far, `parameter_trajectory`
     - the state trajectory so far, `state_trajectory`
     - which iteration number, i_iter
@@ -10,10 +11,16 @@ offer all the knowledge it have.
     - time span, if regularization function want to be time dependent, time_span
     - T.B.C
 """
-# TODO integrate with ADAPT
 
 TIEMANN = 0
 
 
-def tiemann():
+def tiemann(params=None,
+            parameter_trajectory=None,
+            state_trajectory=None,
+            time_span=None,
+            i_iter=None,
+            i_ts=None,
+            errors=None,
+            **kw):
     pass

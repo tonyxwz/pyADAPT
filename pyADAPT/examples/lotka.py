@@ -6,12 +6,12 @@ from pyADAPT.optimize import Optimizer, optimize
 
 
 class LotkaVolterra(BaseModel):
-    """ LotkaVolterra Model using ADAPT
+    """ Lotka Volterra Model using ADAPT
 
     https://en.wikipedia.org/wiki/Lotka%E2%80%93Volterra_equations
     http://www.tiem.utk.edu/~gross/bioed/bealsmodules/predator-prey.html
 
-    
+
     Predictor
     t: time
 
@@ -24,7 +24,6 @@ class LotkaVolterra(BaseModel):
     α, β, γ, δ: positive real parameters describing the interaction between
     the two populations
     """
-
     def __init__(self):
         self.add_state(name="prey", value=10, observable=True)
         self.add_state(name="predator", value=10, observable=True)
@@ -52,7 +51,6 @@ class WrongLotkaVolterra(BaseModel):
     In ADAPT, the structure of the model should be wrong not just parameter
     being inaccurate, change the odefunc a bit
     """
-
     def __init__(self):
         self.add_state(name="prey", value=10, observable=True)
         self.add_state(name="predator", value=10, observable=True)
@@ -85,9 +83,9 @@ if __name__ == "__main__":
     n = 500
 
     lotka = LotkaVolterra()
-    y = lotka.compute_states(
-        t_span=[t0, tf], x0=[10, 10], t_eval=np.linspace(t0, tf, n)
-    )
+    y = lotka.compute_states(t_span=[t0, tf],
+                             x0=[10, 10],
+                             t_eval=np.linspace(t0, tf, n))
 
     noise = 0.2 * np.random.randn(2, n) * y
     data = noise + y
@@ -98,15 +96,14 @@ if __name__ == "__main__":
     plt.title("True model output")
 
     wrong_lotka = WrongLotkaVolterra()
-    y2 = wrong_lotka.compute_states(
-        t_span=[t0, tf], x0=[10, 10], t_eval=np.linspace(t0, tf, n)
-    )
+    y2 = wrong_lotka.compute_states(t_span=[t0, tf],
+                                    x0=[10, 10],
+                                    t_eval=np.linspace(t0, tf, n))
     plt.figure()
     plt.plot(np.linspace(t0, tf, n), y2[0, :])
     plt.plot(np.linspace(t0, tf, n), y2[1, :], "--")
     plt.legend(wrong_lotka.states["name"])
     plt.title("Wrong model output")
 
-    # TODO apply adapt here
-    # dataset = DataSet()
+    # TODO create fake dataset, apply ADAPT here
     plt.show()

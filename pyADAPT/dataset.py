@@ -22,7 +22,6 @@ from pyADAPT.state import State
 from pyADAPT.io import read_data_raw, read_data_specs
 
 
-# TODO change to list of many datasets
 class DataSet(list):
     """
     dataset for ADAPT. containing phenotypes measured at different stages after
@@ -32,23 +31,23 @@ class DataSet(list):
     yields new interpolant data. Model stores the interpolants as the
     trajectories.
     """
-
-    def __init__(
-        self, raw_data_path="", data_specs_path="", raw_data={}, data_specs={}, name=""
-    ):
+    def __init__(self,
+                 raw_data_path="",
+                 data_specs_path="",
+                 raw_data={},
+                 data_specs={},
+                 name=""):
         """
         raw_data: phenotypes organized into a dictionary
 
         data_info: instructions of the data, such as which time variable
             should be used for which state.
         """
-        self.data_specs = data_specs if data_specs else read_data_specs(data_specs_path)
+        self.data_specs = data_specs if data_specs else read_data_specs(
+            data_specs_path)
         self.name = name if name else self.data_specs["groups"][0]
-        self.raw_data = (
-            raw_data[self.name]
-            if raw_data
-            else read_data_raw(raw_data_path, group=self.name)
-        )
+        self.raw_data = (raw_data[self.name] if raw_data else read_data_raw(
+            raw_data_path, group=self.name))
 
         self.structure = {}
         self.ordered_names = []
@@ -75,7 +74,9 @@ class DataSet(list):
                 unit = v["unit"]
             except KeyError as e:
                 unit = "mM/L"
-                print(f"Warning: undefined {e.args[0]}, fallback to default ({unit})")
+                print(
+                    f"Warning: undefined {e.args[0]}, fallback to default ({unit})"
+                )
 
             s = State(
                 name=k,

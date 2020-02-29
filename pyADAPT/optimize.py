@@ -80,10 +80,8 @@ from scipy.optimize import least_squares, leastsq
 
 from pyADAPT.dataset import DataSet
 from pyADAPT.basemodel import BaseModel
-import pysnooper
 
 
-# @pysnooper.snoop()
 def default_regularization(params=None,
                            parameter_trajectory=None,
                            time_span=None,
@@ -91,7 +89,6 @@ def default_regularization(params=None,
                            i_ts=None,
                            **kw):
     """ tiemann & natal's regularization term in ADAPT 2013 paper
-    TODO a consistent calling signature for regularization functions
     the objective have no idea what a regularization function needs, but it can
     offer all the knowledge it have.
         - the parameter trajectory so far, `parameter_trajectory`
@@ -323,12 +320,16 @@ class Optimizer(object):
         # observable: choose those observable to compare with the data
         end_states = end_states[self.model.states["observable"]]
 
-        # data doesn't contain unobservables, for sure
+        # data doesn't contain unobservable states/fluxes
         interp_states = interp_data[:, 0]
         interp_stds = interp_data[:, 1]
 
         # equation 3.4 [ADAPT 2013]
         errors = (end_states - interp_states) / interp_stds
+        # work is need on the errors of flux, but toy and trehalose don't have
+        # flux data, so I won't waste time on it.
+        #   - add flux in base model
+        #   - add flux in Dataset
         reg_term = self.options['lambda'] * R(
             params=params,
             parameter_trajectory=self.parameter_trajectory,
