@@ -15,6 +15,7 @@ pysnooper = "*"
 vprof = "*"
 snakeviz = "*"
 py-spy = "*"
+spyder-kernels = "*"
 
 [packages]
 pyadapt = {editable = true,path = "."}
