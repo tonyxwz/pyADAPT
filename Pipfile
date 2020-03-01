@@ -21,6 +21,7 @@ spyder-kernels = "*"
 pyadapt = {editable = true,path = "."}
 tables = "*"
 pydoe = "*"
+libroadrunner = "*"
 
 [requires]
 python_version = "3.7"
