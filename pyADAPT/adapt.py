@@ -46,7 +46,7 @@ class ADAPT(object):
         self.options["seed_list"] = np.arange(self.options["n_iter"])
 
         # self.parameters = self.model.parameters.copy()
-        # TODO check the names consistency in model and dataset
+        # check the names consistency in model and dataset
 
         # *4 preparation
         self.i_iter = 0
@@ -57,7 +57,7 @@ class ADAPT(object):
         self.states = np.zeros((1, ))
         self.trajectories = np.zeros(
             (1, ))  # 1st index being the iteration number
-        # FIXME min_history has no iteration dimension
+        # oFIXME min_history has no iteration dimension
         self.min_history: list = []
 
     @cached_property
@@ -164,7 +164,7 @@ class ADAPT(object):
         minimization_result = minimize(self.objective_func,
                                        params,
                                        args=[x0, d, t_span, i_iter, i_tstep])
-        # FIXME model should be static in this project, also i_iter, i_tstep
+        # oFIXME model should be static in this project, also i_iter, i_tstep
         if not minimization_result.success:
             print(
                 f"unsuccessful minimization, iter: {i_iter}, t_step: {i_tstep}"
@@ -191,7 +191,7 @@ class ADAPT(object):
                                    1]  # observable states from data (std)
 
         fluxes = self.model.compute_reactions(t_span[-1], states, params)
-        # FIXME fluxes are not computed
+        # oFIXME fluxes are not computed
         # of = f[self.model.ofi]
         errors = (observable_states -
                   observable_states_values) / observable_states_stds
@@ -201,7 +201,7 @@ class ADAPT(object):
 
     def tiemann_regularization(self, p, i_iter, i_tstep):
         """
-        FIXME: regularization should be provided by the model
+        oFIXME: regularization should be provided by the model
         theta: new parameters
         Xi^2(theta[n]) = sum((theta[n][i] - theta[n-1][i]) /
                               delta_t * 1 / theta[0][i])
