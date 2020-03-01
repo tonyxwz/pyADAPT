@@ -23,7 +23,8 @@ Implementation in Python
     - plotting and profiling
 6. finish CLI functions. in functional programming fashion.
     - convert, analysis
-    - maybe just leave the templating work to cookicutter.
+    <!-- https://cookiecutter.readthedocs.io/en/1.7.0/first_steps.html -->
+    - maybe just leave the templating work to [cookiecutter](https://github.com/cookiecutter/cookiecutter).
 
 ## Let's split: What should be OOP and what should be functional?
 
