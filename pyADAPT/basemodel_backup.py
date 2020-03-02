@@ -10,7 +10,6 @@ Steps
 5: Clamp model in Pascal van Beek's work
 6: Discuss the Model with David and Natal
 
-TODO
 ====
 1. warning about the unused names
 2. clever way to add ofi
@@ -39,23 +38,20 @@ class BaseModel(metaclass=ABCMeta):
     3. Define model input function.
     4. Define reactions function.
     """
-
     def __new__(cls, *args, **kwargs):
         # to use `super` in `__new__` method: issubclass(cls, Model) is True
         # super() is (object or type) args and kwargs should be handle in this method
         instance = super().__new__(cls)  # , *args, **kwargs)  # model instance
         instance.name = "Base Model"
-        instance.notes = " ".join(
-            [
-                "This model should not be instantiated for it only",
-                "serves as the base class of other models, please refer to the",
-                "docstring about how to extend this class and define your own",
-                "model.",
-            ]
-        )
-        instance.specs = {}  # TODO
+        instance.notes = " ".join([
+            "This model should not be instantiated for it only",
+            "serves as the base class of other models, please refer to the",
+            "docstring about how to extend this class and define your own",
+            "model.",
+        ])
+        instance.specs = {}  #
         # time, named as convention from matlab version
-        # TODO change predictor as a component of ADAPT
+        #  change predictor as a component of ADAPT
         # with a default value, if cannot be deduced from the Dataset
         instance.predictor = []
 
@@ -63,7 +59,7 @@ class BaseModel(metaclass=ABCMeta):
         instance.parameters = Parameters()
 
         instance.states = OrderedDict()
-        # TODO determine init vary at runtime
+        # determine init vary at runtime
         instance.observables = OrderedDict()
         instance.state_musk = list()  # observable state
         instance.flux_musk = list()  # observabel flux
@@ -119,7 +115,13 @@ class BaseModel(metaclass=ABCMeta):
         """
         pass
 
-    def compute_states(self, t_span, x0, p=None, rtol=1e-7, atol=1e-7, t_eval=None):
+    def compute_states(self,
+                       t_span,
+                       x0,
+                       p=None,
+                       rtol=1e-7,
+                       atol=1e-7,
+                       t_eval=None):
         """ no `uvec`: given time `t`, input should be determined as well.
         " From here, the odefunc is integrated to get the state variables.
         " Then state variables will be used to evaluate the reactions, and the
@@ -154,15 +156,15 @@ class BaseModel(metaclass=ABCMeta):
         return self.fluxes(t, x, p)
 
     def add_parameter(
-        self,
-        name="",
-        value=None,
-        vary=False,
-        lb=-np.inf,
-        ub=np.inf,
-        expr=None,
-        brute_step=None,
-        user_data={},
+            self,
+            name="",
+            value=None,
+            vary=False,
+            lb=-np.inf,
+            ub=np.inf,
+            expr=None,
+            brute_step=None,
+            user_data={},
     ) -> None:
         """Read the docs here:
         https://lmfit.github.io/lmfit-py/parameters.html#the-parameter-class
@@ -180,8 +182,7 @@ class BaseModel(metaclass=ABCMeta):
                 expr=expr,
                 brute_step=brute_step,
                 user_data=user_data,
-            )
-        )
+            ))
 
     def add_constant(self, name="", value=None) -> None:
         self.add_name(name)
@@ -206,13 +207,14 @@ class BaseModel(metaclass=ABCMeta):
         p = self.parameters.copy()
         # if params is None:
         #     params = self.init_vary
-        for k, v in p.items():  # TODO maybe change v.vary to initvary flags
+        for k, v in p.items():  # maybe change v.vary to initvary flags
             if v.vary:  # values of dict observables is boolean
-                v.value = p[k] * np.power(10, ((smax - smin) * np.random.rand() + smin))
+                v.value = p[k] * np.power(10, (
+                    (smax - smin) * np.random.rand() + smin))
         return p
 
     def add_name(self, name: str):
-        # TODO: add reference to the variable
+        # add reference to the variable
         if self.check_name(name):
             self.variable_names.add(name)
         else:
