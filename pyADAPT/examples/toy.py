@@ -82,9 +82,16 @@ if __name__ == "__main__":
         raw_data_path="data/toyModel/toyData.mat",
         data_specs_path="data/toyModel/toyData.yaml",
     )
-    # cProfile.run("optimize(model, data, 'k1', n_iter=1, n_tstep=10)")
-    # d = data.interpolate()
-    # print("begin")
-    # k = model.compute_states(0.2, [0, 2], d[:, 0, 0], new_param_names=["k1"])
-    # print(k)
-    ptraj, straj = optimize(model, data, "k1", n_iter=2, n_tstep=10)
+
+    ptraj, straj, time = optimize(model,
+                                  data,
+                                  "k1",
+                                  n_iter=2,
+                                  n_tstep=50,
+                                  n_core=1)
+    ptraj, straj, time = optimize(model,
+                                  data,
+                                  "k1",
+                                  n_iter=2,
+                                  n_tstep=50,
+                                  n_core=4)
