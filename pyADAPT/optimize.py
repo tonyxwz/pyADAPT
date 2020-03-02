@@ -75,6 +75,7 @@ import sys
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 from scipy.integrate import solve_bvp, solve_ivp
 from scipy.optimize import least_squares, leastsq
 
@@ -99,7 +100,7 @@ def default_regularization(params=None,
         - time span, if regularization function want to be time dependent, time_span
         - T.B.C
     """
-    old_params = parameter_trajectory.iloc[i_ts - 1]
+    old_params = parameter_trajectory[i_ts - 1, :]
     delta_t = time_span[-1] - time_span[0]
     reg = (params - old_params) / delta_t / old_params
     return reg
@@ -136,6 +137,12 @@ class Optimizer(object):
                n_ts=5,
                verbose=True,
                n_core=4):
+        if begin_time is None:
+            begin_time = self.dataset.begin_time
+        if end_time is None:
+            end_time = self.dataset.end_time
+        # endtime should be the last available time from dataset
+        self.time = np.linspace(begin_time, end_time, n_ts)
 
         if n_core > 1:
             pool = mp.Pool(n_core)
@@ -160,18 +167,27 @@ class Optimizer(object):
             self.list_of_state_trajectories = []
             for res_obj in pool_results:
                 ptraj, straj = res_obj.get()
-                assert len(ptraj) == 1
-                assert len(straj) == 1
                 self.list_of_parameter_trajectories.append(ptraj[0])
                 self.list_of_state_trajectories.append(straj[0])
-            return self.list_of_parameter_trajectories, self.list_of_state_trajectories
 
         else:
-            return self.run(begin_time=begin_time,
-                            end_time=end_time,
-                            n_iter=n_iter,
-                            n_ts=n_ts,
-                            verbose=verbose)
+            self.run(begin_time=begin_time,
+                     end_time=end_time,
+                     n_iter=n_iter,
+                     n_ts=n_ts,
+                     verbose=verbose)
+        # convert the lists into xarray
+        self.parameter_trajectories = xr.DataArray(
+            data=np.array(self.list_of_parameter_trajectories),
+            coords=[("iter", list(range(n_iter))), ("time", self.time),
+                    ("param", list(self.parameter_names))],
+            name="parameter trajectories")
+        self.state_trajectories = xr.DataArray(
+            data=np.array(self.list_of_state_trajectories),
+            coords=[("iter", list(range(n_iter))), ("time", self.time),
+                    ("state", list(self.dataset.get_state_names()))],
+            name="state trajectories")
+        return self.parameter_trajectories, self.state_trajectories
 
     def run(self,
             begin_time=None,
@@ -180,16 +196,8 @@ class Optimizer(object):
             n_ts=5,
             verbose=True,
             **kw):
-        if begin_time is None:
-            begin_time = self.dataset.begin_time
-        if end_time is None:
-            end_time = self.dataset.end_time
-        if verbose:
-            print(begin_time, end_time)
         self.list_of_parameter_trajectories = list()
         self.list_of_state_trajectories = list()
-        # endtime should be the last available time from dataset
-        self.time = np.linspace(begin_time, end_time, n_ts)
         for i_iter in range(n_iter):
             if verbose:
                 if "mp" in kw:
@@ -198,29 +206,24 @@ class Optimizer(object):
                     )
                 else:
                     print(f"iteration: {i_iter}")
-            self.parameter_trajectory = pd.DataFrame(
-                data=np.zeros((n_ts, len(self.parameter_names))),
-                columns=self.parameter_names,
-            )
-            self.state_trajectory = pd.DataFrame(
-                data=np.zeros((n_ts, len(self.dataset))),
-                columns=self.dataset.get_state_names(),
-            )
+            self.parameter_trajectory = np.zeros(
+                (n_ts, len(self.parameter_names)))
+            self.state_trajectory = np.zeros((n_ts, len(self.dataset)))
 
             data = self.dataset.interpolate(n_ts=n_ts)
             # params = self.find_init_guesses()
-            self.parameter_trajectory.iloc[0] = self.parameters["init"]
+            self.parameter_trajectory[0, :] = self.parameters["init"]
             # ! 👇 is probably wrong because there's no unobservables
-            self.state_trajectory.iloc[0] = data[:, 0, 0]
+            self.state_trajectory[0, :] = data[:, 0, 0]
             for i_ts in range(1, n_ts):
                 if (i_ts % 10) == 0 and verbose:
                     print(f"time step: {i_ts}")
                 (
-                    self.parameter_trajectory.iloc[i_ts],
-                    self.state_trajectory.iloc[i_ts],
+                    self.parameter_trajectory[i_ts, :],
+                    self.state_trajectory[i_ts, :],
                 ) = self.fit_timestep(
-                    initial_guess=self.parameter_trajectory.iloc[i_ts - 1],
-                    begin_states=self.state_trajectory.iloc[i_ts - 1],
+                    initial_guess=self.parameter_trajectory[i_ts - 1, :],
+                    begin_states=self.state_trajectory[i_ts - 1, :],
                     interp_data=data[:, i_ts, :],
                     i_iter=i_iter,
                     i_ts=i_ts,
@@ -233,7 +236,7 @@ class Optimizer(object):
 
     def lhs_init(self):
         """ Latin hypercube sampling of initial values as described in P. van Beek's
-        master thesis, though not indicated in the code
+        master thesis, though not implemented in the code
         """
 
     def fit_timestep(self, initial_guess, begin_states, interp_data, i_iter,
@@ -282,7 +285,8 @@ class Optimizer(object):
             The function minimized by least squares method. For ADAPT, an objective
             should:
 
-            1. `end_state` = compute the states at the end of the `timespan`, using the give `parameters`, `begin_states`.
+            1. compute the states at the end of the `timespan`, using the give
+                `parameters`, `begin_states`.
             2. choose those `end_states` and `interp_states` which are "observable"
             3. calculate and choose observable fluxes
             4. calculate residual
@@ -311,7 +315,7 @@ class Optimizer(object):
 
             Return
             ------
-            np.ndarray: shape(len(states)+len(parameter penalty))
+            np.ndarray: shape(len(states) + len(parameter penalty))
         """
 
         end_states = self.model.compute_states(params, time_span, begin_states,
@@ -320,16 +324,18 @@ class Optimizer(object):
         # observable: choose those observable to compare with the data
         end_states = end_states[self.model.states["observable"]]
 
-        # data doesn't contain unobservable states/fluxes
+        # data doesn't contain unobservable states/fluxes, no mask
         interp_states = interp_data[:, 0]
         interp_stds = interp_data[:, 1]
 
         # equation 3.4 [ADAPT 2013]
         errors = (end_states - interp_states) / interp_stds
-        # work is need on the errors of flux, but toy and trehalose don't have
-        # flux data, so I won't waste time on it.
-        #   - add flux in base model
-        #   - add flux in Dataset
+        # need more work on the errors of flux. toy and trehalose don't have
+        # flux data, so I won't waste my time on it.
+        # New comer's job:
+        #   - add flux in basemodel
+        #   - add flux in dataset
+        #   - add flux errors here
         reg_term = self.options['lambda'] * R(
             params=params,
             parameter_trajectory=self.parameter_trajectory,
@@ -363,7 +369,7 @@ def optimize(model,
              n_tstep=100,
              n_core=4,
              verbose=True):
-    """ the main optimization (ADAPT) procedure
+    """ the main optimization procedure
 
     Parameter
     ---------
@@ -374,12 +380,22 @@ def optimize(model,
 
     Return
     ------
-    (parameter trajectories, state trajectories)
+    (parameter trajectories, state trajectories, time)
+    trajectories are xarray.DataArray. just easier to manipulate in the analysis
+    routine.
     """
 
     optim = Optimizer(model, dataset, params)
     optim.run_mp(n_iter=n_iter, n_ts=n_tstep, n_core=n_core, verbose=verbose)
-    return optim.list_of_parameter_trajectories, optim.list_of_state_trajectories
+    return optim.parameter_trajectories, optim.state_trajectories, optim.time
+
+
+def ADAPT():
+    """ The ADAPT function 
+    add a threshold to elimimate the trajectories that don't fit enough.
+    In other word, the parameters have to be random at the beginning.
+    """
+    # TODO adapt routine in interface focus code base, threshold
 
 
 def steady_states(model, s):
