@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from scipy.interpolate import PchipInterpolator, CubicHermiteSpline
+from scipy.interpolate import PchipInterpolator, CubicHermiteSpline, CubicSpline
 from cached_property import cached_property
 
 from pyADAPT.sampling import NormalDist
@@ -21,7 +21,6 @@ class State(list):
     ]
     ```
     """
-
     def __init__(
         self,
         name="",
@@ -83,7 +82,7 @@ class State(list):
 
     @cached_property
     def variances(self):
-        return self.stds ** 2
+        return self.stds**2
 
     def sample(self):
         """ random sample of all the data points as an array """
@@ -133,7 +132,11 @@ class State(list):
             _, axes = plt.subplots()
         else:
             plt = None
-        axes.plot(self.time, self.sampled_values, ".g", alpha=0.5, markersize=5)
+        axes.plot(self.time,
+                  self.sampled_values,
+                  ".g",
+                  alpha=0.5,
+                  markersize=5)
 
         return axes
 
