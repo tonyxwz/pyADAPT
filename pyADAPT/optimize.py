@@ -157,7 +157,6 @@ class Optimizer(object):
                                          "end_time": end_time,
                                          "n_iter": 1,
                                          "n_ts": n_ts,
-                                         "verbose": verbose,
                                          "mp": {
                                              "mp_i_iter": i,
                                              "n_core": n_core
@@ -176,8 +175,7 @@ class Optimizer(object):
             self.run(begin_time=begin_time,
                      end_time=end_time,
                      n_iter=n_iter,
-                     n_ts=n_ts,
-                     verbose=verbose)
+                     n_ts=n_ts)
         # convert the lists into xarray
         self.parameter_trajectories = xr.DataArray(
             data=np.array(self.list_of_parameter_trajectories),
@@ -202,7 +200,7 @@ class Optimizer(object):
         self.list_of_state_trajectories = list()
 
         for i_iter in range(n_iter):
-            if verbose:
+            if self.options['verbose']:
                 if "mp" in kw:
                     print(
                         f"iteration: {kw['mp']['mp_i_iter']} ({ mp.current_process().name })"
@@ -219,7 +217,7 @@ class Optimizer(object):
             self.state_trajectory[0, :] = data[:, 0, 0]
             self.parameter_trajectory[0, :] = self.natal_init(i_iter, data)
             for i_ts in range(1, n_ts):
-                if (i_ts % 10) == 0 and verbose:
+                if (i_ts % 10) == 0 and self.options['verbose']:
                     print(f"time step: {i_ts}")
                 (
                     self.parameter_trajectory[i_ts, :],
@@ -250,7 +248,6 @@ class Optimizer(object):
             params = 10**(
                 2 * np.random.random_sample(size=(len(self.parameter_names), ))
                 - 1)
-            print(params, data[:, i_ts, 0])
             lsq_res = least_squares(
                 self.objective_function,
                 params,
@@ -266,7 +263,6 @@ class Optimizer(object):
                 },
             )
             sse = lsq_res.cost
-            print(sse)
         return lsq_res.x
 
     def find_init_guesses(self):
@@ -399,7 +395,6 @@ class Optimizer(object):
                 i_ts=i_ts,
                 time_span=time_span)
         else:
-            print(params)
             reg_term = np.zeros((len(params)))  # SB
         residual = np.concatenate([errors, reg_term])
         return residual
