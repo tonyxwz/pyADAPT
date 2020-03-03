@@ -113,6 +113,10 @@ class ADAPTResult(object):
 
 class Optimizer(object):
     """optimizes an ADAPT model"""
+    ITER = 1
+    TIMESTEP = 2
+    OBJFUNC = 3
+
     def __init__(self, model: BaseModel, dataset: DataSet,
                  parameter_names: list):
         # I am being naive by assuming the user will give the states in the
@@ -129,6 +133,7 @@ class Optimizer(object):
             "sseThres": 1000,
             "regularization": default_regularization,
             "interpolation": "Hermite",
+            "verbose": self.ITER
         }
 
     def run_mp(self,
@@ -136,16 +141,17 @@ class Optimizer(object):
                end_time=None,
                n_iter=5,
                n_ts=5,
-               verbose=True,
-               n_core=4):
+               n_core=4,
+               **options):
         if begin_time is None:
             begin_time = self.dataset.begin_time
         if end_time is None:
             end_time = self.dataset.end_time
         # endtime should be the last available time from dataset
         self.time = np.linspace(begin_time, end_time, n_ts)
-        self.options['verbose'] = verbose
-
+        for k, v in options.items():
+            self.options[k] = v
+        print(self.options['verbose'])
         if n_core > 1:
             pool = mp.Pool(n_core)
             pool_results = []
@@ -189,18 +195,12 @@ class Optimizer(object):
             name="state trajectories")
         return self.parameter_trajectories, self.state_trajectories
 
-    def run(self,
-            begin_time=None,
-            end_time=None,
-            n_iter=5,
-            n_ts=5,
-            verbose=True,
-            **kw):
+    def run(self, begin_time=None, end_time=None, n_iter=5, n_ts=5, **kw):
         self.list_of_parameter_trajectories = list()
         self.list_of_state_trajectories = list()
 
         for i_iter in range(n_iter):
-            if self.options['verbose']:
+            if self.options['verbose'] >= self.ITER:
                 if "mp" in kw:
                     print(
                         f"iteration: {kw['mp']['mp_i_iter']} ({ mp.current_process().name })"
@@ -215,10 +215,13 @@ class Optimizer(object):
             # ! 👇 is probably wrong (*initial value problem*)
             # params = self.find_init_guesses()
             self.state_trajectory[0, :] = data[:, 0, 0]
-            self.parameter_trajectory[0, :] = self.natal_init(i_iter, data)
+            # self.parameter_trajectory[0, :] = self.natal_init(i_iter, data)
+            self.parameter_trajectory[0, :] = self.parameters['init']
             for i_ts in range(1, n_ts):
-                if (i_ts % 10) == 0 and self.options['verbose']:
+                if (i_ts %
+                        10) == 0 and self.options['verbose'] >= self.TIMESTEP:
                     print(f"time step: {i_ts}")
+
                 (
                     self.parameter_trajectory[i_ts, :],
                     self.state_trajectory[i_ts, :],
@@ -245,9 +248,9 @@ class Optimizer(object):
         sseThres = self.options["sseThres"]
 
         while sse > sseThres:
-            params = 10**(
+            params = self.parameters['init'] * (10**(
                 2 * np.random.random_sample(size=(len(self.parameter_names), ))
-                - 1)
+                - 1))
             lsq_res = least_squares(
                 self.objective_function,
                 params,
@@ -279,11 +282,6 @@ class Optimizer(object):
     def steady_states(self):
         """ the data interpolation is assumed to be in steady states"""
         pass
-
-    def lhs_init(self):
-        """ Latin hypercube sampling of initial values as described in P. van Beek's
-        master thesis, though not implemented in the code
-        """
 
     def fit_timestep(self,
                      initial_guess=None,
@@ -406,7 +404,7 @@ def optimize(model,
              n_iter=10,
              n_tstep=100,
              n_core=4,
-             verbose=True):
+             **options):
     """ the main optimization procedure
 
     Parameter
@@ -424,7 +422,7 @@ def optimize(model,
     """
 
     optim = Optimizer(model, dataset, params)
-    optim.run_mp(n_iter=n_iter, n_ts=n_tstep, n_core=n_core, verbose=verbose)
+    optim.run_mp(n_iter=n_iter, n_ts=n_tstep, n_core=n_core, **options)
     return optim.parameter_trajectories, optim.state_trajectories, optim.time
 
 
@@ -450,4 +448,9 @@ if __name__ == "__main__":
         raw_data_path="data/toyModel/toyData.mat",
         data_specs_path="data/toyModel/toyData.yaml",
     )
-    ptraj, straj = optimize(model, data, "k1", n_iter=1, n_tstep=10)
+    ptraj, straj, time = optimize(model,
+                                  data,
+                                  "k1",
+                                  n_iter=4,
+                                  n_tstep=50,
+                                  verbose=1)
