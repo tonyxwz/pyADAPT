@@ -90,15 +90,6 @@ def default_regularization(params=None,
                            i_ts=None,
                            **kw):
     """ tiemann & natal's regularization term in ADAPT 2013 paper
-    the objective have no idea what a regularization function needs, but it can
-    offer all the knowledge it have.
-        - the parameter trajectory so far, `parameter_trajectory`
-        - the state trajectory so far, `state_trajectory`
-        - which iteration number, i_iter
-        - which time step is it, i_ts
-        - errors between data and prediction, error
-        - time span, if regularization function want to be time dependent, time_span
-        - T.B.C
     """
     old_params = parameter_trajectory[i_ts - 1, :]
     delta_t = time_span[-1] - time_span[0]
@@ -151,7 +142,6 @@ class Optimizer(object):
         self.time = np.linspace(begin_time, end_time, n_ts)
         for k, v in options.items():
             self.options[k] = v
-        print(self.options['verbose'])
         if n_core > 1:
             pool = mp.Pool(n_core)
             pool_results = []
@@ -453,4 +443,4 @@ if __name__ == "__main__":
                                   "k1",
                                   n_iter=4,
                                   n_tstep=50,
-                                  verbose=1)
+                                  verbose=Optimizer.ITER)
