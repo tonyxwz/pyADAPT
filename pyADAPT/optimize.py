@@ -124,7 +124,8 @@ class Optimizer(object):
             "sseThres": 1000,
             "regularization": default_regularization,
             "interpolation": "Hermite",
-            "verbose": self.ITER
+            "verbose": self.ITER,
+            "init_method": None
         }
 
     def run_mp(self,
@@ -142,6 +143,7 @@ class Optimizer(object):
         self.time = np.linspace(begin_time, end_time, n_ts)
         for k, v in options.items():
             self.options[k] = v
+        print(self.options['init_method'])
         if n_core > 1:
             pool = mp.Pool(n_core)
             pool_results = []
@@ -204,9 +206,17 @@ class Optimizer(object):
             data = self.dataset.interpolate(n_ts=n_ts)
             # ! 👇 is probably wrong (*initial value problem*)
             # params = self.find_init_guesses()
-            self.state_trajectory[0, :] = data[:, 0, 0]
-            # self.parameter_trajectory[0, :] = self.natal_init(i_iter, data)
-            self.parameter_trajectory[0, :] = self.parameters['init']
+            if self.options['init_method'] is None:
+                self.state_trajectory[0, :] = data[:, 0, 0]
+                self.parameter_trajectory[0, :] = self.parameters['init']
+            elif self.options['init_method'] == "interfacefocus":
+                # putting state initialization here for the possible return
+                # of states in natal_init
+                self.state_trajectory[0, :] = data[:, 0, 0]
+                self.parameter_trajectory[0, :] = self.natal_init(i_iter, data)
+            else:
+                raise Exception("Unknown initialization method.")
+
             for i_ts in range(1, n_ts):
                 if (i_ts %
                         10) == 0 and self.options['verbose'] >= self.TIMESTEP:
@@ -417,7 +427,7 @@ def optimize(model,
 
 
 def ADAPT():
-    """ The ADAPT function 
+    """ The ADAPT function
     add a threshold to elimimate the trajectories that don't fit enough.
     In other word, the parameters have to be random at the beginning.
     """
@@ -443,4 +453,5 @@ if __name__ == "__main__":
                                   "k1",
                                   n_iter=4,
                                   n_tstep=50,
+                                  init_method='interfacefocus',
                                   verbose=Optimizer.ITER)
