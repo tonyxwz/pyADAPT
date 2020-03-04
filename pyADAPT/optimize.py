@@ -143,7 +143,7 @@ class Optimizer(object):
         self.time = np.linspace(begin_time, end_time, n_ts)
         for k, v in options.items():
             self.options[k] = v
-        print(self.options['init_method'])
+
         if n_core > 1:
             pool = mp.Pool(n_core)
             pool_results = []
