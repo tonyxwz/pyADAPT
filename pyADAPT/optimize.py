@@ -391,7 +391,7 @@ def optimize(model,
 
 
 def ADAPT():
-    """ The ADAPT function 
+    """ The ADAPT function
     add a threshold to elimimate the trajectories that don't fit enough.
     In other word, the parameters have to be random at the beginning.
     """

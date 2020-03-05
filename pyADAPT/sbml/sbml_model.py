@@ -24,7 +24,7 @@ python -m pyADAPT analysis -f trehalose.xml -p R:hxt/Vmax
 ```
 
 Where `hxt` is the name of the reaction and `Vmax` is the parameter that
-the use want to "ADAPT"
+the user want to "ADAPT"
 """
 
 from collections import OrderedDict
@@ -32,6 +32,7 @@ from math import exp, log, log2, log10, pow
 
 import libsbml
 import numpy as np
+import roadrunner
 from asteval import Interpreter
 from cached_property import cached_property
 
@@ -41,22 +42,17 @@ from pyADAPT.sbml.wrappers import Compartment, Species
 
 
 class SBMLModel(BaseModel):
-    """The main purpose of this class is to support the yeast trehalose model from
-    Smallbone et al. For other Model of different structure, some further extending
-    might be needed.
+    """ The main purpose of this class is to support the yeast trehalose model from
+    Smallbone et al. For other Model of different structure, further extending
+    might be required.
     """
-    def __init__(self, sbml_path, time_range=[], adapt_params=[]):
+    def __init__(self, sbml_path):
         """Initialize a ADAPT model from a sbml file
 
         Parameters
         ----------
         sbml_path : String
             The path to the sbml model 'xml' file
-        time_range : array(2), optional
-            array([t0, tf]), by default []
-        adapt_params : list of strings, optional
-            the parameter that need to be "adapted", for example,
-            ['glc_0', 'hxt/Vmax'], by default []
         """
         self.sbml: libsbml.SBMLDocument = libsbml.readSBML(sbml_path)
         self.sbml_model: libsbml.Model = self.sbml.getModel()
