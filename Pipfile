@@ -9,7 +9,6 @@ pylint = "*"
 rope = "*"
 yapf = "*"
 scikit-learn = "*"
-black = "==19.10b0"
 pyqt5 = "*"
 pysnooper = "*"
 vprof = "*"
@@ -21,8 +20,8 @@ ipyparallel = "*"
 [packages]
 pyadapt = {editable = true,path = "."}
 tables = "*"
-pydoe = "*"
 libroadrunner = "*"
+spyder-kernels = "*"
 
 [requires]
 python_version = "3.7"

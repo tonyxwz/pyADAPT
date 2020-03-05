@@ -92,7 +92,7 @@ class BaseModel(metaclass=ABCMeta):
         self,
         new_params,  # parameters that need to be optimized
         time_points,  # the time span of the computation
-        x0,  # the states at the beginning of the time span
+        x0,  # the states at the first time point
         new_param_names=[],  # the parameter's names, in the same order
         method="RK45",  # solver choice only RK45/RK23/DOP853 since no jacobians
         rtol=1e-3,  # relative tolerance

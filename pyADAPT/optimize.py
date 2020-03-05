@@ -90,15 +90,6 @@ def default_regularization(params=None,
                            i_ts=None,
                            **kw):
     """ tiemann & natal's regularization term in ADAPT 2013 paper
-    the objective have no idea what a regularization function needs, but it can
-    offer all the knowledge it have.
-        - the parameter trajectory so far, `parameter_trajectory`
-        - the state trajectory so far, `state_trajectory`
-        - which iteration number, i_iter
-        - which time step is it, i_ts
-        - errors between data and prediction, error
-        - time span, if regularization function want to be time dependent, time_span
-        - T.B.C
     """
     old_params = parameter_trajectory[i_ts - 1, :]
     delta_t = time_span[-1] - time_span[0]
@@ -113,6 +104,10 @@ class ADAPTResult(object):
 
 class Optimizer(object):
     """optimizes an ADAPT model"""
+    ITER = 1
+    TIMESTEP = 2
+    OBJFUNC = 3
+
     def __init__(self, model: BaseModel, dataset: DataSet,
                  parameter_names: list):
         # I am being naive by assuming the user will give the states in the
@@ -126,8 +121,11 @@ class Optimizer(object):
             "method": "trf",
             "lambda": 1,
             "odesolver": "RK45",
+            "sseThres": 1000,
             "regularization": default_regularization,
             "interpolation": "Hermite",
+            "verbose": self.ITER,
+            "init_method": None
         }
 
     def run_mp(self,
@@ -135,14 +133,16 @@ class Optimizer(object):
                end_time=None,
                n_iter=5,
                n_ts=5,
-               verbose=True,
-               n_core=4):
+               n_core=4,
+               **options):
         if begin_time is None:
             begin_time = self.dataset.begin_time
         if end_time is None:
             end_time = self.dataset.end_time
         # endtime should be the last available time from dataset
         self.time = np.linspace(begin_time, end_time, n_ts)
+        for k, v in options.items():
+            self.options[k] = v
 
         if n_core > 1:
             pool = mp.Pool(n_core)
@@ -155,7 +155,6 @@ class Optimizer(object):
                                          "end_time": end_time,
                                          "n_iter": 1,
                                          "n_ts": n_ts,
-                                         "verbose": verbose,
                                          "mp": {
                                              "mp_i_iter": i,
                                              "n_core": n_core
@@ -174,8 +173,7 @@ class Optimizer(object):
             self.run(begin_time=begin_time,
                      end_time=end_time,
                      n_iter=n_iter,
-                     n_ts=n_ts,
-                     verbose=verbose)
+                     n_ts=n_ts)
         # convert the lists into xarray
         self.parameter_trajectories = xr.DataArray(
             data=np.array(self.list_of_parameter_trajectories),
@@ -189,17 +187,12 @@ class Optimizer(object):
             name="state trajectories")
         return self.parameter_trajectories, self.state_trajectories
 
-    def run(self,
-            begin_time=None,
-            end_time=None,
-            n_iter=5,
-            n_ts=5,
-            verbose=True,
-            **kw):
+    def run(self, begin_time=None, end_time=None, n_iter=5, n_ts=5, **kw):
         self.list_of_parameter_trajectories = list()
         self.list_of_state_trajectories = list()
+
         for i_iter in range(n_iter):
-            if verbose:
+            if self.options['verbose'] >= self.ITER:
                 if "mp" in kw:
                     print(
                         f"iteration: {kw['mp']['mp_i_iter']} ({ mp.current_process().name })"
@@ -211,13 +204,24 @@ class Optimizer(object):
             self.state_trajectory = np.zeros((n_ts, len(self.dataset)))
 
             data = self.dataset.interpolate(n_ts=n_ts)
+            # ! 👇 is probably wrong (*initial value problem*)
             # params = self.find_init_guesses()
-            self.parameter_trajectory[0, :] = self.parameters["init"]
-            # ! 👇 is probably wrong because there's no unobservables
-            self.state_trajectory[0, :] = data[:, 0, 0]
+            if self.options['init_method'] is None:
+                self.state_trajectory[0, :] = data[:, 0, 0]
+                self.parameter_trajectory[0, :] = self.parameters['init']
+            elif self.options['init_method'] == "interfacefocus":
+                # putting state initialization here for the possible return
+                # of states in natal_init
+                self.state_trajectory[0, :] = data[:, 0, 0]
+                self.parameter_trajectory[0, :] = self.natal_init(i_iter, data)
+            else:
+                raise Exception("Unknown initialization method.")
+
             for i_ts in range(1, n_ts):
-                if (i_ts % 10) == 0 and verbose:
+                if (i_ts %
+                        10) == 0 and self.options['verbose'] >= self.TIMESTEP:
                     print(f"time step: {i_ts}")
+
                 (
                     self.parameter_trajectory[i_ts, :],
                     self.state_trajectory[i_ts, :],
@@ -234,13 +238,57 @@ class Optimizer(object):
             self.list_of_state_trajectories.append(self.state_trajectory)
         return self.list_of_parameter_trajectories, self.list_of_state_trajectories
 
-    def lhs_init(self):
-        """ Latin hypercube sampling of initial values as described in P. van Beek's
-        master thesis, though not implemented in the code
+    def natal_init(self, i_iter, data):
+        """ Natal van Riel's parameter initialization
+        Basically, it tries multiple times to fit the parameters to the data
+        return: arrays of initial parameters
+        """
+        sse = np.inf
+        i_ts = 0
+        sseThres = self.options["sseThres"]
+
+        while sse > sseThres:
+            params = self.parameters['init'] * (10**(
+                2 * np.random.random_sample(size=(len(self.parameter_names), ))
+                - 1))
+            lsq_res = least_squares(
+                self.objective_function,
+                params,
+                bounds=(self.parameters["lb"], self.parameters["ub"]),
+                method=self.options["method"],
+                kwargs={
+                    "begin_states": data[:, i_ts, 0],
+                    "interp_data": data[:, i_ts, :],
+                    "time_span": [-1000, 0],
+                    "R": None,
+                    "i_iter": i_iter,
+                    "i_ts": i_ts
+                },
+            )
+            sse = lsq_res.cost
+        return lsq_res.x
+
+    def find_init_guesses(self):
+        """ Find the initial guess of the parameters at the start of each iteration.
+        Problem statement: the data need to be randomized at time 0. we would like
+        to find a set of parameters that will lead to a steady states of the
+        randomized states at t0.
+
+        only do this once at the beginning of each iteration. afterwards, the
+        initial guesses are just the optimization result from previous timestep.
+        # TODO the initial value problem 🔥
         """
 
-    def fit_timestep(self, initial_guess, begin_states, interp_data, i_iter,
-                     i_ts):
+    def steady_states(self):
+        """ the data interpolation is assumed to be in steady states"""
+        pass
+
+    def fit_timestep(self,
+                     initial_guess=None,
+                     begin_states=None,
+                     interp_data=None,
+                     i_iter=None,
+                     i_ts=None):
         """call least_squares
         access Optimizer options via `i_iter` and `i_ts` and `self`
         """
@@ -262,7 +310,7 @@ class Optimizer(object):
             },
         )
 
-        # now compute the states using new parameters from lsq (a bit tedious yeah...)
+        # compute the states using new parameters from lsq (a bit tedious yeah...)
         # but adding `begin_states` and `lsq_result.fun` can be confusing to users
         new_state_traj = self.model.compute_states(
             lsq_result.x,
@@ -330,36 +378,24 @@ class Optimizer(object):
 
         # equation 3.4 [ADAPT 2013]
         errors = (end_states - interp_states) / interp_stds
-        # need more work on the errors of flux. toy and trehalose don't have
-        # flux data, so I won't waste my time on it.
-        # New comer's job:
-        #   - add flux in basemodel
-        #   - add flux in dataset
-        #   - add flux errors here
-        reg_term = self.options['lambda'] * R(
-            params=params,
-            parameter_trajectory=self.parameter_trajectory,
-            state_trajectory=self.state_trajectory,
-            i_iter=i_iter,
-            i_ts=i_ts,
-            time_span=time_span)
+        """ need more work on the errors of flux. toy and trehalose don't have
+        flux data, so I won't waste my time on it.
+        New comer's job:
+          - add flux in basemodel
+          - add flux in dataset
+          - add flux errors here """
+        if R is not None:
+            reg_term = self.options['lambda'] * R(
+                params=params,
+                parameter_trajectory=self.parameter_trajectory,
+                state_trajectory=self.state_trajectory,
+                i_iter=i_iter,
+                i_ts=i_ts,
+                time_span=time_span)
+        else:
+            reg_term = np.zeros((len(params)))  # SB
         residual = np.concatenate([errors, reg_term])
         return residual
-
-    def find_init_guesses(self):
-        """ Find the initial guess of the parameters at the start of each iteration.
-        Problem statement: the data need to be randomized at time 0. we would like
-        to find a set of parameters that will lead to a steady states of the
-        randomized states at t0.
-
-        only do this once at the beginning of each iteration. afterwards, the
-        initial guesses are just the optimization result from previous timestep.
-        # TODO the initial value problem 🔥
-        """
-
-    def steady_states(self):
-        """ the data interpolation is assumed to be in steady states"""
-        pass
 
 
 def optimize(model,
@@ -368,7 +404,7 @@ def optimize(model,
              n_iter=10,
              n_tstep=100,
              n_core=4,
-             verbose=True):
+             **options):
     """ the main optimization procedure
 
     Parameter
@@ -386,7 +422,7 @@ def optimize(model,
     """
 
     optim = Optimizer(model, dataset, params)
-    optim.run_mp(n_iter=n_iter, n_ts=n_tstep, n_core=n_core, verbose=verbose)
+    optim.run_mp(n_iter=n_iter, n_ts=n_tstep, n_core=n_core, **options)
     return optim.parameter_trajectories, optim.state_trajectories, optim.time
 
 
@@ -412,4 +448,10 @@ if __name__ == "__main__":
         raw_data_path="data/toyModel/toyData.mat",
         data_specs_path="data/toyModel/toyData.yaml",
     )
-    ptraj, straj = optimize(model, data, "k1", n_iter=1, n_tstep=10)
+    ptraj, straj, time = optimize(model,
+                                  data,
+                                  "k1",
+                                  n_iter=4,
+                                  n_tstep=50,
+                                  init_method='interfacefocus',
+                                  verbose=Optimizer.ITER)
