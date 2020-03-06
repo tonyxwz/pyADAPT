@@ -3,8 +3,7 @@ create a shadow class for every node
 
     - Reaction: compute_flux(context)
     - Compartment: cell=1, medium=1
-    - Species: 
-    - Rules
+    - Species:
     - UnitDefinition
     - Parameter
     - InitialAssignment
@@ -57,10 +56,10 @@ class BaseNode(object):
         return other % self.value
 
     def __pow__(self, other):
-        return self.value ** other
+        return self.value**other
 
     def __rpow__(self, other):
-        return other ** self.value
+        return other**self.value
 
     def __neg__(self):
         return -self.value
@@ -140,7 +139,7 @@ class SParameter(BaseNode):
     def __init__(self, pnode: libsbml.Parameter):
         """ 'S' for SBML
         http://sbml.org/Software/libSBML/docs/python-api/classlibsbml_1_1_parameter.html
-        By default, a SBML parameter 
+        By default, a SBML parameter
         A wrapper over sbml parameters to provide the support for assignment rule
         """
         super().__init__(pnode)
@@ -167,8 +166,8 @@ if __name__ == "__main__":
         8.3 // cell == 8.3 // cell.value,
         cell % 4 == cell.value % 4,
         4 % cell == 4 % cell.value,
-        cell ** 4 == cell.value ** 4,
-        4 ** cell == 4 ** cell.value,
+        cell**4 == cell.value**4,
+        4**cell == 4**cell.value,
     )
 
     medium = Compartment(compartments.getElementBySId("medium"))
