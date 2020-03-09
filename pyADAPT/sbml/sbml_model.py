@@ -2,7 +2,39 @@
 Module sbml_model
 ===================
 
-This module offers an model that can be converted from a SBML document.
+This module contains a convert to import a SBML model into the ADAPT model.
+
+How to process SBML components:
+
+- Model:
+    - notes
+    - annotation
+    - list of compartments -> SBMlModel.parameters
+        append to list of constants, the value is the size
+    - list of inital assignments
+        use in `__init__` to assign values to the species concentrations (states)
+    - list of parameters -> SBMLModel.parameters
+        these parameters are not the parameters in ADAPT. For example parameter
+        `heat` is a constant in the smallbone model, while parameter `glc_0` is
+        also a constant, but it is used in `initialassignment` to initialize
+        species concentration. (for my project, the trehalose model)
+    - list of reactions -> reaction.flux
+        reactions are different from the ones in ADAPT because they contains
+        local scope parameters, for example, `Vmax` exists in almost every
+        reaction in the trehalose model. To import SBML model into pyADAPT,
+        the parameters need to be renamed so that they don't conflict in the
+        global scope. so, Vmax from hxt will become hxt_Vmax in the
+        `SBMLModel.parameters`. Another to also store parameter under different
+        scopes in this SBMLModel class.
+    - list of rules -> rule.flux
+        rules are similar to a property of the model, it should return a value
+        calculated using the values known to the model already. They will be
+        implemented as a reaction in `pyADAPT.SBMLModel`, but with an attribute
+        marking they are actually rules not reactions.
+    - list of species -> states
+        Species are just the states in ADAPT models.
+    - list of unit definitions
+        fancy function for new students to work on.
 
 The parameters that could be potentially changed during a simulation have two
 sources, the parameters in the model "model > listOfParameters"
@@ -10,11 +42,6 @@ and the parameters in a reaction "reaction > kineticLaw > listOfParameters".
 
 - "model > listOfParameters" are just some initial conditions
 - "reaction > kineticLaw > listOfParameters" are the parameters that truely matters
-
-this can be problematic if the same name , such as "Vmax", is defined in many
-reactions. In SBMl, the parameters have a scope to operate. However, ADAPT
-controls the parameters only from a global scope. A function to pick out the
-parameters is required.
 
 A proposed syntax for specifying the parent of the parameters
 when calling from the command line is:
@@ -33,12 +60,11 @@ from math import exp, log, log2, log10, pow
 import libsbml
 import numpy as np
 import roadrunner
-from asteval import Interpreter
 from cached_property import cached_property
 
 from pyADAPT.basemodel import BaseModel
 from pyADAPT.sbml.reaction import Reaction
-from pyADAPT.sbml.wrappers import Compartment, Species
+from pyADAPT.sbml.components import Compartment, Species, AssignmentRule, SParameter
 
 
 class SBMLModel(BaseModel):
@@ -55,70 +81,66 @@ class SBMLModel(BaseModel):
             The path to the sbml model 'xml' file
         """
         self.sbml: libsbml.SBMLDocument = libsbml.readSBML(sbml_path)
-        self.sbml_model: libsbml.Model = self.sbml.getModel()
-        assert self.sbml_model is not None
-        self.name = self.sbml_model.name
-        self.notes = self.sbml_model.notes_string
+        # self.sbml_model: libsbml.Model = self.sbml.getModel()
+        assert self.sbml.model is not None
+        self.name = self.sbml.model.name
+        self.notes = self.sbml.model.notes_string
 
-        # math functions in the sbml formulas
         self.math_functions = {
             "log": log,
             "log10": log10,
             "log2": log2,
             "exp": exp
         }
-        # keep track of all the symbols
-        # make use the symbols table
-        self.interpreter = Interpreter(minimal=True, use_numpy=True)
+        # add to _parameters
+        for c in self.sbml.getModel().getListOfCompartments():
+            self.add_parameter(c.id, c.size, False, lb=0, ub=np.inf)
 
-        # Parameter with expr, (ast)eval the rule-constrained parameters
-        rules = self.sbml_model.getListOfRules()
+        # self.getRules(context)
+        rules = self.sbml.model.getListOfRules()
+        self.rules = OrderedDict()
         for r in rules:
-            self
+            self.rules[r.variable] = AssignmentRule(r)
 
-        # parameter without rule -> constants
-        for p in self.sbml_model.getListOfParameters():
-            rule_tmp = rules.get(p.id)
-            if rule_tmp is None:
-                # constant parameter
-                self.constants[p.id] = p.value
+        for p in self.sbml.getModel().getListOfParameters():
+            r = rules.get(p.id)
+            if r is None:
+                self.add_parameter(p.id,
+                                   p.value,
+                                   not p.constant,
+                                   lb=0,
+                                   ub=np.inf)
 
-        # compartments are also constant
-        self.compartments = OrderedDict()
-        for c in self.sbml_model.compartments:
-            self.compartments[c.id] = Compartment(c)
+        # ias: list of initial assignments
+        ias = self.sbml.getModel().getListOfInitialAssignments()
+        for s in self.sbml.getModel().getListOfSpecies():
+            name = s.id
+            ia = ias.get(name)
+            if ia is not None:
+                formula = libsbml.formulaToString(ia.getMath())
+                conc = eval(formula, {},
+                            {p[0]: p[1]
+                             for p in self._parameters})
+            else:
+                conc = s.initial_concentration
+
+            self.add_state(name=s.id, value=conc, observable=True)
 
         # add reactions as pyADAPT.sbml.reaction.Reaction
         self.reactions = OrderedDict()
-        for sbml_rxn in self.sbml_model.getListOfReactions():
-            r = Reaction(sbml_rxn)
-            self.reactions[r.id] = r
+        for sbml_rxn in self.sbml.model.getListOfReactions():
+            rxn = Reaction(sbml_rxn)
+            self.reactions[rxn.id] = rxn
             # move parameters from reaction to model scope, by add prefix
-            for param in r.kl.getListOfParameters():
-                param_name = "_".join([r.id, param.id])
+            for param in rxn.kl.getListOfParameters():
+                param_name = "_".join([rxn.id, param.id])
                 self.add_parameter(
                     name=param_name,
                     value=param.value,
-                    vary=("/".join([r.id, param.id]) in adapt_params),
-                    user_data={"parent": r.id},
+                    vary=False,
+                    parent=rxn.id,
                 )
 
-        # libsbml.InitialAssignment -> pyADAPT.species.initial_concentration
-        self.species = OrderedDict()  # remember the order
-        ia_list = self.sbml_model.getListOfInitialAssignments()
-        for s in self.sbml_model.getListOfSpecies():
-            sp = Species(s)
-            ia = ia_list.get(sp.id)
-            if ia is not None:
-                formula = compile(libsbml.formulaToString(ia.math), "<string>",
-                                  "eval")
-                init_conc = eval(formula, {}, self.context)
-            else:
-                init_conc = s.initial_concentration
-            self.species[s.id] = s
-            self.add_state(name=s.id, init=init_conc)
-
-        self.add_predictor(name="t", value=time_range)
         super().__init__()
 
     @cached_property
@@ -130,94 +152,51 @@ class SBMLModel(BaseModel):
         stoichiometry matrix: row (effect or substrate/species)
                               columns (cause or reaction)
         """
-        mat = np.zeros((len(self.species), len(self.reactions)))
-        species_list = list(self.species)  # list of keys
+        mat = np.zeros((len(self.states), len(self.reactions)))
+        # maybe it's a good idea to always refer to the sbml for ordering
+        species_list = self.states['name'].tolist()
         for j, r in enumerate(self.reactions.values()):
             for species_ref in r.reactants:
-                reactant = self.species[species_ref.species]
+                reactant = self.sbml.model.species.get(species_ref.species)
                 if not reactant.boundary_condition:
                     i = species_list.index(species_ref.species)
                     mat[i, j] = -species_ref.stoichiometry
             for species_ref in r.products:
-                product = self.species[species_ref.species]
+                product = self.sbml.model.species.get(species_ref.species)
                 if not product.boundary_condition:
                     i = species_list.index(species_ref.species)
                     mat[i, j] = species_ref.stoichiometry
         return mat
 
     @property
-    def context(self):
-        return self.get_context()
-
-    def get_context(self):
-        """
-        TODO automatically update all the context
-        - compartment sizes
-        - species states concentrations
-        - parameters (glc_0)
-        - reaction parameters
-        """
-        context = {}
-        context.update(self.constants)
-        context.update(self.math_functions)
-        context.update(self.parameters)
-        context.update(self.states)
-        return context
-
-    def rulesToLambda(self):
-        """libSBML.AssignmentRule
-        the definition of Rule in SBML is identical to the definition of reactions
-        in pyADAPT, libSBML::rule -> PyADAPT::Reactions
-        glc_change = log10(glc / glc_0) at any time
-        self.rules['glc_change'] = compile('log10(glc/glc_0)', '<string>', 'eval')
-        """
-        # TODO rules seems to be useless right now
-        pass
-
-    def get_unit(self, x):
-        """ forget about the units for now
-        they are only useful when i need to plot
-        """
-        pass
-
-    def odefunc(self, t, x, p):
-        """
-        Q: why odefunc take x (state) as an argument which is know to self
-        A: the meaning of odefunc lies in setting the math form of the differential
-        equation system, and the ability to calculate the differentials at any time
-        and states concentrations. If states is calculated from self, the ode
-        function can only return one result.
-        """
-        v = self.fluxes(t, x, p)
-        dxdt = self.stoich_matrix.dot(v)
-        return dxdt
+    def symbols(self):
+        """parameters, states,"""
+        table = {}
+        table.update(self.parameters['value'].to_dict())
+        table.update(self.states['value'].to_dict())
+        return table
 
     def fluxes(self, t, x, p):
         # evaluate each reaction's flux(rate)
-        # print(x)
-        self.update_states(x)
         v = list()
         for r in self.reactions.values():
             # if you want the parameters to be ADAPT, do it here
-            v.append(r.compute_flux(self.context))
+            v.append(r.compute_flux(self.symbols))
         return np.array(v)
 
-    def pick_params_for_reaction(self, p):
-        pass
-
-    def update_states(self, x):
-        """ To use solve_ivp, odefunc must take the states as a list rather than
-        dictionary. The code should guarantee that x is in the same order as species
-        list.
+    def odefunc(self, t, x, p):
         """
-        # this should be "update species"
-        assert len(x) == len(self.species)
-        for species_id, new_state in zip(self.species.keys(), x):
-            self.states[species_id] = new_state
-
-    def inputs(self, t):
-        # Not supported
-        return super().inputs(t)
+        calculate the derivatives in biologist's style
+        p: np.ndarray / pandas.Series
+        """
+        if type(p) is np.ndarray:
+            # FIXME if ndarray, how to extract the parameters?
+            pass
+        # assign p (parameters) and x (states)
+        self.states.loc[:, "value"] = x
+        v = self.fluxes(t, x, p)
+        dxdt = self.stoich_matrix.dot(v)
+        return dxdt
 
 
 if __name__ == "__main__":
@@ -225,20 +204,29 @@ if __name__ == "__main__":
 
     smallbone = SBMLModel("data/trehalose/smallbone.xml")
     pprint(smallbone.stoich_matrix)
-    pprint(smallbone.parameters)
-    x = list()
-    for s in smallbone.species.values():
-        x.append(s.initial_concentration)
-    x = np.array(x)
-    x[15] = 0.1
+    pprint(smallbone.parameters['value'])
+    pprint(smallbone.states['value'])
+    pprint(smallbone.parameters.loc[:, 'value'])
+
+    x = smallbone.states['value']
+    # x[15] = 0.1
 
     t_eval = np.linspace(0, 10, 100)
-    y = smallbone.compute_states([0, 10], x, t_eval=t_eval)
+    # import cProfile
+    # cProfile.run("""smallbone.compute_states(new_params=0.5,
+    #                              time_points=t_eval,
+    #                              x0=x,
+    #                              new_param_names=['hxt_Vmax'])""")
+    y = smallbone.compute_states(new_params=97,
+                                 time_points=t_eval,
+                                 x0=x,
+                                 new_param_names=['hxt_Vmax'])
+    print(y)
 
     import matplotlib.pyplot as plt
 
     for i in range(y.shape[0]):
         plt.plot(t_eval, y[i, :], "--")
-    names = [x.name for x in smallbone.species.values()]
-    plt.legend(names)
+    # names = [x.name for x in smallbone.states.values()]
+    plt.legend(smallbone.states.name)
     plt.show()

@@ -32,7 +32,7 @@ class BaseModel(metaclass=ABCMeta):
         instance = super().__new__(cls)
         instance.name = "Base Model"
         instance.notes = """Base Model, for extending only"""
-
+        instance.predictor_name = "time"
         instance._parameters = list()
         instance._states = list()
         # if the derivatives of you model is not related to time, it is possible
@@ -46,7 +46,6 @@ class BaseModel(metaclass=ABCMeta):
         self._parameters: list
         self._states: list
 
-        self.predictor_name = "time"
         self.parameters = pd.DataFrame(
             self._parameters,
             columns=["name", "value", "vary", "lb", "ub", "init"],
@@ -61,7 +60,7 @@ class BaseModel(metaclass=ABCMeta):
         del self._parameters
         del self._states
 
-    def add_parameter(self, name, value, vary, lb=-np.inf, ub=np.inf):
+    def add_parameter(self, name, value, vary, lb=-np.inf, ub=np.inf, **kw):
         # name, value, vary?, lb, ub, init
         self._parameters.append([name, value, vary, lb, ub, value])
 
@@ -77,6 +76,8 @@ class BaseModel(metaclass=ABCMeta):
         pass
 
     def jacobian(self, t, x, p):
+        # This might be useful if ODE solvers require it. But I am not sure how
+        # hard is it to calculate.
         raise NotImplementedError
 
     def fluxes(self, t, x, p):
@@ -90,13 +91,13 @@ class BaseModel(metaclass=ABCMeta):
 
     def compute_states(
         self,
-        new_params,  # parameters that need to be optimized
-        time_points,  # the time span of the computation
-        x0,  # the states at the first time point
+        new_params=None,  # parameters that need to be optimized
+        time_points=None,  # the time span of the computation
+        x0=None,  # the states at the first time point
         new_param_names=[],  # the parameter's names, in the same order
-        method="RK45",  # solver choice only RK45/RK23/DOP853 since no jacobians
+        method="RK45",  # odesolver, only RK45/RK23/DOP853 since no jacobians
         rtol=1e-3,  # relative tolerance
-        atol=1e-6,  # absolute tolerance
+        atol=1e-6  # absolute tolerance
     ):
         if new_param_names:
             # https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#why-does-assignment-fail-when-using-chained-indexing
@@ -108,7 +109,7 @@ class BaseModel(metaclass=ABCMeta):
 
         # https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html
         sol = solve_ivp(
-            lambda t, x: self.odefunc(t, x, self.parameters.value),
+            lambda t, x: self.odefunc(t, x, self.parameters['value']),
             t_span,
             x0,
             method=method,
@@ -137,9 +138,6 @@ class BaseModel(metaclass=ABCMeta):
 
     def sync_from_optimizer(self, optimizer):
         """ called at the end of Optimizer.run
-        for each parameter_i in optimizer; do
-            self.parameter_i = parameter_i
-        end
         """
         for i in range(len(optimizer)):
             self.parameters.iloc[i]["value"] = optimizer[i]
@@ -151,7 +149,6 @@ class BaseModel(metaclass=ABCMeta):
 
     def psa(self):
         """Parameter sensitivity analysis"""
-        # TODO Parameter sensitivity analysis
 
     def draw(self):
         """ Draw the model using networkx """

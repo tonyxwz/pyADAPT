@@ -366,8 +366,11 @@ class Optimizer(object):
             np.ndarray: shape(len(states) + len(parameter penalty))
         """
 
-        end_states = self.model.compute_states(params, time_span, begin_states,
-                                               self.parameter_names)
+        end_states = self.model.compute_states(
+            new_params=params,
+            time_points=time_span,
+            x0=begin_states,
+            new_param_names=self.parameter_names)
         end_states = end_states[:, -1]
         # observable: choose those observable to compare with the data
         end_states = end_states[self.model.states["observable"]]
@@ -453,5 +456,5 @@ if __name__ == "__main__":
                                   "k1",
                                   n_iter=4,
                                   n_tstep=50,
-                                  init_method='interfacefocus',
-                                  verbose=Optimizer.ITER)
+                                  init_method=None,
+                                  verbose=Optimizer.TIMESTEP)

@@ -5,7 +5,7 @@ import re
 import libsbml
 import numpy as np
 
-from pyADAPT.sbml.wrappers import BaseNode, Compartment, Species
+from pyADAPT.sbml.components import BaseNode, Compartment, Species
 
 
 class Reaction(BaseNode):
@@ -32,7 +32,7 @@ class Reaction(BaseNode):
     def compute_flux(self, context={}):
         """
         Calculate the fluxes of the reaction
-        
+
         :param context: The required substrate concertations and parameters to
             calculate the flux.
         :return: flux (Float)

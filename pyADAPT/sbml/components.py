@@ -180,3 +180,5 @@ if __name__ == "__main__":
         cell != medium,
     )
     print(cell, medium)
+    for ar in model.getListOfRules():
+        print(AssignmentRule(ar))
