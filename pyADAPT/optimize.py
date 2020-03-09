@@ -141,8 +141,7 @@ class Optimizer(object):
             end_time = self.dataset.end_time
         # endtime should be the last available time from dataset
         self.time = np.linspace(begin_time, end_time, n_ts)
-        for k, v in options.items():
-            self.options[k] = v
+        self.options.update(options)
 
         if n_core > 1:
             pool = mp.Pool(n_core)
