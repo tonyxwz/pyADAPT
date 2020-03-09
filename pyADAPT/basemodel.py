@@ -35,6 +35,7 @@ class BaseModel(metaclass=ABCMeta):
         instance.predictor_name = "time"
         instance._parameters = list()
         instance._states = list()
+        instance.flux_trajectory = list()
         # if the derivatives of you model is not related to time, it is possible
         # to implement the ode function in vectorized fashion. if you don't know
         # what it is, just leave it as `False`
@@ -45,6 +46,7 @@ class BaseModel(metaclass=ABCMeta):
         self.name: str
         self._parameters: list
         self._states: list
+        self.flux_trajectory: list
 
         self.parameters = pd.DataFrame(
             self._parameters,
