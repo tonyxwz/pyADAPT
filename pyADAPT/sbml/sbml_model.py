@@ -143,6 +143,8 @@ class SBMLModel(BaseModel):
 
         super().__init__()
         self.stoich_matrix = self.get_stoich_matrix()
+        self.symbol_table = {}
+        self.symbol_table.update(self.math_functions)
 
     def get_stoich_matrix(self):
         """
@@ -175,6 +177,8 @@ class SBMLModel(BaseModel):
 
     def fluxes(self, t, x, p):
         # evaluate each reaction's flux(rate)
+        # Note: it's a bit weird since all the fluxes are `eval`ed, `p` is not
+        # used in this method.
         v = list()
         for r in self.reactions.values():
             v.append(r.compute_flux(self.symbols))
@@ -200,20 +204,20 @@ if __name__ == "__main__":
     smallbone = SBMLModel("data/trehalose/smallbone.xml")
 
     x1 = deepcopy(smallbone.states['value'].values)
-    x0 = [
+    x0 = np.array([
         0.09765, 0.10000, 2.67500, 0.05000, 0.02000, 0.70000, 1.28200, 2.52500,
         1.00000, 0.62500, 1.00000, 1.00000, 0.28150, 0.64910, 1.00000,
         100.00000
-    ]
-    # x[15] = 0.1
-
+    ])
+    x0[15] = 0.1
+    x0[0] = 100
     t_eval = np.linspace(0, 10, 1000)
     # import cProfile
     # cProfile.run("""smallbone.compute_states(new_params=0.5,
     #                              time_points=t_eval,
     #                              x0=x,
     #                              new_param_names=['hxt_Vmax'])""")
-    y = smallbone.compute_states(time_points=t_eval, x0=x1)
+    y = smallbone.compute_states(time_points=t_eval, x0=x0)
 
     # print(y)
 
