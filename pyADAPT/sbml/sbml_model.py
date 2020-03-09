@@ -59,8 +59,6 @@ from math import exp, log, log2, log10, pow
 
 import libsbml
 import numpy as np
-import roadrunner
-from cached_property import cached_property
 
 from pyADAPT.basemodel import BaseModel
 from pyADAPT.sbml.reaction import Reaction
@@ -121,6 +119,8 @@ class SBMLModel(BaseModel):
                 conc = eval(formula, {},
                             {p[0]: p[1]
                              for p in self._parameters})
+            elif s.boundary_condition and s.initial_concentration == 0:
+                conc = 1.0
             else:
                 conc = s.initial_concentration
 
@@ -142,10 +142,7 @@ class SBMLModel(BaseModel):
                 )
 
         super().__init__()
-
-    @cached_property
-    def stoich_matrix(self):
-        return self.get_stoich_matrix()
+        self.stoich_matrix = self.get_stoich_matrix()
 
     def get_stoich_matrix(self):
         """
@@ -171,7 +168,7 @@ class SBMLModel(BaseModel):
     @property
     def symbols(self):
         """parameters, states,"""
-        table = {}
+        table = self.math_functions
         table.update(self.parameters['value'].to_dict())
         table.update(self.states['value'].to_dict())
         return table
@@ -180,53 +177,51 @@ class SBMLModel(BaseModel):
         # evaluate each reaction's flux(rate)
         v = list()
         for r in self.reactions.values():
-            # if you want the parameters to be ADAPT, do it here
             v.append(r.compute_flux(self.symbols))
-        return np.array(v)
+        v = np.array(v)
+        self.flux_trajectory.append(v)
+        return v
 
     def odefunc(self, t, x, p):
         """
         calculate the derivatives in biologist's style
         p: np.ndarray / pandas.Series
         """
-        if type(p) is np.ndarray:
-            # FIXME if ndarray, how to extract the parameters?
-            pass
         # assign p (parameters) and x (states)
         self.states.loc[:, "value"] = x
         v = self.fluxes(t, x, p)
-        dxdt = self.stoich_matrix.dot(v)
+        dxdt = np.dot(self.stoich_matrix, v)
         return dxdt
 
 
 if __name__ == "__main__":
     from pprint import pprint
-
+    from copy import deepcopy
     smallbone = SBMLModel("data/trehalose/smallbone.xml")
-    pprint(smallbone.stoich_matrix)
-    pprint(smallbone.parameters['value'])
-    pprint(smallbone.states['value'])
-    pprint(smallbone.parameters.loc[:, 'value'])
 
-    x = smallbone.states['value']
+    x1 = deepcopy(smallbone.states['value'].values)
+    x0 = [
+        0.09765, 0.10000, 2.67500, 0.05000, 0.02000, 0.70000, 1.28200, 2.52500,
+        1.00000, 0.62500, 1.00000, 1.00000, 0.28150, 0.64910, 1.00000,
+        100.00000
+    ]
     # x[15] = 0.1
 
-    t_eval = np.linspace(0, 10, 100)
+    t_eval = np.linspace(0, 10, 1000)
     # import cProfile
     # cProfile.run("""smallbone.compute_states(new_params=0.5,
     #                              time_points=t_eval,
     #                              x0=x,
     #                              new_param_names=['hxt_Vmax'])""")
-    y = smallbone.compute_states(new_params=97,
-                                 time_points=t_eval,
-                                 x0=x,
-                                 new_param_names=['hxt_Vmax'])
-    print(y)
+    y = smallbone.compute_states(time_points=t_eval, x0=x1)
+
+    # print(y)
 
     import matplotlib.pyplot as plt
 
     for i in range(y.shape[0]):
         plt.plot(t_eval, y[i, :], "--")
     # names = [x.name for x in smallbone.states.values()]
+    print(smallbone.states['value'])
     plt.legend(smallbone.states.name)
     plt.show()

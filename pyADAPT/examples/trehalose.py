@@ -193,10 +193,12 @@ class Smallbone2011(BaseModel):
         return np.array([pgi, hxt, hxk, pgm, tpp, tps, nth, ugp])
 
     def odefunc(self, t, x, p):
-        return np.dot(self.sm, self.fluxes(t, x, p))
+        v = self.fluxes(t, x, p)
+        self.flux_trajectory.append(v)
+        return np.dot(self.sm, v)
 
-    def input(self, t):
-        pass
+    def inputs(self, t):
+        return super().inputs(t)
 
 
 if __name__ == "__main__":
@@ -207,8 +209,14 @@ if __name__ == "__main__":
         1.00000, 0.62500, 1.00000, 1.00000, 0.28150, 0.64910, 1.00000,
         100.00000
     ]
-    t = np.linspace(0, 10)
+    t = np.linspace(0, 10, 1000)
+    x0[0] = 100  # glc
+    x0[-1] = 0.1  # glx
     y = smallbone.compute_states(time_points=t, x0=x0)
+
+    y = y[[0, 1, 2, 3, 4, 5]]
     for i in range(y.shape[0]):
         plt.plot(t, y[i, :])
+    plt.legend(['glc', 'g1p', 'g6p', 'trh', 't6p', 'udg'])
+    plt.title("glx=0.1")
     plt.show()
