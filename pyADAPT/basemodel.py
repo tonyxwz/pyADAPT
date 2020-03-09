@@ -91,7 +91,7 @@ class BaseModel(metaclass=ABCMeta):
 
     def compute_states(
         self,
-        new_params=None,  # parameters that need to be optimized
+        new_params=[],  # parameters that need to be optimized
         time_points=None,  # the time span of the computation
         x0=None,  # the states at the first time point
         new_param_names=[],  # the parameter's names, in the same order
@@ -144,7 +144,7 @@ class BaseModel(metaclass=ABCMeta):
 
     def reset(self):
         """ reset to initial conditions """
-        self.parameters['values'] = self.parameters['init']
+        self.parameters['value'] = self.parameters['init']
         self.states['value'] = self.states['init']
 
     def psa(self):
