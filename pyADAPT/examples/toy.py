@@ -14,7 +14,6 @@ class ToyModel(BaseModel):
         self.add_parameter(name="k3", value=0.1, vary=False, lb=0)
         self.add_parameter(name="k4", value=0.5, vary=False, lb=0)
         self.add_parameter(name="k5", value=1, vary=False, lb=0)
-        self.init_vary = ["k1", "k2", "k3", "k4", "k5"]
 
         self.add_state(name="s1", value=1)
         self.add_state(name="s2", value=1)
