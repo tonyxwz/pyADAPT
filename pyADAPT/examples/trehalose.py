@@ -55,58 +55,53 @@ class Smallbone2011(BaseModel):
         self.add_parameter("ugp_Kiudg", 0.00350, False, -np.inf, np.inf)
         self.add_parameter("ugp_shock", 16.00000, False, -np.inf, np.inf)
 
-        self.add_state("glc", -1954.423351, True)
-        self.add_state('g1p', 0.058932, True)
-        self.add_state('g6p', -8778.849594, True)
-        self.add_state('trh', 0.071574, True)
-        self.add_state('t6p', 0.028853, True)
-        self.add_state('udg', 0.309360, True)
-        self.add_state('adp', 1.282000, True)
-        self.add_state('atp', 2.525000, True)
-        self.add_state('ppi', 1.000000, True)
-        self.add_state('f6p', 0.625000, True)
-        self.add_state('h', 1.000000, True)
-        self.add_state('pho', 1.000000, True)
-        self.add_state('udp', 0.281500, True)
-        self.add_state('utp', 0.649100, True)
-        self.add_state('h2o', 1.000000, True)
-        self.add_state('glx', 100.000000, True)
+        self.add_state("glc", 0.09765, True)
+        self.add_state('g1p', 0.10000, True)
+        self.add_state('g6p', 2.67500, True)
+        self.add_state('trh', 0.05000, True)
+        self.add_state('t6p', 0.02000, True)
+        self.add_state('udg', 0.70000, True)
+
+        # boundary conditions
+        self.add_parameter('adp', 1.282000, False)
+        self.add_parameter('atp', 2.525000, False)
+        self.add_parameter('ppi', 1.000000, False)
+        self.add_parameter('f6p', 0.625000, False)
+        self.add_parameter('h', 1.000000, False)
+        self.add_parameter('pho', 1.000000, False)
+        self.add_parameter('udp', 0.281500, False)
+        self.add_parameter('utp', 0.649100, False)
+        self.add_parameter('h2o', 1.000000, False)
+        self.add_parameter('glx', 100.000000, False)
 
         self.sm = np.array([[0.0, 1.0, -1.0, 0.0, 0.0, 0.0, 2.0, 0.0],
                             [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, -1.0],
                             [-1.0, 0.0, 1.0, -1.0, 0.0, -1.0, 0.0, 0.0],
                             [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, -1.0, 0.0],
                             [0.0, 0.0, 0.0, 0.0, -1.0, 1.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0],
-                            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]])
+                            [0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0]])
         super().__init__()
 
     def fluxes(self, t, x, p):
+        # measured
         glc = x[0]
         g1p = x[1]
         g6p = x[2]
         trh = x[3]
         t6p = x[4]
         udg = x[5]
-        adp = x[6]
-        atp = x[7]
-        ppi = x[8]
-        f6p = x[9]
-        h = x[10]
-        pho = x[11]
-        udp = x[12]
-        utp = x[13]
-        h2o = x[14]
-        glx = x[15]
+
+        # unmeasured and they dont' change at all
+        adp = self.parameters.loc['adp', 'value']
+        atp = self.parameters.loc['atp', 'value']
+        ppi = self.parameters.loc['ppi', 'value']
+        f6p = self.parameters.loc['f6p', 'value']
+        h = self.parameters.loc['h', 'value']
+        pho = self.parameters.loc['pho', 'value']
+        udp = self.parameters.loc['udp', 'value']
+        utp = self.parameters.loc['utp', 'value']
+        h2o = self.parameters.loc['h2o', 'value']
+        glx = self.parameters.loc['glx', 'value']
 
         cell = self.parameters.loc['cell', 'value']
         medium = self.parameters.loc['medium', 'value']
@@ -203,20 +198,33 @@ class Smallbone2011(BaseModel):
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    smallbone = Smallbone2011()
-    x0 = [
-        0.09765, 0.10000, 2.67500, 0.05000, 0.02000, 0.70000, 1.28200, 2.52500,
-        1.00000, 0.62500, 1.00000, 1.00000, 0.28150, 0.64910, 1.00000,
-        100.00000
-    ]
-    t = np.linspace(0, 10, 1000)
-    x0[0] = 100  # glc
-    x0[-1] = 0.1  # glx
-    y = smallbone.compute_states(time_points=t, x0=x0)
+    from pyADAPT.dataset import DataSet
+    from pyADAPT.optimize import optimize
 
-    y = y[[0, 1, 2, 3, 4, 5]]
-    for i in range(y.shape[0]):
-        plt.plot(t, y[i, :])
-    plt.legend(['glc', 'g1p', 'g6p', 'trh', 't6p', 'udg'])
-    plt.title("glx=0.1")
-    plt.show()
+    smallbone = Smallbone2011()
+    # x0 = [
+    #     0.09765, 0.10000, 2.67500, 0.05000, 0.02000, 0.70000, 1.28200, 2.52500,
+    #     1.00000, 0.62500, 1.00000, 1.00000, 0.28150, 0.64910, 1.00000,
+    #     100.00000
+    # ]
+    # t = np.linspace(0, 10, 1000)
+    # x0[0] = 100  # glc
+    # x0[-1] = 0.1  # glx
+    # y = smallbone.compute_states(time_points=t, x0=x0)
+
+    # y = y[[0, 1, 2, 3, 4, 5]]
+    # for i in range(y.shape[0]):
+    #     plt.plot(t, y[i, :])
+    # plt.legend(['glc', 'g1p', 'g6p', 'trh', 't6p', 'udg'])
+    # plt.title("glx=0.1")
+    # plt.show()
+    data = DataSet(raw_data_path="data/trehalose/smallbone2011_data.mat",
+                   data_specs_path="data/trehalose/smallbone2011_data.yaml")
+    ptraj, straj, time = optimize(smallbone,
+                                  data,
+                                  "tpp_Kt6p",
+                                  n_iter=4,
+                                  n_tstep=50,
+                                  n_core=1,
+                                  init_method=None,
+                                  verbose=2)
