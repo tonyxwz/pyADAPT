@@ -1,6 +1,6 @@
 """ It's not possible to standardize the data flow from disk to memory.
 At least the process after the data is loaded should be standardize into using
-numpy and python dictionaries only. 
+numpy and python dictionaries only.
 """
 import numpy as np
 from yaml import load, dump
@@ -19,7 +19,7 @@ def read_data_specs(path_str):
     """ yaml or json """
     with open(path_str, "r") as f:
         ext = path_str.split(".")[-1]
-        if ext == "yaml":
+        if ext == "yaml" or ext == "yml":
             info = load(f, Loader=Loader)
         elif ext == "json":
             info = json.load(f)
@@ -70,7 +70,10 @@ if __name__ == "__main__":
     mat = read_data_raw(path_str="data/clampModelFinal/DataFinal2.mat")
     for datasetname, dataset in mat.items():
         keys = dataset.keys()
-        names = [k[:-5] for k in keys if (k[-4:] == "time") and (len(dataset[k]) > 1)]
+        names = [
+            k[:-5] for k in keys
+            if (k[-4:] == "time") and (len(dataset[k]) > 1)
+        ]
         for n in names:
             try:
                 time, flux = dataset[n + "_time"], dataset[n + "_flux"]
