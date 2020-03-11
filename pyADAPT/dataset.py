@@ -27,9 +27,8 @@ class DataSet(list):
     dataset for ADAPT. containing phenotypes measured at different stages after
     intervention. list of States
 
-    Job division from DataSet and Model: DataSet only stores the source data and
-    yields new interpolant data. Model stores the interpolants as the
-    trajectories.
+    DataSet only stores the source data and yields new interpolant data. Model
+    stores the interpolants as the trajectories.
     """
     def __init__(self,
                  raw_data_path="",
@@ -73,7 +72,7 @@ class DataSet(list):
             try:
                 unit = v["unit"]
             except KeyError as e:
-                unit = "mM/L"
+                unit = "mM"
                 print(
                     f"Warning: undefined {e.args[0]}, fallback to default ({unit})"
                 )
@@ -180,9 +179,13 @@ def get_cols(N, ratio=1):
 if __name__ == "__main__":
     from pprint import pprint, pformat
 
+    # D = DataSet(
+    #     raw_data_path="data/toyModel/toyData.mat",
+    #     data_specs_path="data/toyModel/toyData.yaml",
+    # )
     D = DataSet(
-        raw_data_path="data/toyModel/toyData.mat",
-        data_specs_path="data/toyModel/toyData.yaml",
+        raw_data_path="data/trehalose/smallbone2011_data.mat",
+        data_specs_path="data/trehalose/smallbone2011_data.yaml",
     )
     idp = D.interpolate(n_ts=10)
     # all for s1:

@@ -112,13 +112,13 @@ class State(list):
         axes.set_xlabel(self.time_unit + "(s)")
         axes.set_ylabel(self.unit)
         axes.errorbar(
-            self.time[1:],
-            [d.mean for d in self[1:]],
-            yerr=[d.std for d in self[1:]],
+            self.time,
+            [d.mean for d in self],
+            yerr=[d.std for d in self],
             fmt=".b",
             uplims=True,
             lolims=True,
-            elinewidth=1,
+            elinewidth=0.3,
         )
         if plt is not None:
             axes.bar(self.time, [d.mean for d in self])
