@@ -26,8 +26,19 @@ class Reaction(BaseNode):
                             for p in self.kl.getListOfParameters()]) + ")",
             re.VERBOSE,
         )
-        self.text_formula = self.regex.sub(f"{self.id}_\\1", self.kl.formula)
-        self.formula = compile(self.text_formula, "<string>", "eval")
+        self.formula = self.formate_formula(self.kl.formula)
+
+    def formate_formula(self, text):
+        regex1 = re.compile(
+            r'pow\(\b(\w*)\b,[ ]*\b(\w*)\b\)')  # change pow(a, b) to a ** b
+        text = regex1.sub("(\\1 ** \\2)", text)
+        regex2 = re.compile(
+            "(" + "|".join([p.id
+                            for p in self.kl.getListOfParameters()]) + ")",
+            re.VERBOSE,
+        )  # prepend reaction id to parameters id
+        text = regex2.sub(f"{self.id}_\\1", text)
+        return text
 
     def compute_flux(self, context={}):
         """
@@ -74,7 +85,7 @@ if __name__ == "__main__":
     for r_ in model.getListOfReactions():
         r = Reaction(r_)
         print(r.name, ":", r)
-        print(r.id, ":", r.text_formula)
+        print(r.id, ":", r.formula)
         for p in r.kl.getListOfParameters():
             print((p.id, p.value), end=" ")
         print("\n")
