@@ -35,6 +35,7 @@ class BaseModel(metaclass=ABCMeta):
         instance.predictor_name = "time"
         instance._parameters = list()
         instance._states = list()
+        instance._constants = list()
         instance.flux_trajectory = list()
         # if the derivatives of you model is not related to time, it is possible
         # to implement the ode function in vectorized fashion. if you don't know
@@ -46,6 +47,7 @@ class BaseModel(metaclass=ABCMeta):
         self.name: str
         self._parameters: list
         self._states: list
+        self._constants: list
         self.flux_trajectory: list
 
         self.parameters = pd.DataFrame(
@@ -59,8 +61,12 @@ class BaseModel(metaclass=ABCMeta):
             columns=["name", "value", "observable", "init"],
             index=[s[0] for s in self._states],
         )
+        self.constants = pd.DataFrame(self._constants,
+                                      columns=['name', 'value'],
+                                      index=[c[0] for c in self._constants])
         del self._parameters
         del self._states
+        del self._constants
 
     def add_parameter(self, name, value, vary, lb=-np.inf, ub=np.inf, **kw):
         # name, value, vary?, lb, ub, init
