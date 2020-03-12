@@ -16,6 +16,7 @@ snakeviz = "*"
 py-spy = "*"
 spyder-kernels = "*"
 ipyparallel = "*"
+ipympl = "*"
 
 [packages]
 pyadapt = {editable = true,path = "."}
