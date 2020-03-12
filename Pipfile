@@ -5,10 +5,25 @@ verify_ssl = true
 
 [dev-packages]
 pyqt5-tools = "==5.12.*"
+jupyterlab = "*"
+pylint = "*"
+rope = "*"
+yapf = "*"
+scikit-learn = "*"
+pyqt5 = "*"
+pysnooper = "*"
+vprof = "*"
+snakeviz = "*"
+py-spy = "*"
+spyder-kernels = "*"
+ipyparallel = "*"
+ipympl = "*"
 
 [packages]
 pyadapt = {editable = true,path = "."}
-xarray = "*"
+tables = "*"
+libroadrunner = "*"
+spyder-kernels = "*"
 
 [requires]
 python_version = "3.7"

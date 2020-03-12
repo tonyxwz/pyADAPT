@@ -5,10 +5,24 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: analyze trehalose",
+            "type": "python",
+            "request": "launch",
+            "module": "pyADAPT",
+            "args": [
+                "analyze",
+                "-f",
+                "data/trehalose/smallbone.xml",
+                "-p",
+                "hxt/Vmax",
+                "hxt/Kglc"
+            ]
+        },
+        {
             "name": "Run Toy Model",
             "type": "python",
             "request": "launch",
-            "module": "run_toy"
+            "module": "pyADAPT.examples.toy"
         },
         {
             "name": "Python: Current File",
