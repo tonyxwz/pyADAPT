@@ -4,6 +4,7 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+pyqt5-tools = "==5.12.*"
 jupyterlab = "*"
 pylint = "*"
 rope = "*"
@@ -16,6 +17,7 @@ snakeviz = "*"
 py-spy = "*"
 spyder-kernels = "*"
 ipyparallel = "*"
+ipympl = "*"
 
 [packages]
 pyadapt = {editable = true,path = "."}
