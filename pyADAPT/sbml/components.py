@@ -129,7 +129,7 @@ class AssignmentRule(BaseNode):
         self.formula = libsbml.formulaToString(rule.math)
 
     def __repr__(self):
-        return f"pyADAPT AssginmentRule: {self.variable} = {self.formula_string}"
+        return f"pyADAPT AssginmentRule: {self.variable} = {self.formula}"
 
     def get_value(self, context):
         return evaluate(self.formula, {}, context)
