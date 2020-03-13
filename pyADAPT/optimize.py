@@ -89,8 +89,7 @@ def default_regularization(params=None,
                            i_iter=None,
                            i_ts=None,
                            **kw):
-    """ tiemann & natal's regularization term in ADAPT 2013 paper
-    """
+    """ tiemann & natal's regularization term in ADAPT 2013 paper """
     old_params = parameter_trajectory[i_ts - 1, :]
     delta_t = time_span[-1] - time_span[0]
     reg = (params - old_params) / delta_t / old_params
@@ -119,7 +118,7 @@ class Optimizer(object):
             parameter_names)]
         self.options = {  # TODO: a method to set options
             "method": "trf",
-            "lambda": 1,
+            "lamda": 1,
             "odesolver": "RK45",
             "sseThres": 1000,
             "regularization": default_regularization,
@@ -184,6 +183,8 @@ class Optimizer(object):
             coords=[("iter", list(range(n_iter))), ("time", self.time),
                     ("state", list(self.dataset.get_state_names()))],
             name="state trajectories")
+        self.parameter_trajectories.attrs.update(self.options)
+        self.state_trajectories.attrs.update(self.options)
         return self.parameter_trajectories, self.state_trajectories
 
     def run(self, begin_time=None, end_time=None, n_iter=5, n_ts=5, **kw):
@@ -266,17 +267,6 @@ class Optimizer(object):
             )
             sse = lsq_res.cost
         return lsq_res.x
-
-    def find_init_guesses(self):
-        """ Find the initial guess of the parameters at the start of each iteration.
-        Problem statement: the data need to be randomized at time 0. we would like
-        to find a set of parameters that will lead to a steady states of the
-        randomized states at t0.
-
-        only do this once at the beginning of each iteration. afterwards, the
-        initial guesses are just the optimization result from previous timestep.
-        # TODO the initial value problem 🔥
-        """
 
     def steady_states(self):
         """ the data interpolation is assumed to be in steady states"""
@@ -387,7 +377,7 @@ class Optimizer(object):
           - add flux in dataset
           - add flux errors here """
         if R is not None:
-            reg_term = self.options['lambda'] * R(
+            reg_term = self.options['lamda'] * R(
                 params=params,
                 parameter_trajectory=self.parameter_trajectory,
                 state_trajectory=self.state_trajectory,

@@ -40,7 +40,7 @@ class ADAPT(object):
         self.options["smax"] = 1  # scale max
         self.options["seed"] = 0  # to seed the random generator
         self.options["ss_time"] = 100  # steady-state duration
-        self.options["lambda"] = 0.1  # regularization weight
+        self.options["lamda"] = 0.1  # regularization weight
         self.options["rtol"] = 1e-7
         self.options["atol"] = 1e-7
         self.options["seed_list"] = np.arange(self.options["n_iter"])
@@ -209,7 +209,7 @@ class ADAPT(object):
         """
         p_init = self.trajectories[i_iter, :, 0]
         p_previous = self.trajectories[i_iter, :, i_tstep]
-        penalty = (self.options["lambda"] *
+        penalty = (self.options["lamda"] *
                    ((p - p_previous) / self.delta_t / p_init)**2)
         return penalty
 
