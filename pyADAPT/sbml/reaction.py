@@ -5,7 +5,7 @@ import re
 import libsbml
 import numpy as np
 from numexpr import evaluate
-from pyADAPT.sbml.components import BaseNode, Compartment, Species
+from pyADAPT.sbml.components import BaseNode
 
 
 class Reaction(BaseNode):
@@ -80,7 +80,7 @@ if __name__ == "__main__":
         context[s.id] = s.initial_concentration
     for r_ in model.getListOfReactions():
         r = Reaction(r_)
-        print(r.name, ":", r)
+        print(r.name, ":", r, r.unit)
         print(r.id, ":", r.formula)
         for p in r.kl.getListOfParameters():
             print((p.id, p.value), end=" ")

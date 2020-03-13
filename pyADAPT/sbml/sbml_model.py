@@ -62,7 +62,7 @@ import numpy as np
 
 from pyADAPT.basemodel import BaseModel
 from pyADAPT.sbml.reaction import Reaction
-from pyADAPT.sbml.components import Compartment, Species, AssignmentRule, SParameter
+from pyADAPT.sbml.components import AssignmentRule
 
 
 class SBMLModel(BaseModel):
@@ -78,11 +78,11 @@ class SBMLModel(BaseModel):
         sbml_path : String
             The path to the sbml model 'xml' file
         """
-        self.sbml: libsbml.SBMLDocument = libsbml.readSBML(sbml_path)
-        # self.sbml_model: libsbml.Model = self.sbml.getModel()
-        assert self.sbml.model is not None
-        self.name = self.sbml.model.name
-        self.notes = self.sbml.model.notes_string
+        sbml: libsbml.SBMLDocument = libsbml.readSBML(sbml_path)
+        # sbml_model: libsbml.Model = sbml.getModel()
+        assert sbml.model is not None
+        self.name = sbml.model.name
+        self.notes = sbml.model.notes_string
 
         self.math_functions = {
             "log": log,
@@ -91,16 +91,16 @@ class SBMLModel(BaseModel):
             "exp": exp
         }
         # add to _parameters
-        for c in self.sbml.getModel().getListOfCompartments():
+        for c in sbml.getModel().getListOfCompartments():
             self.add_parameter(c.id, c.size, False, lb=0, ub=np.inf)
 
         # self.getRules(context)
-        rules = self.sbml.model.getListOfRules()
+        rules = sbml.model.getListOfRules()
         self.rules = OrderedDict()
         for r in rules:
             self.rules[r.variable] = AssignmentRule(r)
 
-        for p in self.sbml.getModel().getListOfParameters():
+        for p in sbml.getModel().getListOfParameters():
             r = rules.get(p.id)
             if r is None:
                 self.add_parameter(p.id,
@@ -110,8 +110,8 @@ class SBMLModel(BaseModel):
                                    ub=np.inf)
 
         # ias: list of initial assignments
-        ias = self.sbml.getModel().getListOfInitialAssignments()
-        for s in self.sbml.getModel().getListOfSpecies():
+        ias = sbml.getModel().getListOfInitialAssignments()
+        for s in sbml.getModel().getListOfSpecies():
             name = s.id
 
             ia = ias.get(name)
@@ -133,7 +133,7 @@ class SBMLModel(BaseModel):
 
         # add reactions as pyADAPT.sbml.reaction.Reaction
         self.reactions = OrderedDict()
-        for sbml_rxn in self.sbml.model.getListOfReactions():
+        for sbml_rxn in sbml.model.getListOfReactions():
             rxn = Reaction(sbml_rxn)
             self.reactions[rxn.id] = rxn
             # move parameters from reaction to model scope, by add prefix
@@ -147,30 +147,26 @@ class SBMLModel(BaseModel):
                 )
 
         super().__init__()
-        self.stoich_matrix = self.get_stoich_matrix()
-        self.symbol_table = {}
-        self.symbol_table.update(self.math_functions)
-
-    def get_stoich_matrix(self):
         """
         stoichiometry matrix: row (effect or substrate/species)
                               columns (cause or reaction)
         """
-        mat = np.zeros((len(self.states), len(self.reactions)))
+        self.stoich_matrix = np.zeros((len(self.states), len(self.reactions)))
         # maybe it's a good idea to always refer to the sbml for ordering
         species_list = self.states['name'].tolist()
         for j, r in enumerate(self.reactions.values()):
             for species_ref in r.reactants:
-                reactant = self.sbml.model.species.get(species_ref.species)
+                reactant = sbml.model.species.get(species_ref.species)
                 if not reactant.boundary_condition:
                     i = species_list.index(species_ref.species)
-                    mat[i, j] = -species_ref.stoichiometry
+                    self.stoich_matrix[i, j] = -species_ref.stoichiometry
             for species_ref in r.products:
-                product = self.sbml.model.species.get(species_ref.species)
+                product = sbml.model.species.get(species_ref.species)
                 if not product.boundary_condition:
                     i = species_list.index(species_ref.species)
-                    mat[i, j] = species_ref.stoichiometry
-        return mat
+                    self.stoich_matrix[i, j] = species_ref.stoichiometry
+        # return mat
+        del sbml
 
     @property
     def symbols(self):
@@ -213,21 +209,27 @@ if __name__ == "__main__":
     x0 = np.array([0.09765, 0.10000, 2.67500, 0.05000, 0.02000, 0.70000])
     # x0[15] = 0.1
     # x0[0] = 100
-    t_eval = np.linspace(0, 10, 1000)
-    # import cProfile
-    # cProfile.run("""smallbone.compute_states(new_params=0.5,
-    #                              time_points=t_eval,
-    #                              x0=x,
-    #                              new_param_names=['hxt_Vmax'])""")
-    y = smallbone.compute_states(time_points=t_eval, x0=x0)
+    # t_eval = np.linspace(0, 10, 1000)
+    # y = smallbone.compute_states(time_points=t_eval, x0=x0)
 
-    # print(y)
+    # import matplotlib.pyplot as plt
 
-    import matplotlib.pyplot as plt
-
-    for i in range(y.shape[0]):
-        plt.plot(t_eval, y[i, :], "--")
-    # names = [x.name for x in smallbone.states.values()]
-    print(smallbone.states['value'])
-    plt.legend(smallbone.states.name)
-    plt.show()
+    # for i in range(y.shape[0]):
+    #     plt.plot(t_eval, y[i, :], "--")
+    # # names = [x.name for x in smallbone.states.values()]
+    # print(smallbone.states['value'])
+    # plt.legend(smallbone.states.name)
+    # plt.show()
+    from pyADAPT.dataset import DataSet
+    from pyADAPT.optimize import optimize, Optimizer
+    data = DataSet(raw_data_path="data/trehalose/smallbone2011_data.mat",
+                   data_specs_path="data/trehalose/smallbone2011_data.yaml")
+    hxk_Vmax_traj, hxk_Vmax_straj, time = optimize(smallbone,
+                                                   data,
+                                                   "hxk_Vmax",
+                                                   n_iter=4,
+                                                   n_tstep=500,
+                                                   n_core=1,
+                                                   init_method=None,
+                                                   verbose=Optimizer.ITER,
+                                                   **{"lamda": 5})
