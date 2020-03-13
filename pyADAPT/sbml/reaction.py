@@ -4,7 +4,7 @@ import re
 
 import libsbml
 import numpy as np
-
+from numexpr import evaluate
 from pyADAPT.sbml.components import BaseNode, Compartment, Species
 
 
@@ -21,22 +21,18 @@ class Reaction(BaseNode):
         self.kl = reaction.getKineticLaw()
         self.unit = libsbml.UnitDefinition.printUnits(
             self.kl.getDerivedUnitDefinition())
-        self.regex = re.compile(
-            "(" + "|".join([p.id
-                            for p in self.kl.getListOfParameters()]) + ")",
-            re.VERBOSE,
-        )
-        self.formula = self.formate_formula(self.kl.formula)
+        self.formula = self.format_formula(self.kl.formula)
 
-    def formate_formula(self, text):
-        regex1 = re.compile(
-            r'pow\(\b(\w*)\b,[ ]*\b(\w*)\b\)')  # change pow(a, b) to a ** b
+    def format_formula(self, text):
+        # change pow(a, b) to a ** b
+        regex1 = re.compile(r'pow\s*\(\s*\b(\w*)\b\s*,\s*\b(\w*)\b\s*\)')
         text = regex1.sub("(\\1 ** \\2)", text)
+        # prepend reaction id_ to parameters id
         regex2 = re.compile(
             "(" + "|".join([p.id
                             for p in self.kl.getListOfParameters()]) + ")",
             re.VERBOSE,
-        )  # prepend reaction id to parameters id
+        )
         text = regex2.sub(f"{self.id}_\\1", text)
         return text
 
@@ -48,7 +44,7 @@ class Reaction(BaseNode):
             calculate the flux.
         :return: flux (Float)
         """
-        return eval(self.formula, {}, context)
+        return evaluate(self.formula, context)
 
     def get_ce(self):
         # ce: chemical equation

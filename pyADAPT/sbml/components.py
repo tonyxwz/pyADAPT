@@ -10,6 +10,7 @@ create a shadow class for every node
 """
 
 import libsbml
+from numexpr import evaluate
 
 
 class BaseNode(object):
@@ -125,14 +126,13 @@ class AssignmentRule(BaseNode):
     def __init__(self, rule: libsbml.AssignmentRule):
         super().__init__(rule)
         self.variable = rule.getVariable()  # target variable
-        self.formula_string = libsbml.formulaToString(rule.math)
-        self.formula = compile(self.formula_string, "<string>", "eval")
+        self.formula = libsbml.formulaToString(rule.math)
 
     def __repr__(self):
         return f"pyADAPT AssginmentRule: {self.variable} = {self.formula_string}"
 
     def get_value(self, context):
-        return eval(self.formula, {}, context)
+        return evaluate(self.formula, {}, context)
 
 
 class SParameter(BaseNode):
