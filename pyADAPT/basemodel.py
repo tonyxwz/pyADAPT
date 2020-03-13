@@ -33,6 +33,7 @@ class BaseModel(metaclass=ABCMeta):
         instance.name = "Base Model"
         instance.notes = """Base Model, for extending only"""
         instance.predictor_name = "time"
+        instance.map = dict()
         instance._parameters = list()
         instance._states = list()
         instance._constants = list()
@@ -45,11 +46,13 @@ class BaseModel(metaclass=ABCMeta):
 
     def __init__(self):
         self.name: str
+        self.map: dict
         self._parameters: list
         self._states: list
         self._constants: list
         self.flux_trajectory: list
 
+        # not checking symbol names
         self.parameters = pd.DataFrame(
             self._parameters,
             columns=["name", "value", "vary", "lb", "ub", "init"],
@@ -68,21 +71,57 @@ class BaseModel(metaclass=ABCMeta):
         del self._states
         del self._constants
 
-    def add_parameter(self, name, value, vary, lb=-np.inf, ub=np.inf, **kw):
+    def add_parameter(self,
+                      name="",
+                      value=None,
+                      vary=False,
+                      lb=-np.inf,
+                      ub=np.inf,
+                      **kw):
         # name, value, vary?, lb, ub, init
+        self.map[name] = len(self._parameters)
         self._parameters.append([name, value, vary, lb, ub, value])
 
-    def add_state(self, name, value, observable=True):
+    def add_parameters(self, ll):
+        for r in ll:
+            if type(r) is list:
+                self.add_parameter(*r)
+            elif type(r) is dict:
+                self.add_parameter(**r)
+
+    def add_state(self, name='', value=None, observable=True):
         # name, value, observalbe, init
+        self.map[name] = len(self._states)
         self._states.append([name, value, observable, value])
 
-    def add_constant(self, name, value):
+    def add_states(self, ll):
+        for r in ll:
+            if type(r) is list:
+                self.add_state(*r)
+            elif type(r) is dict:
+                self.add_state(**r)
+
+    def add_constant(self, name='', value=None):
         self._constants.append([name, value])
+
+    def add_constants(self, ll):
+        for r in ll:
+            if type(r) is list:
+                self.add_constant(*r)
+            elif type(r) is dict:
+                self.add_constant(**r)
 
     @abstractmethod
     def odefunc(self, t, x, p):
-        """ t: time, x: state at t, p: parameters, u: constant
+        """ t: time
+        x: state at t, ndarray
+        p: parameters, DataFrame
         return: dx/dt at t
+
+        TODO
+        ----
+        further simplify the process for indexing states x and parameters p from
+        the arguments.
         """
         pass
 

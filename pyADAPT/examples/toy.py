@@ -44,10 +44,10 @@ class ToyModel(BaseModel):
         u1 = u["u1"]
         u2 = u["u2"]
 
-        s1 = x[0]
-        s2 = x[1]
-        s3 = x[2]
-        s4 = x[3]
+        s1 = x[self.map['s1']]
+        s2 = x[self.map["s2"]]
+        s3 = x[self.map["s3"]]
+        s4 = x[self.map["s4"]]
 
         k1 = p["k1"]
         k2 = p["k2"]
