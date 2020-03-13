@@ -113,6 +113,7 @@ class SBMLModel(BaseModel):
         ias = self.sbml.getModel().getListOfInitialAssignments()
         for s in self.sbml.getModel().getListOfSpecies():
             name = s.id
+
             ia = ias.get(name)
             if ia is not None:
                 formula = libsbml.formulaToString(ia.getMath())
@@ -120,11 +121,15 @@ class SBMLModel(BaseModel):
                             {p[0]: p[1]
                              for p in self._parameters})
             elif s.boundary_condition and s.initial_concentration == 0:
+                # fix sbml default value in COPASI
                 conc = 1.0
             else:
                 conc = s.initial_concentration
 
-            self.add_state(name=s.id, value=conc, observable=True)
+            if s.boundary_condition:
+                self.add_constant(name=s.id, value=conc)
+            else:
+                self.add_state(name=s.id, value=conc, observable=True)
 
         # add reactions as pyADAPT.sbml.reaction.Reaction
         self.reactions = OrderedDict()
@@ -173,6 +178,7 @@ class SBMLModel(BaseModel):
         table = self.math_functions
         table.update(self.parameters['value'].to_dict())
         table.update(self.states['value'].to_dict())
+        table.update(self.constants['value'].to_dict())
         return table
 
     def fluxes(self, t, x, p):
@@ -202,15 +208,11 @@ if __name__ == "__main__":
     from pprint import pprint
     from copy import deepcopy
     smallbone = SBMLModel("data/trehalose/smallbone.xml")
-
+    print(smallbone.stoich_matrix)
     x1 = deepcopy(smallbone.states['value'].values)
-    x0 = np.array([
-        0.09765, 0.10000, 2.67500, 0.05000, 0.02000, 0.70000, 1.28200, 2.52500,
-        1.00000, 0.62500, 1.00000, 1.00000, 0.28150, 0.64910, 1.00000,
-        100.00000
-    ])
-    x0[15] = 0.1
-    x0[0] = 100
+    x0 = np.array([0.09765, 0.10000, 2.67500, 0.05000, 0.02000, 0.70000])
+    # x0[15] = 0.1
+    # x0[0] = 100
     t_eval = np.linspace(0, 10, 1000)
     # import cProfile
     # cProfile.run("""smallbone.compute_states(new_params=0.5,

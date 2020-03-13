@@ -76,6 +76,9 @@ class BaseModel(metaclass=ABCMeta):
         # name, value, observalbe, init
         self._states.append([name, value, observable, value])
 
+    def add_constant(self, name, value):
+        self._constants.append([name, value])
+
     @abstractmethod
     def odefunc(self, t, x, p):
         """ t: time, x: state at t, p: parameters, u: constant
