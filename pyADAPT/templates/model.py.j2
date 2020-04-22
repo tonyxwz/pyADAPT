@@ -25,16 +25,16 @@ class {{model_name}}(Model):
 
         super().__init__()
 
-    def inputs(self, t):
+    def inputs_func(self, t):
         {# this is the first thing to consider when building a model, although being very simplified in the toy model#}
         # return the input at time `t`
         pass
-    def fluxes(self, t, x, p):
+    def fluxes_func(self, t, x, p):
         {# then define the fluxes #}
         pass
     def reactions(self, t, x, p):
         return self.fluxes(t, x, p)
 
-    def odefunc(self, t, x, p):
+    def ode_func(self, t, x, p):
         {# the ode definition here #}
         pass
