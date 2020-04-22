@@ -29,7 +29,7 @@ class ToyModel(BaseModel):
         `p`: parameters (`self.parameters)
         `u`: constants (`self.constants`)
         """
-        v1, v2, v3, v4, v5, ds3dt = self.fluxes(t, x, p)
+        v1, v2, v3, v4, v5, ds3dt = self.fluxes_func(t, x, p)
 
         dxdt = np.zeros(len(x))
         dxdt[0] = v1 - v3 - v4
@@ -39,7 +39,7 @@ class ToyModel(BaseModel):
 
         return dxdt
 
-    def fluxes(self, t, x, p):
+    def fluxes_func(self, t, x, p):
         u = self.inputs(t)
         u1 = u["u1"]
         u2 = u["u2"]

@@ -33,7 +33,7 @@ class {{model_name}}(Model):
         {# then define the fluxes #}
         pass
     def reactions(self, t, x, p):
-        return self.fluxes(t, x, p)
+        return self.fluxes_func(t, x, p)
 
     def ode_func(self, t, x, p):
         {# the ode definition here #}

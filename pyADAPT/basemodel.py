@@ -1,14 +1,5 @@
 """No configuration files for models anymore except for a python script that extends this
-abstract class `Model`.
-
-Steps
-=====
-1: toymodel without considering the model input
-        with only constant parameters               *
-3: toymodel validation
-4: Tiemann's model, fully implemented
-5: Clamp model in Pascal van Beek's work
-6: Discuss the Model with David and Natal
+abstract class `Model`
 """
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
@@ -67,6 +58,9 @@ class BaseModel(metaclass=ABCMeta):
         del self._parameters
         del self._states
         del self._constants
+
+    def __iadd__(self, other):
+        pass
 
     def add_parameter(self,
                       name="",
@@ -132,9 +126,6 @@ class BaseModel(metaclass=ABCMeta):
     def inputs_func(self, t):
         raise NotImplementedError
 
-    def __repr__(self):
-        return " ".join([super().__repr__(), self.name])
-
     def compute_states(
         self,
         new_params=[],  # parameters that need to be optimized
@@ -181,12 +172,6 @@ class BaseModel(metaclass=ABCMeta):
                 v.value = p[k] * np.power(10, (
                     (smax - smin) * np.random.rand() + smin))
         return p
-
-    def sync_from_optimizer(self, optimizer):
-        """ called at the end of Optimizer.run
-        """
-        for i in range(len(optimizer)):
-            self.parameters.iloc[i]["value"] = optimizer[i]
 
     def reset(self):
         """ reset to initial conditions """

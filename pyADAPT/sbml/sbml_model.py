@@ -177,7 +177,7 @@ class SBMLModel(BaseModel):
         table.update(self.constants['value'].to_dict())
         return table
 
-    def fluxes(self, t, x, p):
+    def fluxes_func(self, t, x, p):
         # evaluate each reaction's flux(rate)
         # Note: it's a bit weird since all the fluxes are `eval`ed, `p` is not
         # used in this method.
@@ -185,17 +185,16 @@ class SBMLModel(BaseModel):
         for r in self.reactions.values():
             v.append(r.compute_flux(self.symbols))
         v = np.array(v)
-        self.flux_trajectory.append(v)
         return v
 
-    def odefunc(self, t, x, p):
+    def ode_func(self, t, x, p):
         """
         calculate the derivatives in biologist's style
         p: np.ndarray / pandas.Series
         """
         # assign p (parameters) and x (states)
         self.states.loc[:, "value"] = x
-        v = self.fluxes(t, x, p)
+        v = self.fluxes_func(t, x, p)
         dxdt = np.dot(self.stoich_matrix, v)
         return dxdt
 
