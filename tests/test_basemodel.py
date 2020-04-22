@@ -18,14 +18,14 @@ class SimpleModel(BaseModel):
         self.add_state(name="s2", value=0.57, observable=False)
         super().__init__()
 
-    def odefunc(self, t, x, p):
-        return super().odefunc(t, x, p)
+    def ode_func(self, t, x, p):
+        return super().ode_func(t, x, p)
 
-    def fluxes(self, t, x, p):
-        return super().fluxes(t, x, p)
+    def fluxes_func(self, t, x, p):
+        return super().fluxes_func(t, x, p)
 
-    def inputs(self, t):
-        return super().inputs(t)
+    def inputs_func(self, t):
+        return super().inputs_func(t)
 
 
 class TestLotka(unittest.TestCase):
@@ -33,9 +33,9 @@ class TestLotka(unittest.TestCase):
         self.model = LotkaVolterra()
 
     def test_compute(self):
-        y = self.model.compute_states(
-            t_span=[0, 100], x0=[10, 10], t_eval=np.linspace(0, 100, 500)
-        )
+        y = self.model.compute_states(t_span=[0, 100],
+                                      x0=[10, 10],
+                                      t_eval=np.linspace(0, 100, 500))
         self.assertEqual(y.shape, (2, 500))
 
 
