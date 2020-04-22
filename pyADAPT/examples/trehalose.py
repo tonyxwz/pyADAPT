@@ -82,7 +82,7 @@ class Smallbone2011(BaseModel):
                             [0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0]])
         super().__init__()
 
-    def fluxes(self, t, x, p):
+    def fluxes_func(self, t, x, p):
         # measured
         glc = x[0]
         g1p = x[1]
@@ -196,12 +196,12 @@ class Smallbone2011(BaseModel):
 
         return np.array([pgi, hxt, hxk, pgm, tpp, tps, nth, ugp])
 
-    def odefunc(self, t, x, p):
-        v = self.fluxes(t, x, p)
+    def ode_func(self, t, x, p):
+        v = self.fluxes_func(t, x, p)
         return np.dot(self.sm, v)
 
-    def inputs(self, t):
-        return super().inputs(t)
+    def inputs_func(self, t):
+        return super().inputs_func(t)
 
 
 if __name__ == "__main__":

@@ -22,7 +22,7 @@ class ToyModel(BaseModel):
 
         super().__init__()
 
-    def odefunc(self, t, x, p):
+    def ode_func(self, t, x, p):
         """ODE function of the toy model
         `t`: time
         `x`: current state

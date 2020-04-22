@@ -34,7 +34,7 @@ class LotkaVolterra(BaseModel):
         self.add_parameter(name="gamma", value=0.4, vary=False, lb=0)
         super().__init__()
 
-    def odefunc(self, t, x, p):
+    def ode_func(self, t, x, p):
         alpha = p["value"].loc["alpha"]
         beta = p["value"].loc["beta"]
         delta = p["value"].loc["delta"]
@@ -49,7 +49,7 @@ class LotkaVolterra(BaseModel):
 class WrongLotkaVolterra(BaseModel):
     """ If the parameters are not accurate, simply use optimization method.
     In ADAPT, the structure of the model should be wrong not just parameter
-    being inaccurate, change the odefunc a bit
+    being inaccurate, change the ode_func a bit
     """
     def __init__(self):
         self.add_state(name="prey", value=10, observable=True)
@@ -61,7 +61,7 @@ class WrongLotkaVolterra(BaseModel):
         self.add_parameter(name="gamma", value=0.4, vary=False, lb=0)
         super().__init__()
 
-    def odefunc(self, t, x, p):
+    def ode_func(self, t, x, p):
         alpha = p.at["alpha", "value"]
         beta = p.at["beta", "value"]
         delta = p.at["delta", "value"]
@@ -83,27 +83,29 @@ if __name__ == "__main__":
     n = 500
 
     lotka = LotkaVolterra()
-    y = lotka.compute_states(t_span=[t0, tf],
-                             x0=[10, 10],
-                             t_eval=np.linspace(t0, tf, n))
+    print(lotka.parameters)
+    # y = lotka.compute_states(
+    #     time_points=np.linspace(t0, tf, n),
+    #     x0=[10, 10],
+    # )
 
-    noise = 0.2 * np.random.randn(2, n) * y
-    data = noise + y
+    # noise = 0.2 * np.random.randn(2, n) * y
+    # data = noise + y
 
-    plt.plot(np.linspace(t0, tf, n), data[0, :])
-    plt.plot(np.linspace(t0, tf, n), data[1, :], "--")
-    plt.legend(lotka.states["name"])
-    plt.title("True model output")
+    # plt.plot(np.linspace(t0, tf, n), data[0, :])
+    # plt.plot(np.linspace(t0, tf, n), data[1, :], "--")
+    # plt.legend(lotka.states["name"])
+    # plt.title("True model output")
 
-    wrong_lotka = WrongLotkaVolterra()
-    y2 = wrong_lotka.compute_states(t_span=[t0, tf],
-                                    x0=[10, 10],
-                                    t_eval=np.linspace(t0, tf, n))
-    plt.figure()
-    plt.plot(np.linspace(t0, tf, n), y2[0, :])
-    plt.plot(np.linspace(t0, tf, n), y2[1, :], "--")
-    plt.legend(wrong_lotka.states["name"])
-    plt.title("Wrong model output")
+    # wrong_lotka = WrongLotkaVolterra()
+    # y2 = wrong_lotka.compute_states(t_span=[t0, tf],
+    #                                 x0=[10, 10],
+    #                                 t_eval=np.linspace(t0, tf, n))
+    # plt.figure()
+    # plt.plot(np.linspace(t0, tf, n), y2[0, :])
+    # plt.plot(np.linspace(t0, tf, n), y2[1, :], "--")
+    # plt.legend(wrong_lotka.states["name"])
+    # plt.title("Wrong model output")
 
-    # TODO create fake dataset, apply ADAPT here
-    plt.show()
+    # # # TODO create fake dataset, apply ADAPT here
+    # plt.show()
