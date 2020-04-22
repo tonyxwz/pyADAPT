@@ -7,8 +7,6 @@ from pyADAPT.sampling import NormalDist
 
 __all__ = ["Spline", "State", "Flux"]
 
-spline_map = {"Hermite": PchipInterpolator, "Cubic": CubicHermiteSpline}
-
 
 class Spline(list):
     """ species, x, implemented as list of NormalDist
@@ -62,7 +60,6 @@ class Spline(list):
         to calculate the objective (error) function
         interpolate linearly on variance
         """
-        # variances = np.asarray([d.std for d in self]) ** 2
         pp = PchipInterpolator(self.time, self.variances)
         return pp
 
@@ -138,43 +135,17 @@ class Spline(list):
 
 
 class State(Spline):
-    def __init__(self,
-                 name='',
-                 time=None,
-                 time_unit='second',
-                 means=None,
-                 stds=None,
-                 unit=None,
-                 observable=False):
-        super().__init__(name=name,
-                         time=time,
-                         time_unit=time_unit,
-                         means=means,
-                         stds=stds,
-                         unit=unit,
-                         observable=observable)
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
 
     def __repr__(self):
         repr_list = list(zip(self.time, self))
-        return f"Metabolite({self.name}): {repr_list}"
+        return f"State({self.name}): {repr_list}"
 
 
 class Flux(Spline):
-    def __init__(self,
-                 name='',
-                 time=None,
-                 time_unit='second',
-                 means=None,
-                 stds=None,
-                 unit=None,
-                 observable=False):
-        super().__init__(name=name,
-                         time=time,
-                         time_unit=time_unit,
-                         means=means,
-                         stds=stds,
-                         unit=unit,
-                         observable=observable)
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
 
     def __repr__(self):
         repr_list = list(zip(self.time, self))
@@ -192,7 +163,7 @@ if __name__ == "__main__":
     stds = [1, 0.5, 1.7, 1.2, 0.9]
 
     time_unit = "day"
-    unit = "mM/L"
+    unit = "mM"
 
     s = State(
         name="Hepatic TG",
