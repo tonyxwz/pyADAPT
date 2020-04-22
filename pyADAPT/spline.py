@@ -5,12 +5,12 @@ from cached_property import cached_property
 
 from pyADAPT.sampling import NormalDist
 
-__all__ = ["State"]
+__all__ = ["Spline", "State", "Flux"]
 
 spline_map = {"Hermite": PchipInterpolator, "Cubic": CubicHermiteSpline}
 
 
-class State(list):
+class Spline(list):
     """ species, x, implemented as list of NormalDist
     ```
     [
@@ -88,10 +88,6 @@ class State(list):
         """ random sample of all the data points as an array """
         return np.asarray([d.sample() for d in self])
 
-    def __repr__(self):
-        repr_list = list(zip(self.time, self))
-        return f"State({self.name}): {repr_list}"
-
     @cached_property
     def plt(self):
         import matplotlib.pyplot as plt
@@ -139,6 +135,50 @@ class State(list):
                   markersize=5)
 
         return axes
+
+
+class State(Spline):
+    def __init__(self,
+                 name='',
+                 time=None,
+                 time_unit='second',
+                 means=None,
+                 stds=None,
+                 unit=None,
+                 observable=False):
+        super().__init__(name=name,
+                         time=time,
+                         time_unit=time_unit,
+                         means=means,
+                         stds=stds,
+                         unit=unit,
+                         observable=observable)
+
+    def __repr__(self):
+        repr_list = list(zip(self.time, self))
+        return f"Metabolite({self.name}): {repr_list}"
+
+
+class Flux(Spline):
+    def __init__(self,
+                 name='',
+                 time=None,
+                 time_unit='second',
+                 means=None,
+                 stds=None,
+                 unit=None,
+                 observable=False):
+        super().__init__(name=name,
+                         time=time,
+                         time_unit=time_unit,
+                         means=means,
+                         stds=stds,
+                         unit=unit,
+                         observable=observable)
+
+    def __repr__(self):
+        repr_list = list(zip(self.time, self))
+        return f"Flux({self.name}): {repr_list}"
 
 
 if __name__ == "__main__":
