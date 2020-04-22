@@ -40,7 +40,7 @@ class Reaction(BaseNode):
         """
         Calculate the fluxes of the reaction
 
-        :param context: The required substrate concertations and parameters to
+        :param context: The required substrate concentrations and parameters to
             calculate the flux.
         :return: flux (Float)
         """
