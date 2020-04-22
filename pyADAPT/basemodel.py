@@ -34,23 +34,20 @@ class BaseModel(metaclass=ABCMeta):
         instance.notes = """Base Model, for extending only"""
         instance.predictor_name = "time"
         instance.map = dict()
+        instance.fluxes = list()
         instance._parameters = list()
         instance._states = list()
         instance._constants = list()
-        instance.flux_trajectory = list()
-        # if the derivatives of you model is not related to time, it is possible
-        # to implement the ode function in vectorized fashion. if you don't know
-        # what it is, just leave it as `False`
-        instance.vectorized = False
+
         return instance
 
     def __init__(self):
         self.name: str
         self.map: dict
+        self.fluxes: list
         self._parameters: list
         self._states: list
         self._constants: list
-        self.flux_trajectory: list
 
         # not checking symbol names
         self.parameters = pd.DataFrame(
@@ -60,7 +57,7 @@ class BaseModel(metaclass=ABCMeta):
         )
         # only init values of states matters in the model
         self.states = pd.DataFrame(
-            self._states,  # value in Model.states are not used in compuation
+            self._states,  # value in Model.states are not used in computation
             columns=["name", "value", "observable", "init"],
             index=[s[0] for s in self._states],
         )
@@ -89,8 +86,8 @@ class BaseModel(metaclass=ABCMeta):
             elif type(r) is dict:
                 self.add_parameter(**r)
 
-    def add_state(self, name='', value=None, observable=True):
-        # name, value, observalbe, init
+    def add_state(self, name='', value=None, observable=False):
+        # name, value, observable, init
         self.map[name] = len(self._states)
         self._states.append([name, value, observable, value])
 
@@ -112,7 +109,7 @@ class BaseModel(metaclass=ABCMeta):
                 self.add_constant(**r)
 
     @abstractmethod
-    def odefunc(self, t, x, p):
+    def ode_func(self, t, x, p):
         """ t: time
         x: state at t, ndarray
         p: parameters, DataFrame
@@ -125,15 +122,14 @@ class BaseModel(metaclass=ABCMeta):
         """
         pass
 
-    def jacobian(self, t, x, p):
-        # This might be useful if ODE solvers require it. But I am not sure how
-        # hard is it to calculate.
+    def jacobian_func(self, t, x, p):
+        # This might be useful if ODE solvers require it.
         raise NotImplementedError
 
-    def fluxes(self, t, x, p):
+    def fluxes_func(self, t, x, p):
         raise NotImplementedError
 
-    def inputs(self, t):
+    def inputs_func(self, t):
         raise NotImplementedError
 
     def __repr__(self):
@@ -159,7 +155,7 @@ class BaseModel(metaclass=ABCMeta):
 
         # https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html
         sol = solve_ivp(
-            lambda t, x: self.odefunc(t, x, self.parameters['value']),
+            lambda t, x: self.ode_func(t, x, self.parameters['value']),
             t_span,
             x0,
             method=method,
@@ -196,9 +192,6 @@ class BaseModel(metaclass=ABCMeta):
         """ reset to initial conditions """
         self.parameters['value'] = self.parameters['init']
         self.states['value'] = self.states['init']
-
-    def psa(self):
-        """Parameter sensitivity analysis"""
 
     def draw(self):
         """ Draw the model using networkx """
