@@ -1,16 +1,4 @@
 """ Data set format specification
-ADAPT as a stochastic simulation method, depends heavily on the data set format.
-The following dataset is good enough for the toy model, but depends heavily on
-the MATLAB data file format.
-
-Current, xarray/pandas and pickle seems promising
-
-The dataset provided to ADAPT procedure should always be a list of distributions.
-But the storing and exchanging format should be pandas pickle.
-
-This is not an urgent problem to solve, I should first try to use hard coded
-script to provide the data set structures.
-
 TODO: routine `read_pandas` (read_data)
 """
 
