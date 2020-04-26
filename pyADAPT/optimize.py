@@ -130,17 +130,6 @@ class Optimizer(object):
         self.flux_mask = self.__create_mask(self.dataset.names,
                                             self.model.flux_order)
 
-    def __align_names(self):
-        """align data to be in the same order as the model
-        after aligning, the splines in dataset is in the following order:
-        +---------+---------+
-        |s1|s2|...|v1|v2|...|
-        +---------+---------+
-        states -> model.odefunc
-        fluxes -> model.flux_id
-        """
-        order = self.model.state_order + self.model.flux_order
-
     def __create_mask(self, names_data, names_model):
         mask = list()
         for i in range(len(names_model)):
@@ -155,6 +144,7 @@ class Optimizer(object):
 
         self.parameter_trajectories_list = []
         self.state_trajectories_list = []
+        self.flux_trajectories_list = []
 
         if self.options['n_core'] > 1:
             pool = mp.Pool(self.options['n_core'])
@@ -166,16 +156,18 @@ class Optimizer(object):
             pool.close()
             pool.join()
             for res_obj in pool_results:
-                ptraj, straj = res_obj.get()
+                ptraj, straj, vtraj = res_obj.get()
                 self.parameter_trajectories_list.append(ptraj)
                 self.state_trajectories_list.append(straj)
+                self.flux_trajectories_list.append(vtraj)
 
         else:
             for i_iter in range(self.options['n_iter']):
-                ptraj, straj = self.fit_iteration(i_iter=i_iter,
-                                                  parallel=False)
+                ptraj, straj, vtraj = self.fit_iteration(i_iter=i_iter,
+                                                         parallel=False)
                 self.parameter_trajectories_list.append(ptraj)
                 self.state_trajectories_list.append(straj)
+                self.flux_trajectories_list.append(vtraj)
 
         # convert the lists into xarray
         self.parameter_trajectories = xr.DataArray(
@@ -193,6 +185,31 @@ class Optimizer(object):
             name="state trajectories")
         return self.parameter_trajectories, self.state_trajectories
 
+    def initialize_ts0(self, i_iter, splines):
+        self.parameter_trajectory = np.zeros(
+            (self.options['n_ts'], len(self.parameter_names)))
+        self.state_trajectory = np.zeros(
+            (self.options['n_ts'], len(self.model.state_order)))
+        self.flux_trajectory = np.zeros(
+            (self.options['n_ts'], len(self.model.flux_order)))
+
+        # TODO initial value problem
+        # Solution: 1, model
+        # self.state_trajectory[0, :] = self.model.state.init
+        # self.state_trajectory[
+        #     0, self.state_mask] = splines[:len(self.model.state_order), 0, 0]
+
+        # self.flux_trajectory[0, :] = splines[len(self.model.state_order):, 0,
+        #                                      0]
+        self.state_trajectory[0, :] = splines[:len(self.model.state_order), 0,
+                                              0]
+        if self.options['init_method'] is None:
+            # ! focus on default init method
+            self.parameter_trajectory[0, :] = self.parameters['init']
+        elif self.options['init_method'] == "interfacefocus":
+            # putting state initialization here for the possible return of states in natal_init
+            self.parameter_trajectory[0, :] = self.natal_init(i_iter, splines)
+
     def fit_iteration(self, i_iter=0, parallel=True):
         """ handle one iteration (one subprocess)
         """
@@ -200,41 +217,24 @@ class Optimizer(object):
         if self.options['verbose'] >= ITER:
             print(f"iteration: {i_iter}", ps_name)
 
-        self.parameter_trajectory = np.zeros(
-            (self.options['n_ts'], len(self.parameter_names)))
-        self.state_trajectory = np.zeros(
-            (self.options['n_ts'], len(self.dataset)))
-
         splines = self.dataset.interpolate(n_ts=self.options['n_ts'])
-        # ! 👇 is probably wrong (*initial value problem*)
-        # params = self.find_init_guesses()
-        if self.options['init_method'] is None:
-            self.state_trajectory[0, :] = splines[:, 0, 0]
-            self.parameter_trajectory[0, :] = self.parameters['init']
-        elif self.options['init_method'] == "interfacefocus":
-            # putting state initialization here for the possible return
-            # of states in natal_init
-            self.state_trajectory[0, :] = splines[:, 0, 0]
-            self.parameter_trajectory[0, :] = self.natal_init(i_iter, splines)
-        else:
-            raise Exception("Unknown initialization method.")
+        self.init_ts0(i_iter, splines)
 
         for i_ts in range(1, self.options['n_ts']):
             if (i_ts % 10) == 0 and self.options['verbose'] >= TIMESTEP:
                 print(f"time step: {i_ts}", ps_name)
 
-            (
-                self.parameter_trajectory[i_ts, :],
-                self.state_trajectory[i_ts, :],
-            ) = self.fit_timestep(
-                initial_guess=self.parameter_trajectory[i_ts - 1, :],
-                begin_states=self.state_trajectory[i_ts - 1, :],
-                end_data=splines[:, i_ts, :],
-                i_iter=i_iter,
-                i_ts=i_ts,
-            )
+            (self.parameter_trajectory[i_ts, :],
+             self.state_trajectory[i_ts, :],
+             self.flux_trajectory[i_ts, :]) = self.fit_timestep(
+                 initial_guess=self.parameter_trajectory[i_ts - 1, :],
+                 begin_states=self.state_trajectory[i_ts - 1, :],
+                 end_data=splines[:, i_ts, :],
+                 i_iter=i_iter,
+                 i_ts=i_ts)
 
-        return self.parameter_trajectory, self.state_trajectory
+        return (self.parameter_trajectory, self.state_trajectory,
+                self.flux_trajectory)
 
     def natal_init(self, i_iter, data):
         """ Natal van Riel's parameter initialization
@@ -274,7 +274,6 @@ class Optimizer(object):
 
         only do this once at the beginning of each iteration. afterwards, the
         initial guesses are just the optimization result from previous timestep.
-        # TODO the initial value problem
         """
 
     def fit_timestep(self,
@@ -282,32 +281,35 @@ class Optimizer(object):
                      begin_states=None,
                      end_data=None,
                      i_iter=None,
-                     i_ts=None):
+                     i_ts=None,
+                     **lsq_options):
         """call least_squares
         access Optimizer options via `i_iter` and `i_ts` and `self`
         """
         time_span = self.time[i_ts - 1:i_ts + 1]
 
-        lsq_result = least_squares(
-            self.objective_function,
-            initial_guess,
-            kwargs={
-                "begin_states": begin_states,
-                "end_data": end_data,
-                "time_span": time_span,
-                "i_iter": i_iter,
-                "i_ts": i_ts
-            },
-            bounds=(self.parameters["lb"], self.parameters["ub"]),
-            method=self.options["method"],
-        )
+        lsq_result = least_squares(self.objective_function,
+                                   initial_guess,
+                                   kwargs={
+                                       "begin_states": begin_states,
+                                       "end_data": end_data,
+                                       "time_span": time_span,
+                                       "i_iter": i_iter,
+                                       "i_ts": i_ts
+                                   },
+                                   bounds=(self.parameters["lb"],
+                                           self.parameters["ub"]),
+                                   method=self.options["method"],
+                                   **lsq_options)
         # TODO
-        new_state_traj = self.model.compute_states(
+        new_states = self.model.compute_states(
             lsq_result.x,
             time_span,
             begin_states,
-            new_param_names=self.parameter_names)
-        return (lsq_result.x, new_state_traj[:, -1])
+            new_param_names=self.parameter_names)[:, -1]
+        new_fluxes = self.model.fluxes(time_span[-1], new_states,
+                                       self.model.parameters['value'])
+        return (lsq_result.x, new_states, new_fluxes)
 
     def objective_function(self,
                            params,
@@ -354,6 +356,7 @@ class Optimizer(object):
         if self.options['verbose'] >= OBJFUNC:
             pass  # print something about optimizer
         # self.model.set_params(self, params, self.parameter_names)
+
         end_states = self.model.compute_states(
             new_params=params,
             time_points=time_span,
@@ -421,7 +424,7 @@ if __name__ == "__main__":
                                   n_iter=100,
                                   delta_t=0.2,
                                   n_core=4,
-                                  verbose=TIMESTEP)
+                                  verbose=ITER)
 
     import matplotlib.pyplot as plt
     fig, axes = plt.subplots(ncols=len(ptraj.coords['param']), squeeze=False)
