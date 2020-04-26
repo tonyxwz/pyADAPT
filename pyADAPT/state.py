@@ -5,12 +5,10 @@ from cached_property import cached_property
 
 from pyADAPT.sampling import NormalDist
 
-__all__ = ["State"]
-
-spline_map = {"Hermite": PchipInterpolator, "Cubic": CubicHermiteSpline}
+__all__ = ["Spline", "State", "Flux"]
 
 
-class State(list):
+class Spline(list):
     """ species, x, implemented as list of NormalDist
     ```
     [
@@ -62,7 +60,6 @@ class State(list):
         to calculate the objective (error) function
         interpolate linearly on variance
         """
-        # variances = np.asarray([d.std for d in self]) ** 2
         pp = PchipInterpolator(self.time, self.variances)
         return pp
 
@@ -88,10 +85,6 @@ class State(list):
         """ random sample of all the data points as an array """
         return np.asarray([d.sample() for d in self])
 
-    def __repr__(self):
-        repr_list = list(zip(self.time, self))
-        return f"State({self.name}): {repr_list}"
-
     @cached_property
     def plt(self):
         import matplotlib.pyplot as plt
@@ -112,13 +105,13 @@ class State(list):
         axes.set_xlabel(self.time_unit + "(s)")
         axes.set_ylabel(self.unit)
         axes.errorbar(
-            self.time[1:],
-            [d.mean for d in self[1:]],
-            yerr=[d.std for d in self[1:]],
+            self.time,
+            [d.mean for d in self],
+            yerr=[d.std for d in self],
             fmt=".b",
             uplims=True,
             lolims=True,
-            elinewidth=1,
+            elinewidth=0.3,
         )
         if plt is not None:
             axes.bar(self.time, [d.mean for d in self])
@@ -141,6 +134,24 @@ class State(list):
         return axes
 
 
+class State(Spline):
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
+
+    def __repr__(self):
+        repr_list = list(zip(self.time, self))
+        return f"State({self.name}): {repr_list}"
+
+
+class Flux(Spline):
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
+
+    def __repr__(self):
+        repr_list = list(zip(self.time, self))
+        return f"Flux({self.name}): {repr_list}"
+
+
 if __name__ == "__main__":
     from pprint import pprint
     import matplotlib.pyplot as plt
@@ -152,7 +163,7 @@ if __name__ == "__main__":
     stds = [1, 0.5, 1.7, 1.2, 0.9]
 
     time_unit = "day"
-    unit = "mM/L"
+    unit = "mM"
 
     s = State(
         name="Hepatic TG",
