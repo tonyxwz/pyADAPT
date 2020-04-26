@@ -115,8 +115,8 @@ class BaseModel(metaclass=ABCMeta):
         new_param_names=[],  # the parameter's names, in the same order
         method="RK45",  # odesolver, only RK45/RK23/DOP853 since no jacobians
         rtol=1e-3,  # relative tolerance
-        atol=1e-6  # absolute tolerance
-    ):
+        atol=1e-6,  # absolute tolerance
+        **solver_options):
         # integrate state_ode to get state values
         if new_param_names:
             self.parameters.loc[new_param_names, "value"] = new_params
@@ -132,7 +132,7 @@ class BaseModel(metaclass=ABCMeta):
             t_eval=time_points,
             rtol=rtol,
             atol=atol,
-        )
+            **solver_options)
 
         return sol.y
 
