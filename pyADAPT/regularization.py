@@ -24,3 +24,17 @@ def tiemann(params=None,
             errors=None,
             **kw):
     pass
+
+
+def default_regularization(params=None,
+                           parameter_trajectory=None,
+                           time_span=None,
+                           i_iter=None,
+                           i_ts=None,
+                           **kw):
+    """ tiemann & natal's regularization term in ADAPT 2013 paper
+    """
+    old_params = parameter_trajectory[i_ts - 1, :]
+    delta_t = time_span[-1] - time_span[0]
+    reg = (params - old_params) / delta_t / old_params
+    return reg
