@@ -4,14 +4,6 @@ The following dataset is good enough for the toy model, but depends heavily on
 the MATLAB data file format.
 
 Current, xarray/pandas and pickle seems promising
-
-The dataset provided to ADAPT procedure should always be a list of distributions.
-But the storing and exchanging format should be pandas pickle.
-
-This is not an urgent problem to solve, I should first try to use hard coded
-script to provide the data set structures.
-
-TODO: routine `read_pandas` (read_data)
 """
 
 import pickle
@@ -50,7 +42,6 @@ class DataSet(list):
             raw_data_path, group=self.name))
 
         self.structure = {}
-        self.ordered_names = []
 
         assert "structure" in self.data_specs
 
@@ -77,7 +68,7 @@ class DataSet(list):
                 print(
                     f"Warning: undefined {e.args[0]}, fallback to default ({unit})"
                 )
-
+            # TODO use Flux spline isa flux
             s = State(
                 name=k,
                 time=time,
@@ -88,7 +79,6 @@ class DataSet(list):
             )
 
             self.append(s)
-            self.ordered_names.append(k)
 
     def get_time(self, when):
         if when == "end":
@@ -96,6 +86,19 @@ class DataSet(list):
         elif when == "begin":
             time = max([s.time[0] for s in self])
         return time
+
+    def align(self, order):
+        # TODO verify
+        cur = 0
+        for n in order:
+            if n in self.names:
+                i = self.names.index(n)
+                self.insert(cur, self.pop(i))
+                cur += 1
+
+    @property
+    def names(self):
+        return [s.name for s in self]
 
     @property
     def end_time(self):
@@ -115,14 +118,12 @@ class DataSet(list):
 
         return
         ------
-        numpy.ndarray in the same order as `self.ordered_names`
+        numpy.ndarray in the same order as `self`
         ```
         [
-            [
-                [value, std],
-                ......
-                [value, std]
-            ]
+            [value, std],
+            ......,
+            [value, std]
         ]
         ```
         """
@@ -136,7 +137,7 @@ class DataSet(list):
 
     def __getitem__(self, index):
         if type(index) is str:
-            index = self.ordered_names.index(index)
+            index = self.names.index(index)
         return super().__getitem__(index)
 
 
@@ -179,11 +180,13 @@ def get_cols(N, ratio=1):
 
 if __name__ == "__main__":
     from pprint import pprint, pformat
+    import matplotlib.pyplot as plt
 
     D = DataSet(
         raw_data_path="data/toyModel/toyData.mat",
         data_specs_path="data/toyModel/toyData.yaml",
     )
+
     idp = D.interpolate(n_ts=10)
     # all for s1:
     pprint(idp[0, :, :])
@@ -196,4 +199,12 @@ if __name__ == "__main__":
 
     n_interp = 100
     n_ts = 200
-    plot_splines(D, n_interp, n_ts)
+    fig0, axes0 = plt.subplots(2, 2, figsize=(8, 8))
+    plot_splines(D, n_interp, n_ts, axes=axes0)
+
+    order = ['s2', 's4', 's1', 's3']
+    D.align(order)
+    idp = D.interpolate(n_ts=10)
+    fig1, axes1 = plt.subplots(2, 2, figsize=(8, 8))
+    plot_splines(D, n_interp, n_ts, axes=axes1)
+    plt.show()
