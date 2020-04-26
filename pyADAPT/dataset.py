@@ -10,7 +10,7 @@ import pickle
 
 import numpy as np
 
-from pyADAPT.state import State
+from pyADAPT.spline import State, Flux
 from pyADAPT.io import read_data_raw, read_data_specs
 
 

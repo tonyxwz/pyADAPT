@@ -12,23 +12,21 @@ class Spline(list):
     """ species, x, implemented as list of NormalDist
     ```
     [
-        (time[0], (mean=2, std=0.7)),
-        (time[1], (mean=3, std=1.5)),
-        (time[2], (mean=5, std=1.1)),
+        (time[0], (mean0, std0)),
+        (time[1], (mean1, std1)),
+        (time[2], (mean2, std2)),
         ...
     ]
     ```
     """
-    def __init__(
-        self,
-        name="",
-        time=None,
-        time_unit="second",
-        means=None,
-        stds=None,
-        unit=None,
-        observable=False,
-    ):
+    def __init__(self,
+                 name="",
+                 time=None,
+                 time_unit="second",
+                 means=None,
+                 stds=None,
+                 unit=None,
+                 observable=False):
         super().__init__()
         self.name = name
         self.time = np.array(time)
