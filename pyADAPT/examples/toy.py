@@ -7,7 +7,7 @@ from pyADAPT.basemodel import BaseModel
 class ToyModel(BaseModel):
     def __init__(self):
         self.name = "Toy Model"
-        self.description = "Toy Model as appeared in the 2013 paper by Natal van Riel"
+        self.notes = "Toy Model as appeared in the 2013 paper by Natal van Riel"
 
         self.add_parameter(name="k1", value=1, vary=True, lb=0)
         self.add_parameter(name="k2", value=1, vary=False, lb=0)
@@ -15,14 +15,11 @@ class ToyModel(BaseModel):
         self.add_parameter(name="k4", value=0.5, vary=False, lb=0)
         self.add_parameter(name="k5", value=1, vary=False, lb=0)
 
-        self.add_state(name="s1", value=1)
-        self.add_state(name="s2", value=1)
-        self.add_state(name="s3", value=1)
-        self.add_state(name="s4", value=1)
+        super().__init__(state_order=['s1', 's2', 's3', 's4'],
+                         flux_order=['v1', 'v2', 'v3', 'v4', 'v5', 'v6'],
+                         input_order=['u1', 'u2'])
 
-        super().__init__()
-
-    def odefunc(self, t, x, p):
+    def state_ode(self, t, x, p):
         """ODE function of the toy model
         `t`: time
         `x`: current state
@@ -41,13 +38,14 @@ class ToyModel(BaseModel):
 
     def fluxes(self, t, x, p):
         u = self.inputs(t)
-        u1 = u["u1"]
-        u2 = u["u2"]
+        u2 = u[self['u2']]
+        # also possible if don't mind the "no-member" lint error
+        u1 = u[self.u1]
 
-        s1 = x[0]
-        s2 = x[1]
-        s3 = x[2]
-        s4 = x[3]
+        s1 = x[self['s1']]
+        s2 = x[self['s2']]
+        s3 = x[self['s3']]
+        s4 = x[self['s4']]
 
         k1 = p["k1"]
         k2 = p["k2"]
@@ -67,7 +65,7 @@ class ToyModel(BaseModel):
 
     def inputs(self, t):
         # let's skip `t` for the ToyModel
-        return {"u1": 1, "u2": 1}
+        return [1, 1]
 
 
 if __name__ == "__main__":
@@ -88,6 +86,7 @@ if __name__ == "__main__":
                                   n_iter=2,
                                   n_tstep=50,
                                   n_core=1)
+
     ptraj, straj, time = optimize(model,
                                   data,
                                   "k1",

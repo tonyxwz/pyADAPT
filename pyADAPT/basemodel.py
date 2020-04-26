@@ -22,6 +22,17 @@ from scipy.optimize import least_squares
 from pyADAPT.io import read_data_specs
 
 
+class ParameterTable(pd.DataFrame):
+    def __init__(self):
+        super().__init__()
+
+    def __iadd__(self, other):
+        pass
+
+    def __add__(self, other):
+        pass
+
+
 class BaseModel(metaclass=ABCMeta):
     """Abstract class for constructing ADAPT models
 
@@ -32,55 +43,60 @@ class BaseModel(metaclass=ABCMeta):
         instance = super().__new__(cls)
         instance.name = "Base Model"
         instance.notes = """Base Model, for extending only"""
-        instance.predictor_name = "time"
+
         instance._parameters = list()
-        instance._states = list()
-        instance.flux_trajectory = list()
-        # if the derivatives of you model is not related to time, it is possible
-        # to implement the ode function in vectorized fashion. if you don't know
-        # what it is, just leave it as `False`
-        instance.vectorized = False
+        instance.map = dict()
+        # instance.mat = np.ndarray()  # stoichiometry matrix
         return instance
 
-    def __init__(self):
+    def __init__(self, state_order=[], flux_order=[], input_order=[]):
         self.name: str
-        self._parameters: list
-        self._states: list
-        self.flux_trajectory: list
+        self.notes: str
+        self.map: dict
+        self.mat: np.ndarray
 
+        self.state_order = state_order
+        self.flux_order = flux_order
+        self.input_order = input_order
+
+        self._parameters: list
         self.parameters = pd.DataFrame(
             self._parameters,
             columns=["name", "value", "vary", "lb", "ub", "init"],
             index=[p[0] for p in self._parameters],
         )
-        # only init values of states matters in the model
-        self.states = pd.DataFrame(
-            self._states,  # value in Model.states are not used in compuation
-            columns=["name", "value", "observable", "init"],
-            index=[s[0] for s in self._states],
-        )
         del self._parameters
-        del self._states
+
+        # TODO add map for parameters?
+        for i, s in enumerate(self.state_order):
+            self.map[s] = i
+            setattr(self, s, i)
+        for i, v in enumerate(self.flux_order):
+            self.map[v] = i
+            setattr(self, v, i)
+        for i, ip in enumerate(self.input_order):
+            self.map[ip] = i
+            setattr(self, ip, i)
+
+    def __getitem__(self, x):
+        return self.map[x]
 
     def add_parameter(self, name, value, vary, lb=-np.inf, ub=np.inf, **kw):
         # name, value, vary?, lb, ub, init
+        # TODO add existing name check
         self._parameters.append([name, value, vary, lb, ub, value])
+        self.map[name] = len(self._parameters)
 
-    def add_state(self, name, value, observable=True):
-        # name, value, observalbe, init
-        self._states.append([name, value, observable, value])
+    def add_parameters(self, l: list):
+        for p in l:
+            self.add_parameter(**p)
 
     @abstractmethod
-    def odefunc(self, t, x, p):
+    def state_ode(self, t, x, p):
         """ t: time, x: state at t, p: parameters, u: constant
         return: dx/dt at t
         """
         pass
-
-    def jacobian(self, t, x, p):
-        # This might be useful if ODE solvers require it. But I am not sure how
-        # hard is it to calculate.
-        raise NotImplementedError
 
     def fluxes(self, t, x, p):
         raise NotImplementedError
@@ -101,17 +117,15 @@ class BaseModel(metaclass=ABCMeta):
         rtol=1e-3,  # relative tolerance
         atol=1e-6  # absolute tolerance
     ):
+        # integrate state_ode to get state values
         if new_param_names:
-            # https://pandas.pydata.org/pandas-docs/stable/user_guide/indexing.html#why-does-assignment-fail-when-using-chained-indexing
-            # see the `def do_something(df)` example
             self.parameters.loc[new_param_names, "value"] = new_params
-            # parameters.loc[new_param_names] = new_params
 
         t_span = [time_points[0], time_points[-1]]
 
         # https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html
         sol = solve_ivp(
-            lambda t, x: self.odefunc(t, x, self.parameters['value']),
+            lambda t, x: self.state_ode(t, x, self.parameters['value']),
             t_span,
             x0,
             method=method,
@@ -132,7 +146,7 @@ class BaseModel(metaclass=ABCMeta):
         p = self.parameters.copy()
         # if params is None:
         #     params = self.init_vary
-        for k, v in p.items():  # maybe change v.vary to initvary flags
+        for k, v in p.items():
             if v.vary:  # values of dict observables is boolean
                 v.value = p[k] * np.power(10, (
                     (smax - smin) * np.random.rand() + smin))
@@ -147,13 +161,6 @@ class BaseModel(metaclass=ABCMeta):
     def reset(self):
         """ reset to initial conditions """
         self.parameters['value'] = self.parameters['init']
-        self.states['value'] = self.states['init']
-
-    def psa(self):
-        """Parameter sensitivity analysis"""
-
-    def draw(self):
-        """ Draw the model using networkx """
 
 
 if __name__ == "__main__":
