@@ -68,7 +68,7 @@ class DataSet(list):
                 print(
                     f"Warning: undefined {e.args[0]}, fallback to default ({unit})"
                 )
-            # TODO use Flux spline isa flux
+            # TODO use Flux for flux splines
             s = State(
                 name=k,
                 time=time,
@@ -80,15 +80,7 @@ class DataSet(list):
 
             self.append(s)
 
-    def get_time(self, when):
-        if when == "end":
-            time = min([s.time[-1] for s in self])
-        elif when == "begin":
-            time = max([s.time[0] for s in self])
-        return time
-
     def align(self, order):
-        # TODO verify
         cur = 0
         for n in order:
             if n in self.names:
@@ -101,15 +93,20 @@ class DataSet(list):
         return [s.name for s in self]
 
     @property
+    def fluxe_names(self):
+        return [s.name for s in self if type(s) is Flux]
+
+    @property
+    def state_names(self):
+        return [s.name for s in self if type(s) is State]
+
+    @property
     def end_time(self):
-        return self.get_time("end")
+        return min([s.time[-1] for s in self])
 
     @property
     def begin_time(self):
-        return self.get_time("begin")
-
-    def get_state_names(self):
-        return [s.name for s in self]
+        return max([s.time[0] for s in self])
 
     def interpolate(self, n_ts=100, method="Hermite") -> np.ndarray:
         """In every ADAPT iteration, this function is called once to get a new
