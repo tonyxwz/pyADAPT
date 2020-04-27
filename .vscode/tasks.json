@@ -4,9 +4,16 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "unittest",
+            "label": "py-spy",
             "type": "shell",
-            "command": "echo Hello"
+            "command": "pipenv run py-spy top -- python -m pyADAPT.examples.toy ",
+            "problemMatcher": []
+        },
+        {
+            "label": "cProfile",
+            "type": "shell",
+            "command": "pipenv run python run_profiler.py;pipenv run snakeviz pyADAPT.prof",
+            "problemMatcher": []
         }
     ]
 }

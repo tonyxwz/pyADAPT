@@ -141,3 +141,4 @@ examples/**/*.npy
 Pipfile.lock
 .idea/
 .ycm_extra_conf.py
+*.prof
