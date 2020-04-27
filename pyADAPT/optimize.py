@@ -73,11 +73,12 @@ import multiprocessing as mp
 
 import numpy as np
 import pandas as pd
-import xarray as xr
+# import xarray as xr
 from scipy.optimize import least_squares, leastsq
 
 from pyADAPT.dataset import DataSet
 from pyADAPT.basemodel import BaseModel
+from pyADAPT.trajectory import Trajectory
 from pyADAPT.regularization import default_regularization
 
 ITER = 1
@@ -124,13 +125,13 @@ class Optimizer(object):
         # 1. and arrange the states and fluxes in the model to be in the same order as the dataset
         self.dataset.align(self.model.state_order + self.model.flux_order)
         # 2. create the mask here
-        self.state_mask = self.__create_mask(self.dataset.names,
-                                             self.model.state_order)
+        self.state_mask = self.create_mask(self.dataset.names,
+                                           self.model.state_order)
 
-        self.flux_mask = self.__create_mask(self.dataset.names,
-                                            self.model.flux_order)
+        self.flux_mask = self.create_mask(self.dataset.names,
+                                          self.model.flux_order)
 
-    def __create_mask(self, names_data, names_model):
+    def create_mask(self, names_data, names_model):
         mask = list()
         for i in range(len(names_model)):
             mask.append(names_model[i] in names_data)
@@ -170,22 +171,32 @@ class Optimizer(object):
                 self.flux_trajectories_list.append(vtraj)
 
         # convert the lists into xarray
-        self.parameter_trajectories = xr.DataArray(
+        self.parameter_trajectories = Trajectory(
             data=np.array(self.parameter_trajectories_list),
             coords=[("iter", list(range(self.options['n_iter']))),
                     ("time", self.time),
                     ("param", list(self.parameter_names))],
             name="parameter trajectories")
 
-        self.state_trajectories = xr.DataArray(
+        self.state_trajectories = Trajectory(
             data=np.array(self.state_trajectories_list),
             coords=[("iter", list(range(self.options['n_iter']))),
                     ("time", self.time),
-                    ("state", list(self.dataset.get_state_names()))],
+                    ("state", list(self.model.state_order))],
             name="state trajectories")
+
+        self.flux_trajectories = Trajectory(
+            data=np.array(self.flux_trajectories_list),
+            coords=[("iter", list(range(self.options['n_iter']))),
+                    ("time", self.time),
+                    ("flux", list(self.model.flux_order))],
+            name="flux trajectories")
         return self.parameter_trajectories, self.state_trajectories
 
     def initialize_ts0(self, i_iter, splines):
+        """ time step 0 is handled differently because there's no previous
+        time step information at this moment
+        """
         self.parameter_trajectory = np.zeros(
             (self.options['n_ts'], len(self.parameter_names)))
         self.state_trajectory = np.zeros(
@@ -193,7 +204,7 @@ class Optimizer(object):
         self.flux_trajectory = np.zeros(
             (self.options['n_ts'], len(self.model.flux_order)))
 
-        # TODO initial value problem
+        # TODO initial value problem, see BaseModel for options
         # Solution: 1, model
         # self.state_trajectory[0, :] = self.model.state.init
         # self.state_trajectory[
@@ -218,7 +229,7 @@ class Optimizer(object):
             print(f"iteration: {i_iter}", ps_name)
 
         splines = self.dataset.interpolate(n_ts=self.options['n_ts'])
-        self.init_ts0(i_iter, splines)
+        self.initialize_ts0(i_iter, splines)
 
         for i_ts in range(1, self.options['n_ts']):
             if (i_ts % 10) == 0 and self.options['verbose'] >= TIMESTEP:
@@ -421,7 +432,7 @@ if __name__ == "__main__":
     ptraj, straj, time = optimize(model,
                                   data,
                                   "k1",
-                                  n_iter=100,
+                                  n_iter=10,
                                   delta_t=0.2,
                                   n_core=4,
                                   verbose=ITER)
