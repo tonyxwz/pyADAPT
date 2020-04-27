@@ -73,12 +73,11 @@ import multiprocessing as mp
 
 import numpy as np
 import pandas as pd
-# import xarray as xr
+import xarray as xr
 from scipy.optimize import least_squares, leastsq
 
 from pyADAPT.dataset import DataSet
 from pyADAPT.basemodel import BaseModel
-from pyADAPT.trajectory import Trajectory
 from pyADAPT.regularization import default_regularization
 
 ITER = 1
@@ -171,27 +170,26 @@ class Optimizer(object):
                 self.flux_trajectories_list.append(vtraj)
 
         # convert the lists into xarray
-        self.parameter_trajectories = Trajectory(
+        self.parameter_trajectories = xr.DataArray(
             data=np.array(self.parameter_trajectories_list),
             coords=[("iter", list(range(self.options['n_iter']))),
-                    ("time", self.time),
-                    ("param", list(self.parameter_names))],
+                    ("time", self.time), ("id", list(self.parameter_names))],
             name="parameter trajectories")
 
-        self.state_trajectories = Trajectory(
+        self.state_trajectories = xr.DataArray(
             data=np.array(self.state_trajectories_list),
             coords=[("iter", list(range(self.options['n_iter']))),
-                    ("time", self.time),
-                    ("state", list(self.model.state_order))],
+                    ("time", self.time), ("id", list(self.model.state_order))],
             name="state trajectories")
 
-        self.flux_trajectories = Trajectory(
+        self.flux_trajectories = xr.DataArray(
             data=np.array(self.flux_trajectories_list),
             coords=[("iter", list(range(self.options['n_iter']))),
-                    ("time", self.time),
-                    ("flux", list(self.model.flux_order))],
+                    ("time", self.time), ("id", list(self.model.flux_order))],
             name="flux trajectories")
-        return self.parameter_trajectories, self.state_trajectories
+
+        return (self.parameter_trajectories, self.state_trajectories,
+                self.flux_trajectories)
 
     def initialize_ts0(self, i_iter, splines):
         """ time step 0 is handled differently because there's no previous
@@ -297,7 +295,7 @@ class Optimizer(object):
         """call least_squares
         access Optimizer options via `i_iter` and `i_ts` and `self`
         """
-        time_span = self.time[i_ts - 1:i_ts + 1]
+        time_span = self.time[i_ts - 1:i_ts + 1]  # just two points
 
         lsq_result = least_squares(self.objective_function,
                                    initial_guess,
@@ -312,15 +310,17 @@ class Optimizer(object):
                                            self.parameters["ub"]),
                                    method=self.options["method"],
                                    **lsq_options)
-        # TODO
-        new_states = self.model.compute_states(
-            lsq_result.x,
-            time_span,
-            begin_states,
+        # calculate the states and fluxes at the end of the time step using the
+        # optimized parameters
+        final_states = self.model.compute_states(
+            new_params=lsq_result.x,
+            time_points=time_span,
+            x0=begin_states,
             new_param_names=self.parameter_names)[:, -1]
-        new_fluxes = self.model.fluxes(time_span[-1], new_states,
-                                       self.model.parameters['value'])
-        return (lsq_result.x, new_states, new_fluxes)
+
+        final_fluxes = self.model.fluxes(time_span[-1], final_states,
+                                         self.model.parameters['value'])
+        return (lsq_result.x, final_states, final_fluxes)
 
     def objective_function(self,
                            params,
@@ -416,34 +416,33 @@ def optimize(model, dataset, *params, **options):
     """
     optim = Optimizer(model, dataset, params)
     optim.run(**options)
-    return optim.parameter_trajectories, optim.state_trajectories, optim.time
+    return (optim.parameter_trajectories, optim.state_trajectories,
+            optim.flux_trajectories, optim.time)
 
 
 if __name__ == "__main__":
     from pyADAPT.examples.lotka import LotkaVolterra
     from pyADAPT.examples.toy import ToyModel
     from pyADAPT.dataset import DataSet
+    import pyADAPT.trajectory as traj
 
     model = ToyModel()
     data = DataSet(
         raw_data_path="data/toyModel/toyData.mat",
         data_specs_path="data/toyModel/toyData.yaml",
     )
-    ptraj, straj, time = optimize(model,
-                                  data,
-                                  "k1",
-                                  n_iter=10,
-                                  delta_t=0.2,
-                                  n_core=4,
-                                  verbose=ITER)
+    ptraj, straj, vtraj, time = optimize(model,
+                                         data,
+                                         "k1",
+                                         n_iter=10,
+                                         delta_t=0.2,
+                                         n_core=4,
+                                         verbose=ITER)
 
     import matplotlib.pyplot as plt
-    fig, axes = plt.subplots(ncols=len(ptraj.coords['param']), squeeze=False)
-    axes = axes.flatten()
-    for a, p in enumerate(ptraj.coords['param']):
-        for i in ptraj.coords['iter']:
-            axes[a].plot(time, ptraj.loc[i, :, p], color='green', alpha=0.2)
-        axes[a].plot(time, ptraj.sel(param=p).mean(dim="iter"), color='red')
-        axes[a].set_title(p.data[()])  # access np.darray with 0-dims
+    fig, axes = plt.subplots()
+
+    traj.plot(ptraj, axes, color="green", alpha=0.2)
+    traj.plot_mean(ptraj, axes, color="red")
 
     plt.show()
