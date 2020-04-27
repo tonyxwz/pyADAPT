@@ -46,6 +46,7 @@ class BaseModel(metaclass=ABCMeta):
 
         instance._parameters = list()
         instance.map = dict()
+        # TODO this initial value problem requires the initial values for states which can be solve in two ways: 1. give values explicitly without considering the consistency with the dataset. 2. randomize then simulate the model till steady state and use this as the initial values
         # instance.mat = np.ndarray()  # stoichiometry matrix
         return instance
 
@@ -56,6 +57,8 @@ class BaseModel(metaclass=ABCMeta):
         self.mat: np.ndarray
 
         self.state_order = state_order
+        # TODO
+        self.state_init_values = list()
         self.flux_order = flux_order
         self.input_order = input_order
 
@@ -67,7 +70,7 @@ class BaseModel(metaclass=ABCMeta):
         )
         del self._parameters
 
-        # TODO add map for parameters?
+        # ? add map for parameters
         for i, s in enumerate(self.state_order):
             self.map[s] = i
             setattr(self, s, i)
@@ -83,7 +86,6 @@ class BaseModel(metaclass=ABCMeta):
 
     def add_parameter(self, name, value, vary, lb=-np.inf, ub=np.inf, **kw):
         # name, value, vary?, lb, ub, init
-        # TODO add existing name check
         self._parameters.append([name, value, vary, lb, ub, value])
         self.map[name] = len(self._parameters)
 
