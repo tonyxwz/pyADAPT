@@ -74,6 +74,7 @@ if __name__ == "__main__":
     from pyADAPT.dataset import DataSet
     from pyADAPT.optimize import optimize
     import cProfile
+    import pyADAPT.trajectory as traj
 
     model = ToyModel()
     data = DataSet(
@@ -81,16 +82,17 @@ if __name__ == "__main__":
         data_specs_path="data/toyModel/toyData.yaml",
     )
 
-    ptraj, straj, time = optimize(model,
-                                  data,
-                                  "k1",
-                                  n_iter=4,
-                                  delta_t=0.2,
-                                  n_core=1)
+    ptraj, straj, vtraj, time = optimize(model,
+                                         data,
+                                         "k1",
+                                         n_iter=4,
+                                         delta_t=0.2,
+                                         n_core=4)
+    traj.mean(ptraj)
 
-    ptraj, straj, time = optimize(model,
-                                  data,
-                                  "k1",
-                                  n_iter=4,
-                                  delta_t=0.2,
-                                  n_core=4)
+    import matplotlib.pyplot as plt
+    fig, axes = plt.subplots(2, 2, squeeze=False)
+    traj.plot_mean(straj, axes, color='red')
+    fig2, axes2 = plt.subplots()
+    traj.plot(ptraj, axes2, color='green', alpha=0.2)
+    plt.show()
