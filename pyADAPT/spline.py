@@ -32,7 +32,7 @@ class Spline(list):
         self.time = np.array(time)
         self.time_unit = time_unit
         self.unit = unit
-        self.sampled_values = None
+        self.last_sampled = None
         assert len(time) == len(stds) == len(means)
         for m, s in zip(means, stds):
             self.append(NormalDist(m, s))
@@ -40,10 +40,10 @@ class Spline(list):
     @property
     def values_spline(self):
         """ interpolate the values """
-        self.sampled_values = self.sample()
+        self.last_sampled = self.sample()
         # remove this line if the first interpolation should be random
-        # self.sampled_values[0] = self[0].mean
-        pp = PchipInterpolator(self.time, self.sampled_values)
+        # self.last_sampled[0] = self[0].mean
+        pp = PchipInterpolator(self.time, self.last_sampled)
         return pp
 
     def interp_values(self, n_ts=100, method="pchip"):
@@ -83,13 +83,6 @@ class Spline(list):
         """ random sample of all the data points as an array """
         return np.asarray([d.sample() for d in self])
 
-    @cached_property
-    def plt(self):
-        import matplotlib.pyplot as plt
-
-        plt.style.use("ggplot")
-        return plt
-
     def errorbar(self, axes=None):
         if axes is None:
             import matplotlib.pyplot as plt
@@ -123,11 +116,7 @@ class Spline(list):
             _, axes = plt.subplots()
         else:
             plt = None
-        axes.plot(self.time,
-                  self.sampled_values,
-                  ".g",
-                  alpha=0.5,
-                  markersize=5)
+        axes.plot(self.time, self.last_sampled, ".g", alpha=0.5, markersize=5)
 
         return axes
 
@@ -163,14 +152,12 @@ if __name__ == "__main__":
     time_unit = "day"
     unit = "mM"
 
-    s = State(
-        name="Hepatic TG",
-        time=time,
-        means=means,
-        stds=stds,
-        time_unit=time_unit,
-        unit=unit,
-    )
+    s = State(name="Hepatic TG",
+              time=time,
+              means=means,
+              stds=stds,
+              time_unit=time_unit,
+              unit=unit)
     pprint(s)
 
     s.errorbar(axes=axes)

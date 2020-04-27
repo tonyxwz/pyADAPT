@@ -19,10 +19,11 @@
             ]
         },
         {
-            "name": "Run Toy Model",
+            "name": "Run ADAPT",
             "type": "python",
             "request": "launch",
-            "module": "pyADAPT.examples.toy"
+            "program": "run.py",
+            "console": "integratedTerminal"
         },
         {
             "name": "Python: Current File",
