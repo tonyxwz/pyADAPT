@@ -38,9 +38,10 @@ class ToyModel(BaseModel):
 
     def fluxes(self, t, x, p):
         u = self.inputs(t)
-        u2 = u[self['u2']]
         # also possible if don't mind the "no-member" lint error
-        u1 = u[self.u1]
+        # u1 = u[self.u1]
+        u1 = u[self['u1']]
+        u2 = u[self['u2']]
 
         s1 = x[self['s1']]
         s2 = x[self['s2']]
@@ -83,13 +84,13 @@ if __name__ == "__main__":
     ptraj, straj, time = optimize(model,
                                   data,
                                   "k1",
-                                  n_iter=2,
-                                  n_tstep=50,
+                                  n_iter=4,
+                                  delta_t=0.2,
                                   n_core=1)
 
     ptraj, straj, time = optimize(model,
                                   data,
                                   "k1",
-                                  n_iter=2,
-                                  n_tstep=50,
+                                  n_iter=4,
+                                  delta_t=0.2,
                                   n_core=4)
