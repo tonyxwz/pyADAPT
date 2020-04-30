@@ -1,0 +1,1 @@
+& "$(pipenv --venv)\Scripts\activate.ps1"
