@@ -18,12 +18,14 @@ py-spy = "*"
 spyder-kernels = "*"
 ipyparallel = "*"
 ipympl = "*"
+black = "*"
 
 [packages]
 pyadapt = {editable = true,path = "."}
 tables = "*"
-libroadrunner = "*"
-spyder-kernels = "*"
 
 [requires]
 python_version = "3.7"
+
+[pipenv]
+allow_prereleases = true
