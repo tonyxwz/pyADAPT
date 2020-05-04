@@ -46,19 +46,23 @@ class BaseModel(metaclass=ABCMeta):
 
         instance._parameters = list()
         instance.map = dict()
-        # TODO this initial value problem requires the initial values for states which can be solve in two ways: 1. give values explicitly without considering the consistency with the dataset. 2. randomize then simulate the model till steady state and use this as the initial values
+
         # instance.mat = np.ndarray()  # stoichiometry matrix
         return instance
 
-    def __init__(self, state_order=[], flux_order=[], input_order=[]):
+    def __init__(self,
+                 state_order=[],
+                 init_states=[],
+                 flux_order=[],
+                 input_order=[]):
         self.name: str
         self.notes: str
         self.map: dict
         self.mat: np.ndarray
 
         self.state_order = state_order
-        # TODO
-        self.state_init_values = list()
+
+        self.init_states = np.array(init_states)  # TODO
         self.flux_order = flux_order
         self.input_order = input_order
 
@@ -110,15 +114,15 @@ class BaseModel(metaclass=ABCMeta):
         return " ".join([super().__repr__(), self.name])
 
     def compute_states(
-        self,
-        new_params=[],  # parameters that need to be optimized
-        time_points=None,  # the time span of the computation
-        x0=None,  # the states at the first time point
-        new_param_names=[],  # the parameter's names, in the same order
-        method="RK45",  # odesolver, only RK45/RK23/DOP853 since no jacobians
-        rtol=1e-3,  # relative tolerance
-        atol=1e-6,  # absolute tolerance
-        **solver_options):
+            self,
+            new_params=[],  # parameters that need to be optimized
+            time_points=None,  # the time span of the computation
+            x0=None,  # the states at the first time point
+            new_param_names=[],  # the parameter's names, in the same order
+            method="RK45",  # odesolver, only RK45/RK23/DOP853 since no jacobians
+            rtol=1e-3,  # relative tolerance
+            atol=1e-6,  # absolute tolerance
+            **solver_options):
         # integrate state_ode to get state values
         if new_param_names:
             self.parameters.loc[new_param_names, "value"] = new_params
@@ -127,7 +131,7 @@ class BaseModel(metaclass=ABCMeta):
 
         # https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html
         sol = solve_ivp(
-            lambda t, x: self.state_ode(t, x, self.parameters['value']),
+            lambda t, x: self.state_ode(t, x, self.parameters["value"]),
             t_span,
             x0,
             method=method,
@@ -162,7 +166,7 @@ class BaseModel(metaclass=ABCMeta):
 
     def reset(self):
         """ reset to initial conditions """
-        self.parameters['value'] = self.parameters['init']
+        self.parameters["value"] = self.parameters["init"]
 
 
 if __name__ == "__main__":
