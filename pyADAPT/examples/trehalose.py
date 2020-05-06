@@ -55,134 +55,141 @@ class Smallbone2011(BaseModel):
         self.add_parameter("ugp_Kiudg", 0.00350, False, -np.inf, np.inf)
         self.add_parameter("ugp_shock", 16.00000, False, -np.inf, np.inf)
 
-        self.add_state("glc", -1954.423351, True)
-        self.add_state('g1p', 0.058932, True)
-        self.add_state('g6p', -8778.849594, True)
-        self.add_state('trh', 0.071574, True)
-        self.add_state('t6p', 0.028853, True)
-        self.add_state('udg', 0.309360, True)
-        self.add_state('adp', 1.282000, True)
-        self.add_state('atp', 2.525000, True)
-        self.add_state('ppi', 1.000000, True)
-        self.add_state('f6p', 0.625000, True)
-        self.add_state('h', 1.000000, True)
-        self.add_state('pho', 1.000000, True)
-        self.add_state('udp', 0.281500, True)
-        self.add_state('utp', 0.649100, True)
-        self.add_state('h2o', 1.000000, True)
-        self.add_state('glx', 100.000000, True)
+        # boundary conditions
+        self.add_parameter('adp', 1.282000, False)
+        self.add_parameter('atp', 2.525000, False)
+        self.add_parameter('ppi', 1.000000, False)
+        self.add_parameter('f6p', 0.625000, False)
+        self.add_parameter('h', 1.000000, False)
+        self.add_parameter('pho', 1.000000, False)
+        self.add_parameter('udp', 0.281500, False)
+        self.add_parameter('utp', 0.649100, False)
+        self.add_parameter('h2o', 1.000000, False)
+        self.add_parameter('glx', 100.000000, False)
+
+        # self.add_state("glc", 0.09765, True)
+        # self.add_state('g1p', 0.10000, True)
+        # self.add_state('g6p', 2.67500, True)
+        # self.add_state('trh', 0.05000, True)
+        # self.add_state('t6p', 0.02000, True)
+        # self.add_state('udg', 0.70000, True)
+        self.state_order = ['glc', 'g1p', 'g6p', 'trh', 't6p', 'udg']
 
         self.sm = np.array([[0.0, 1.0, -1.0, 0.0, 0.0, 0.0, 2.0, 0.0],
                             [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, -1.0],
                             [-1.0, 0.0, 1.0, -1.0, 0.0, -1.0, 0.0, 0.0],
                             [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, -1.0, 0.0],
                             [0.0, 0.0, 0.0, 0.0, -1.0, 1.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0],
-                            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]])
+                            [0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0]])
         super().__init__()
 
     def fluxes(self, t, x, p):
-        glc = x[0]
-        g1p = x[1]
-        g6p = x[2]
-        trh = x[3]
-        t6p = x[4]
-        udg = x[5]
-        adp = x[6]
-        atp = x[7]
-        ppi = x[8]
-        f6p = x[9]
-        h = x[10]
-        pho = x[11]
-        udp = x[12]
-        utp = x[13]
-        h2o = x[14]
-        glx = x[15]
+        # measured
+        # wish:
+        # glc = x['glc']
+        glc = x[self['glc']]
+        g1p = x[self['g1p']]
+        g6p = x[self['g6p']]
+        trh = x[self['trh']]
+        t6p = x[self['t6p']]
+        udg = x[self['udg']]
 
-        cell = self.parameters.loc['cell', 'value']
-        medium = self.parameters.loc['medium', 'value']
-        heat = self.parameters.loc['heat', 'value']
+        # unmeasured and they don't change at all
+        adp = p['adp']
+        atp = p['atp']
+        ppi = p['ppi']
+        f6p = p['f6p']
+        h = p['h']
+        pho = p['pho']
+        udp = p['udp']
+        utp = p['utp']
+        h2o = p['h2o']
+        glx = p['glx']
 
-        glc_0 = self.parameters.loc['glc_0', 'value']
-        g1p_0 = self.parameters.loc['g1p_0', 'value']
-        g6p_0 = self.parameters.loc['g6p_0', 'value']
-        trh_0 = self.parameters.loc['trh_0', 'value']
-        t6p_0 = self.parameters.loc['t6p_0', 'value']
-        udg_0 = self.parameters.loc['udg_0', 'value']
+        cell = p['cell']
+        medium = p['medium']
+        heat = p['heat']
 
-        pgi_Vmax = self.parameters.loc['pgi_Vmax', 'value']
-        pgi_Kg6p = self.parameters.loc['pgi_Kg6p', 'value']
-        pgi_Kf6p = self.parameters.loc['pgi_Kf6p', 'value']
-        pgi_Keq = self.parameters.loc['pgi_Keq', 'value']
-        pgi_shock = self.parameters.loc['pgi_shock', 'value']
+        glc_0 = p['glc_0']
+        g1p_0 = p['g1p_0']
+        g6p_0 = p['g6p_0']
+        trh_0 = p['trh_0']
+        t6p_0 = p['t6p_0']
+        udg_0 = p['udg_0']
 
-        hxt_Vmax = self.parameters.loc['hxt_Vmax', 'value']
-        hxt_Kglc = self.parameters.loc['hxt_Kglc', 'value']
-        hxt_Ki = self.parameters.loc['hxt_Ki', 'value']
-        hxt_shock = self.parameters.loc['hxt_shock', 'value']
+        pgi_Vmax = p['pgi_Vmax']
+        pgi_Kg6p = p['pgi_Kg6p']
+        pgi_Kf6p = p['pgi_Kf6p']
+        pgi_Keq = p['pgi_Keq']
+        pgi_shock = p['pgi_shock']
 
-        hxk_Vmax = self.parameters.loc['hxk_Vmax', 'value']
-        hxk_Kglc = self.parameters.loc['hxk_Kglc', 'value']
-        hxk_Katp = self.parameters.loc['hxk_Katp', 'value']
-        hxk_Kg6p = self.parameters.loc['hxk_Kg6p', 'value']
-        hxk_Kadp = self.parameters.loc['hxk_Kadp', 'value']
-        hxk_Keq = self.parameters.loc['hxk_Keq', 'value']
-        hxk_Kit6p = self.parameters.loc['hxk_Kit6p', 'value']
-        hxk_shock = self.parameters.loc['hxk_shock', 'value']
+        hxt_Vmax = p['hxt_Vmax']
+        hxt_Kglc = p['hxt_Kglc']
+        hxt_Ki = p['hxt_Ki']
+        hxt_shock = p['hxt_shock']
 
-        pgm_Vmax = self.parameters.loc['pgm_Vmax', 'value']
-        pgm_Kg6p = self.parameters.loc['pgm_Kg6p', 'value']
-        pgm_Kg1p = self.parameters.loc['pgm_Kg1p', 'value']
-        pgm_Keq = self.parameters.loc['pgm_Keq', 'value']
-        pgm_shock = self.parameters.loc['pgm_shock', 'value']
+        hxk_Vmax = p['hxk_Vmax']
+        hxk_Kglc = p['hxk_Kglc']
+        hxk_Katp = p['hxk_Katp']
+        hxk_Kg6p = p['hxk_Kg6p']
+        hxk_Kadp = p['hxk_Kadp']
+        hxk_Keq = p['hxk_Keq']
+        hxk_Kit6p = p['hxk_Kit6p']
+        hxk_shock = p['hxk_shock']
 
-        tpp_Vmax = self.parameters.loc['tpp_Vmax', 'value']
-        tpp_Kt6p = self.parameters.loc['tpp_Kt6p', 'value']
-        tpp_shock = self.parameters.loc['tpp_shock', 'value']
+        pgm_Vmax = p['pgm_Vmax']
+        pgm_Kg6p = p['pgm_Kg6p']
+        pgm_Kg1p = p['pgm_Kg1p']
+        pgm_Keq = p['pgm_Keq']
+        pgm_shock = p['pgm_shock']
 
-        tps_Vmax = self.parameters.loc['tps_Vmax', 'value']
-        tps_Kg6p = self.parameters.loc['tps_Kg6p', 'value']
-        tps_Kudg = self.parameters.loc['tps_Kudg', 'value']
-        tps_shock = self.parameters.loc['tps_shock', 'value']
-        tps_activity = self.parameters.loc['tps_activity', 'value']
+        tpp_Vmax = p['tpp_Vmax']
+        tpp_Kt6p = p['tpp_Kt6p']
+        tpp_shock = p['tpp_shock']
 
-        nth_Vmax = self.parameters.loc['nth_Vmax', 'value']
-        nth_Ktrh = self.parameters.loc['nth_Ktrh', 'value']
-        nth_shock = self.parameters.loc['nth_shock', 'value']
-        ugp_Vmax = self.parameters.loc['ugp_Vmax', 'value']
-        ugp_Kutp = self.parameters.loc['ugp_Kutp', 'value']
-        ugp_Kiutp = self.parameters.loc['ugp_Kiutp', 'value']
-        ugp_Kg1p = self.parameters.loc['ugp_Kg1p', 'value']
-        ugp_Kiudg = self.parameters.loc['ugp_Kiudg', 'value']
-        ugp_shock = self.parameters.loc['ugp_shock', 'value']
+        tps_Vmax = p['tps_Vmax']
+        tps_Kg6p = p['tps_Kg6p']
+        tps_Kudg = p['tps_Kudg']
+        tps_shock = p['tps_shock']
+        tps_activity = p['tps_activity']
 
+        nth_Vmax = p['nth_Vmax']
+        nth_Ktrh = p['nth_Ktrh']
+        nth_shock = p['nth_shock']
+        ugp_Vmax = p['ugp_Vmax']
+        ugp_Kutp = p['ugp_Kutp']
+        ugp_Kiutp = p['ugp_Kiutp']
+        ugp_Kg1p = p['ugp_Kg1p']
+        ugp_Kiudg = p['ugp_Kiudg']
+        ugp_shock = p['ugp_shock']
+
+        # G6P isomerase
         pgi = cell * pow(pgi_shock, heat) * pgi_Vmax / pgi_Kg6p * (
             g6p - f6p / pgi_Keq) / (1 + g6p / pgi_Kg6p + f6p / pgi_Kf6p)
+
+        # glucose transport
         hxt = cell * pow(hxt_shock, heat) * hxt_Vmax * (
             glx - glc) / hxt_Kglc / (1 + (glx + glc) / hxt_Kglc +
                                      hxt_Ki * glx * glc / pow(hxt_Kglc, 2))
+        # Hexokinase
         hxk = cell * pow(hxk_shock, heat) * hxk_Vmax / (
             hxk_Kglc * hxk_Katp) * (glc * atp - g6p * adp / hxk_Keq) / (
                 (1 + glc / hxk_Kglc + g6p / hxk_Kg6p + t6p / hxk_Kit6p) *
                 (1 + atp / hxk_Katp + adp / hxk_Kadp))
+        # Phosphoglucomutase
         pgm = cell * pow(pgm_shock, heat) * pgm_Vmax / pgm_Kg6p * (
             g6p - g1p / pgm_Keq) / (1 + g6p / pgm_Kg6p + g1p / pgm_Kg1p)
+        # T6P phosphatase
         tpp = cell * pow(
             tpp_shock, heat) * tpp_Vmax * t6p / tpp_Kt6p / (1 + t6p / tpp_Kt6p)
+        # T6P synthase
         tps = cell * tps_activity * pow(
             tps_shock, heat) * tps_Vmax * g6p * udg / (tps_Kg6p * tps_Kudg) / (
                 (1 + g6p / tps_Kg6p) * (1 + udg / tps_Kudg))
+        # Trehalase
         nth = cell * pow(
             nth_shock, heat) * nth_Vmax * trh / nth_Ktrh / (1 + trh / nth_Ktrh)
+        # UDP–glucose phosphorylase
         ugp = cell * pow(
             ugp_shock, heat) * ugp_Vmax * utp * g1p / (ugp_Kutp * ugp_Kg1p) / (
                 ugp_Kiutp / ugp_Kutp + utp / ugp_Kutp + g1p / ugp_Kg1p +
@@ -192,9 +199,9 @@ class Smallbone2011(BaseModel):
 
         return np.array([pgi, hxt, hxk, pgm, tpp, tps, nth, ugp])
 
-    def odefunc(self, t, x, p):
+    def state_ode(self, t, x, p):
+        # x: np.ndarray, how to use 'id' to index?
         v = self.fluxes(t, x, p)
-        self.flux_trajectory.append(v)
         return np.dot(self.sm, v)
 
     def inputs(self, t):
@@ -203,20 +210,33 @@ class Smallbone2011(BaseModel):
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    smallbone = Smallbone2011()
-    x0 = [
-        0.09765, 0.10000, 2.67500, 0.05000, 0.02000, 0.70000, 1.28200, 2.52500,
-        1.00000, 0.62500, 1.00000, 1.00000, 0.28150, 0.64910, 1.00000,
-        100.00000
-    ]
-    t = np.linspace(0, 10, 1000)
-    x0[0] = 100  # glc
-    x0[-1] = 0.1  # glx
-    y = smallbone.compute_states(time_points=t, x0=x0)
+    from pyADAPT.dataset import DataSet
+    from pyADAPT.optimize import optimize
 
-    y = y[[0, 1, 2, 3, 4, 5]]
-    for i in range(y.shape[0]):
-        plt.plot(t, y[i, :])
-    plt.legend(['glc', 'g1p', 'g6p', 'trh', 't6p', 'udg'])
-    plt.title("glx=0.1")
-    plt.show()
+    smallbone = Smallbone2011()
+    # x0 = [
+    #     0.09765, 0.10000, 2.67500, 0.05000, 0.02000, 0.70000, 1.28200, 2.52500,
+    #     1.00000, 0.62500, 1.00000, 1.00000, 0.28150, 0.64910, 1.00000,
+    #     100.00000
+    # ]
+    # t = np.linspace(0, 10, 1000)
+    # x0[0] = 100  # glc
+    # x0[-1] = 0.1  # glx
+    # y = smallbone.compute_states(time_points=t, x0=x0)
+
+    # y = y[[0, 1, 2, 3, 4, 5]]
+    # for i in range(y.shape[0]):
+    #     plt.plot(t, y[i, :])
+    # plt.legend(['glc', 'g1p', 'g6p', 'trh', 't6p', 'udg'])
+    # plt.title("glx=0.1")
+    # plt.show()
+    data = DataSet(raw_data_path="data/trehalose/smallbone2011_data.mat",
+                   data_specs_path="data/trehalose/smallbone2011_data.yaml")
+    ptraj, straj, time = optimize(smallbone,
+                                  data,
+                                  "tpp_Kt6p",
+                                  n_iter=4,
+                                  n_tstep=50,
+                                  n_core=1,
+                                  init_method=None,
+                                  verbose=2)

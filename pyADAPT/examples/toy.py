@@ -14,9 +14,11 @@ class ToyModel(BaseModel):
         self.add_parameter(name="k4", value=0.5, vary=False, lb=0)
         self.add_parameter(name="k5", value=1, vary=False, lb=0)
 
-        super().__init__(state_order=['s1', 's2', 's3', 's4'],
-                         flux_order=['v1', 'v2', 'v3', 'v4', 'v5', 'v6'],
-                         input_order=['u1', 'u2'])
+        super().__init__(
+            state_order=['s1', 's2', 's3', 's4'],
+            #  init_states=[],
+            flux_order=['v1', 'v2', 'v3', 'v4', 'v5', 'v6'],
+            input_order=['u1', 'u2'])
 
     def state_ode(self, t, x, p):
         """ODE function of the toy model
@@ -72,7 +74,6 @@ if __name__ == "__main__":
     import os
     from pyADAPT.dataset import DataSet
     from pyADAPT.optimize import optimize
-    import cProfile
     import pyADAPT.trajectory as traj
 
     model = ToyModel()
@@ -86,12 +87,4 @@ if __name__ == "__main__":
                                          "k1",
                                          n_iter=4,
                                          delta_t=0.2,
-                                         n_core=4)
-    traj.mean(ptraj)
-
-    import matplotlib.pyplot as plt
-    fig, axes = plt.subplots(2, 2, squeeze=False)
-    traj.plot_mean(straj, axes, color='red')
-    fig2, axes2 = plt.subplots()
-    traj.plot(ptraj, axes2, color='green', alpha=0.2)
-    plt.show()
+                                         n_core=1)
