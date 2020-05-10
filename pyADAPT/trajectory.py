@@ -1,4 +1,5 @@
-""" manipulating 3-D data with coordinates: iter, time id
+"""
+manipulating 3-D data with coordinates: iter, time id
 some wrappers over tedious xarray functions
 """
 import xarray as xr
@@ -12,6 +13,10 @@ class Trajectory(dict):
     def __init__(self, data=[], coords=[], name=""):
         for i_iter in coords['iter']:
             data = data[i_iter]
+
+    def interp(self, t):
+        # TODO
+        pass
 
 
 def check_axes(func):

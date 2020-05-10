@@ -23,23 +23,25 @@ class DataSet(list):
     yields new interpolant data. Model stores the interpolants as the
     trajectories.
     """
-    def __init__(self,
-                 raw_data_path="",
-                 data_specs_path="",
-                 raw_data={},
-                 data_specs={},
-                 name=""):
+
+    def __init__(
+        self, raw_data_path="", data_specs_path="", raw_data={}, data_specs={}, name=""
+    ):
         """
         raw_data: phenotypes organized into a dictionary
 
         data_info: instructions of the data, such as which time variable
             should be used for which state.
         """
-        self.data_specs = data_specs if data_specs else read_data_specs(
-            data_specs_path)
+        self.data_specs = data_specs if data_specs else read_data_specs(data_specs_path)
+
+        # TODO there're a lot to improve on this messy init method, but it works
         self.name = name if name else self.data_specs["groups"][0]
-        self.raw_data = (raw_data[self.name] if raw_data else read_data_raw(
-            raw_data_path, group=self.name))
+        self.raw_data = (
+            raw_data[self.name]
+            if raw_data
+            else read_data_raw(raw_data_path, group=self.name)
+        )
 
         self.structure = {}
 
@@ -65,9 +67,7 @@ class DataSet(list):
                 unit = v["unit"]
             except KeyError as e:
                 unit = "mM/L"
-                print(
-                    f"Warning: undefined {e.args[0]}, fallback to default ({unit})"
-                )
+                print(f"Warning: undefined {e.args[0]}, fallback to default ({unit})")
             # TODO use Flux for flux splines
             s = State(
                 name=k,
@@ -118,7 +118,7 @@ class DataSet(list):
         numpy.ndarray in the same order as `self`
         ```
         [
-            [value, std],
+            [value, std],,z
             ......,
             [value, std]
         ]
@@ -138,7 +138,7 @@ class DataSet(list):
         return super().__getitem__(index)
 
 
-def plot_splines(D, N, n_ts=100, axes=None, seed=0):
+def plot_splines(D, N, n_ts=100, axes=None, seed=0, figsize=(10, 10)):
     if axes is not None:
         # assert axes.size == len(D)
         ncols = axes.shape[1]
@@ -199,7 +199,7 @@ if __name__ == "__main__":
     fig0, axes0 = plt.subplots(2, 2, figsize=(8, 8))
     plot_splines(D, n_interp, n_ts, axes=axes0)
 
-    order = ['s2', 's4', 's1', 's3']
+    order = ["s2", "s4", "s1", "s3"]
     D.align(order)
     idp = D.interpolate(n_ts=10)
     fig1, axes1 = plt.subplots(2, 2, figsize=(8, 8))
