@@ -73,7 +73,6 @@ class Smallbone2011(BaseModel):
         # self.add_state('trh', 0.05000, True)
         # self.add_state('t6p', 0.02000, True)
         # self.add_state('udg', 0.70000, True)
-        self.state_order = ['glc', 'g1p', 'g6p', 'trh', 't6p', 'udg']
 
         self.sm = np.array([[0.0, 1.0, -1.0, 0.0, 0.0, 0.0, 2.0, 0.0],
                             [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, -1.0],
@@ -81,7 +80,12 @@ class Smallbone2011(BaseModel):
                             [0.0, 0.0, 0.0, 0.0, 1.0, 0.0, -1.0, 0.0],
                             [0.0, 0.0, 0.0, 0.0, -1.0, 1.0, 0.0, 0.0],
                             [0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0]])
-        super().__init__()
+
+        super().__init__(
+            state_order=['glc', 'g1p', 'g6p', 'trh', 't6p', 'udg'],
+            initial_states=[0.09675, 0.1, 2.675, 0.05, 0.02, 0.7],
+            flux_order=['pgi', 'hxt','hxk','pgm','tpp','tps','nth','ugp'],
+        )
 
     def fluxes(self, t, x, p):
         # measured
