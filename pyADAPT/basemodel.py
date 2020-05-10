@@ -52,7 +52,7 @@ class BaseModel(metaclass=ABCMeta):
 
     def __init__(self,
                  state_order=[],
-                 init_states=[],
+                 initial_states=[],  # TODO
                  flux_order=[],
                  input_order=[]):
         self.name: str
@@ -62,7 +62,7 @@ class BaseModel(metaclass=ABCMeta):
 
         self.state_order = state_order
 
-        self.init_states = np.array(init_states)  # TODO
+        self.initial_states = np.array(initial_states)
         self.flux_order = flux_order
         self.input_order = input_order
 
