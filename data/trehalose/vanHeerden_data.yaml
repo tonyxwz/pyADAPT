@@ -1,0 +1,59 @@
+name: toy data
+description: from Natal van Riel and Christian Tiemann's publication in 2013
+raw_path: toyData.mat
+groups:
+  - smallbone2011toy
+
+states:
+  glc:
+    means: s1_mean
+    stds: s1_std
+    time: t
+    unit: mM
+    time_unit: min
+    observable: true
+  g1p:
+    means: s2_mean
+    stds: s2_std
+    time: t
+    unit: mM
+    time_unit: min
+    observable: true
+  g6p:
+    means: s3_mean
+    stds: s3_std
+    time: t
+    unit: mM
+    time_unit: min
+    observable: true
+  trh:
+    means: s4_mean
+    stds: s4_std
+    time: t
+    unit: mM
+    time_unit: min
+    observable: true
+  t6p:
+    means: s5_mean
+    stds: s5_std
+    time: t
+    unit: mM
+    time_unit: min
+    observable: true
+  udg:
+    means: s6_mean
+    stds: s6_std
+    time: t
+    unit: mM
+    time_unit: min
+    observable: true
+
+fluxes:
+  pgi:
+  hxt:
+  hxk:
+  pgm:
+  tpp:
+  tps:
+  nth:
+  ugp:
