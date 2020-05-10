@@ -98,15 +98,12 @@ class Optimizer(object):
 
     same for states and fluxes
     """
-    def __init__(self, model: BaseModel, dataset: DataSet,
-                 parameter_names: list):
-        # I am being naive by assuming the user will give the states in the
-        # model and the dataset in the same order, maybe warn in the manual.
+
+    def __init__(self, model: BaseModel, dataset: DataSet, parameter_names: list):
         self.model = model
         self.dataset = dataset
         self.parameter_names = list(parameter_names)
-        self.parameters: pd.DataFrame = self.model.parameters.loc[
-            self.parameter_names]
+        self.parameters: pd.DataFrame = self.model.parameters.loc[self.parameter_names]
         self.options = {
             "method": "trf",
             "lambda_r": 1,
@@ -116,21 +113,20 @@ class Optimizer(object):
             "R": default_regularization,
             "interpolation": "Hermite",
             "verbose": ITER,
-            "init_method": None,
+            "init_method": None,  # pascal, natal are options
             "delta_t": 0.1,
             "n_core": 4,
-            "n_iter": 5,
-            "init": "PASCAL",  # Pascal van Beek
+            "n_iter": 5
         }
         # model don't know which states and fluxes are visible until data is given
         # 1. and arrange the states and fluxes in the model to be in the same order as the dataset
         self.dataset.align(self.model.state_order + self.model.flux_order)
         # 2. create the mask here
-        self.state_mask = self.create_mask(self.dataset.names,
-                                           self.model.state_order)
+        #! in van heerden's dataset, glucose(glc) is absent.
+        # state_mask will be ['g1p', 'g6p', 'trh', 't6p', 'udg']
+        self.state_mask = self.create_mask(self.dataset.names, self.model.state_order)
 
-        self.flux_mask = self.create_mask(self.dataset.names,
-                                          self.model.flux_order)
+        self.flux_mask = self.create_mask(self.dataset.names, self.model.flux_order)
 
     def create_mask(self, names_data, names_model):
         mask = list()
@@ -140,8 +136,9 @@ class Optimizer(object):
 
     def run(self, **options):
         self.options.update(options)
-        self.time = np.arange(self.dataset.begin_time, self.dataset.end_time,
-                              self.options["delta_t"])
+        self.time = np.arange(
+            self.dataset.begin_time, self.dataset.end_time, self.options["delta_t"]
+        )
         self.options["n_ts"] = len(self.time)
 
         self.parameter_trajectories_list = []
@@ -154,8 +151,8 @@ class Optimizer(object):
             pool_results = []
             for i_iter in range(self.options["n_iter"]):
                 pool_results.append(
-                    pool.apply_async(self.fit_iteration,
-                                     kwds={"i_iter": i_iter}))
+                    pool.apply_async(self.fit_iteration, kwds={"i_iter": i_iter})
+                )
             pool.close()
             pool.join()
             for res_obj in pool_results:
@@ -166,8 +163,7 @@ class Optimizer(object):
 
         else:
             for i_iter in range(self.options["n_iter"]):
-                ptraj, straj, vtraj = self.fit_iteration(i_iter=i_iter,
-                                                         parallel=False)
+                ptraj, straj, vtraj = self.fit_iteration(i_iter=i_iter, parallel=False)
                 self.parameter_trajectories_list.append(ptraj)
                 self.state_trajectories_list.append(straj)
                 self.flux_trajectories_list.append(vtraj)
@@ -215,8 +211,17 @@ class Optimizer(object):
         if self.options["verbose"] >= ITER:
             print(f"iteration: {i_iter}", ps_name)
 
+        self.parameter_trajectory = np.zeros(
+            (self.options["n_ts"], len(self.parameter_names))
+        )
+        self.state_trajectory = np.zeros(
+            (self.options["n_ts"], len(self.model.state_order))
+        )
+        self.flux_trajectory = np.zeros(
+            (self.options["n_ts"], len(self.model.flux_order))
+        )
+
         splines = self.dataset.interpolate(n_ts=self.options["n_ts"])
-        # timestep 0
         self.init_ts0(i_iter, splines)
 
         for i_ts in range(1, self.options["n_ts"]):
@@ -235,53 +240,31 @@ class Optimizer(object):
                 i_ts=i_ts,
             )
 
-        return (self.parameter_trajectory, self.state_trajectory,
-                self.flux_trajectory)
+        return (self.parameter_trajectory, self.state_trajectory, self.flux_trajectory)
 
     def init_ts0(self, i_iter, splines):
         """ time step 0 is handled differently because there's no previous
         time step information at this moment
 
         what need to be done at t=0?
-        1. generate parameter
-        2. generate state
-        3. calculate fluxes from parameters
+        1. generate state
+        2. generate parameter
+        3. calculate fluxes from new parameters and states
         """
-        self.parameter_trajectory = np.zeros(
-            (self.options["n_ts"], len(self.parameter_names)))
-        self.state_trajectory = np.zeros(
-            (self.options["n_ts"], len(self.model.state_order)))
-        self.flux_trajectory = np.zeros(
-            (self.options["n_ts"], len(self.model.flux_order)))
+        print(self.state_mask)
+        self.state_trajectory[0, self.state_mask] = splines[: len(self.model.state_order), 0, 0]
+        for i, observable in enumerate(self.state_mask):
+            if not observable:
+                self.state_trajectory[0, i] = self.model.initial_states[i] * np.random.rand()
 
-        # TODO initial value problem
-        # # Solution: 1, model
-        # self.state_trajectory[0, :] = self.model.state.init
-        # self.state_trajectory[0, self.state_mask] = splines[
-        #     : len(self.model.state_order), 0, 0
-        # ]
-
-        # self.flux_trajectory[0, :] = splines[len(self.model.state_order) :, 0, 0]
-        self.state_trajectory[0, :] = splines[:len(self.model.state_order), 0,
-                                              0]
-
-        if self.options["init_method"] is None:
-            self.parameter_trajectory[0, :] = self.parameters["init"]
-        elif self.options["init_method"] == "interfacefocus":
-            # putting state initialization here for the possible return of states in natal_init
-            self.parameter_trajectory[0, :] = self.natal_init(i_iter, splines)
-
-    def ss_simu(self):
-        """
-        case1.ipynb
-        Pascal chatper 8
-        """
-        pass
-
-    def default_init(self):
-        """ initialize the parameters with user given data
-        """
-        pass
+        # This is risky but according 3-σ principle, this is "almost" always true
+        param_init =  np.random.normal(self.parameters["init"], self.parameters['init'] * 0.2)
+        print(param_init)
+        self.parameter_trajectory[0,: ] = param_init
+        self.parameters.loc[:, "value"] = param_init
+        # TODO add support for self.options['init']
+        if self.model.flux_order:
+            self.flux_trajectory[0, :] = self.model.fluxes(0, self.state_trajectory[0,:], self.model.parameters["value"])
 
     def pascal_init(self, i_iter, data):
         """ The initial parameters and states finding method in Pascal van Beek's
@@ -299,53 +282,37 @@ class Optimizer(object):
         i_ts = 0
 
         while sse > self.options["sseThres"]:
-            params = self.parameters["init"] * (10**(
-                2 * np.random.random_sample(size=(len(self.parameter_names), ))
-                - 1))
+            params = self.parameters["init"] * (10 ** (2 * np.random.random_sample(size=(len(self.parameter_names),)) - 1))
             lsq_res = least_squares(
                 self.objective_function,
                 params,
                 bounds=(self.parameters["lb"], self.parameters["ub"]),
                 method=self.options["method"],
                 kwargs={
-                    "begin_states":
-                    data[:, i_ts, 0],
-                    "interp_data":
-                    data[:, i_ts, :],
-                    "time_span":
-                    [self.time[0] - self.options["ss_time"], self.time[0]],
-                    "R":
-                    None,
-                    "i_iter":
-                    i_iter,
-                    "i_ts":
-                    i_ts,
+                    "begin_states": data[:, i_ts, 0],
+                    "interp_data": data[:, i_ts, :],
+                    "time_span": [self.time[0] - self.options["ss_time"], self.time[0]],
+                    "R": None,
+                    "i_iter": i_iter,
+                    "i_ts": i_ts,
                 },
             )
             sse = lsq_res.cost
         return lsq_res.x
 
-    def find_init_guesses(self):
-        """ Find the initial guess of the parameters at the start of each iteration.
-        Problem statement: the data need to be randomized at time 0. we would like
-        to find a set of parameters that will lead to a steady states of the
-        randomized states at t0.
-
-        only do this once at the beginning of each iteration. afterwards, the
-        initial guesses are just the optimization result from previous timestep.
-        """
-
-    def fit_timestep(self,
-                     initial_guess=None,
-                     begin_states=None,
-                     end_data=None,
-                     i_iter=None,
-                     i_ts=None,
-                     **lsq_options):
+    def fit_timestep(
+        self,
+        initial_guess=None,
+        begin_states=None,
+        end_data=None,
+        i_iter=None,
+        i_ts=None,
+        **lsq_options,
+    ):
         """call least_squares
         access Optimizer options via `i_iter` and `i_ts` and `self`
         """
-        time_span = self.time[i_ts - 1:i_ts + 1]  # just two points
+        time_span = self.time[i_ts - 1 : i_ts + 1]  # just two points
 
         lsq_result = least_squares(
             self.objective_function,
@@ -369,19 +336,24 @@ class Optimizer(object):
             x0=begin_states,
             new_param_names=self.parameter_names,
         )[:, -1]
-
-        final_fluxes = self.model.fluxes(time_span[-1], final_states,
-                                         self.model.parameters["value"])
+        if self.model.flux_order:
+            final_fluxes = self.model.fluxes(
+                time_span[-1], final_states, self.model.parameters["value"]
+            )
+        else:
+            final_fluxes = []
         return (lsq_result.x, final_states, final_fluxes)
 
-    def objective_function(self,
-                           params,
-                           begin_states=None,
-                           end_data=None,
-                           time_span=None,
-                           i_iter=None,
-                           i_ts=None,
-                           **kw):
+    def objective_function(
+        self,
+        params,
+        begin_states=None,
+        end_data=None,
+        time_span=None,
+        i_iter=None,
+        i_ts=None,
+        **kw,
+    ):
         """ Objective function
 
             The function minimized by least squares method. For ADAPT, an objective
@@ -418,7 +390,6 @@ class Optimizer(object):
         """
         if self.options["verbose"] >= OBJFUNC:
             pass  # print something about optimizer
-        # self.model.set_params(self, params, self.parameter_names)
 
         end_states = self.model.compute_states(
             new_params=params,
@@ -428,10 +399,10 @@ class Optimizer(object):
         )
         end_states = end_states[:, -1]
         if len(self.model.flux_order):
-            end_fluxes = self.model.fluxes(time_span[-1], end_states,
-                                           self.model.parameters["value"])
+            end_fluxes = self.model.fluxes(
+                time_span[-1], end_states, self.model.parameters["value"]
+            )
             end_fluxes = end_fluxes[self.flux_mask]
-        # observable: choose those observable to compare with the data
         end_pred = end_states[self.state_mask]
 
         if len(self.model.flux_order):
@@ -489,15 +460,12 @@ if __name__ == "__main__":
         raw_data_path="data/toyModel/toyData.mat",
         data_specs_path="data/toyModel/toyData.yaml",
     )
-    ptraj, straj, vtraj, time = optimize(model,
-                                         data,
-                                         "k1",
-                                         n_iter=10,
-                                         delta_t=0.2,
-                                         n_core=4,
-                                         verbose=ITER)
+    ptraj, straj, vtraj, time = optimize(
+        model, data, "k1", n_iter=10, delta_t=0.2, n_core=4, verbose=ITER
+    )
 
     import matplotlib.pyplot as plt
+
     fig, axes = plt.subplots()
     traj.plot(ptraj, axes=axes, color="green", alpha=0.2)
     traj.plot_mean(ptraj, axes=axes, color="red")
