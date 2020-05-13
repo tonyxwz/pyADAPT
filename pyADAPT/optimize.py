@@ -251,7 +251,6 @@ class Optimizer(object):
         2. generate parameter
         3. calculate fluxes from new parameters and states
         """
-        print(self.state_mask)
         self.state_trajectory[0, self.state_mask] = splines[: len(self.model.state_order), 0, 0]
         for i, observable in enumerate(self.state_mask):
             if not observable:
@@ -259,7 +258,6 @@ class Optimizer(object):
 
         # This is risky but according 3-σ principle, this is "almost" always true
         param_init =  np.random.normal(self.parameters["init"], self.parameters['init'] * 0.2)
-        print(param_init)
         self.parameter_trajectory[0,: ] = param_init
         self.parameters.loc[:, "value"] = param_init
         # TODO add support for self.options['init']
@@ -469,5 +467,6 @@ if __name__ == "__main__":
     fig, axes = plt.subplots()
     traj.plot(ptraj, axes=axes, color="green", alpha=0.2)
     traj.plot_mean(ptraj, axes=axes, color="red")
+
 
     plt.show()
