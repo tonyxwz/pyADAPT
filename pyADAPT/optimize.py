@@ -70,6 +70,7 @@ from this lame paper.
 
 import datetime
 import multiprocessing as mp
+import logging
 
 import numpy as np
 import pandas as pd
@@ -116,7 +117,8 @@ class Optimizer(object):
             "init_method": None,  # pascal, natal are options
             "delta_t": 0.1,
             "n_core": 4,
-            "n_iter": 5
+            "n_iter": 5,
+            "seed" : 1
         }
         # model don't know which states and fluxes are visible until data is given
         # 1. and arrange the states and fluxes in the model to be in the same order as the dataset
@@ -207,6 +209,8 @@ class Optimizer(object):
     def fit_iteration(self, i_iter=0, parallel=True):
         """ handle one iteration (one subprocess)
         """
+        # reseed the random generator of subprocess
+        np.random.seed(self.options['seed'] + i_iter)
         ps_name = mp.current_process().name if parallel else ""
         if self.options["verbose"] >= ITER:
             print(f"iteration: {i_iter}", ps_name)
