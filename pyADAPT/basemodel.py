@@ -52,7 +52,7 @@ class BaseModel(metaclass=ABCMeta):
 
     def __init__(self,
                  state_order=[],
-                 initial_states=[],  # TODO
+                 initial_states=[],
                  flux_order=[],
                  input_order=[]):
         self.name: str
