@@ -70,7 +70,7 @@ from this lame paper.
 
 import datetime
 import multiprocessing as mp
-import logging
+import logging  # TODO multiprocess logging (instead of print)
 
 import numpy as np
 import pandas as pd

@@ -35,7 +35,7 @@ class DataSet(list):
         """
         self.data_specs = data_specs if data_specs else read_data_specs(data_specs_path)
 
-        # TODO there're a lot to improve on this messy init method, but it works
+        #  NOTE: there're a lot to improve on this messy init method, but it works
         self.name = name if name else self.data_specs["groups"][0]
         self.raw_data = (
             raw_data[self.name]
@@ -68,7 +68,7 @@ class DataSet(list):
             except KeyError as e:
                 unit = "mM/L"
                 print(f"Warning: undefined {e.args[0]}, fallback to default ({unit})")
-            # TODO use Flux for flux splines
+            # FIXME use Flux for flux splines
             s = State(
                 name=k,
                 time=time,

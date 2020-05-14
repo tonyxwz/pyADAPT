@@ -59,6 +59,7 @@ from math import exp, log, log2, log10, pow
 
 import libsbml
 import numpy as np
+import tempfile  # TODO return Model object directly
 
 from pyADAPT.basemodel import BaseModel
 from pyADAPT.sbml.reaction import Reaction
@@ -183,10 +184,9 @@ class SBMLModel(BaseModel):
         for r in self.reactions.values():
             v.append(r.compute_flux(self.symbols))
         v = np.array(v)
-        self.flux_trajectory.append(v)
         return v
 
-    def odefunc(self, t, x, p):
+    def state_ode(self, t, x, p):
         """
         calculate the derivatives in biologist's style
         p: np.ndarray / pandas.Series
@@ -197,10 +197,18 @@ class SBMLModel(BaseModel):
         dxdt = np.dot(self.stoich_matrix, v)
         return dxdt
 
+def SBMLBuilder(sbml) -> SBMLModel:
+    # TODO
+    # builder pattern to avoid the adding libsbml object, which cannot be pickled
+    # when using multiprocessing
+    pass
+
+
 
 if __name__ == "__main__":
     from pprint import pprint
     from copy import deepcopy
+
     smallbone = SBMLModel("data/trehalose/smallbone.xml")
 
     x1 = deepcopy(smallbone.states['value'].values)
