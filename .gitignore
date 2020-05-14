@@ -142,3 +142,5 @@ Pipfile.lock
 .idea/
 .ycm_extra_conf.py
 *.prof
+# netCDF data format
+*.nc
