@@ -19,14 +19,17 @@ class Spline(list):
     ]
     ```
     """
-    def __init__(self,
-                 name="",
-                 time=None,
-                 time_unit="second",
-                 means=None,
-                 stds=None,
-                 unit=None,
-                 observable=False):
+
+    def __init__(
+        self,
+        name="",
+        time=None,
+        time_unit="second",
+        means=None,
+        stds=None,
+        unit=None,
+        observable=False,
+    ):
         super().__init__()
         self.name = name
         self.time = np.array(time)
@@ -36,6 +39,20 @@ class Spline(list):
         assert len(time) == len(stds) == len(means)
         for m, s in zip(means, stds):
             self.append(NormalDist(m, s))
+
+    def get_timepoints(self, n_ts):
+        return np.linspace(self.time[0], self.time[-1], n_ts)
+
+    @cached_property
+    def mean_spline(self):
+        # This is useful for classical parameter estimation
+        pp = PchipInterpolator(self.time, self.means)
+        return pp
+
+    def interp_means(self, n_ts=100):
+        # classical parameter estimation
+        tnew = np.linspace(self.time[0], self.time[-1], n_ts)
+        return self.mean_spline(tnew)
 
     @property
     def values_spline(self):
@@ -77,7 +94,7 @@ class Spline(list):
 
     @cached_property
     def variances(self):
-        return self.stds**2
+        return self.stds ** 2
 
     def sample(self):
         """ random sample of all the data points as an array """
@@ -152,12 +169,14 @@ if __name__ == "__main__":
     time_unit = "day"
     unit = "mM"
 
-    s = State(name="Hepatic TG",
-              time=time,
-              means=means,
-              stds=stds,
-              time_unit=time_unit,
-              unit=unit)
+    s = State(
+        name="Hepatic TG",
+        time=time,
+        means=means,
+        stds=stds,
+        time_unit=time_unit,
+        unit=unit,
+    )
     pprint(s)
 
     s.errorbar(axes=axes)
