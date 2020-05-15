@@ -16,6 +16,7 @@ Metabolites
 | trehalose             | 3 trh           | 15 Tre         |
 | trehalose 6-phosphate | 4 t6p           | 14 Tre6P       |
 | UDP glucose           | 5 udg           | 13 UDP_Glc     |
+
 Fluxes
 | reaction                  | id in Smallbone | id in vHeerden         |
 |---------------------------|-----------------|------------------------|
@@ -25,7 +26,7 @@ Fluxes
 | UDP–glucose phosphorylase | 7 ugp           | (7) UPG                |
 """
 #%%
-from pyADAPT.io import read_data_raw, read_mat
+# from pyADAPT.io import read_data_raw, read_mat
 from mat4py import loadmat
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -42,7 +43,7 @@ def moving_average(data_set, periods=3):
 
 
 #%%
-matpath = r"data\trehalose\vHeerden_trehalose_data_micromolgdw.mat"
+matpath = r"../data/trehalose/vHeerden_trehalose_data_micromolgdw.mat"
 vanHeerden = loadmat(matpath)
 
 legenda_meta = np.squeeze(np.array(vanHeerden["data"]["legenda_metabolites"]))
