@@ -2,11 +2,17 @@
 classic approach parameter estimation
 
 mismatch between the different metabolites in Smallbone and vanHeerden
-This metabolites have little influence on the model (as far as we know). That is why the experimentalis did not take the work to measure. I would fix the initial contentration to the same metabolite value the Smallbone 2011 model uses, and let it run to steady state.
+This metabolites have little influence on the model (as far as we know). That is
+why the experimentalis did not take the work to measure. I would fix the initial
+contentration to the same metabolite value the Smallbone 2011 model uses, and
+let it run to steady state.
 
-Then, when you do least squares optimization, you can consider if you want to include it in the cost function or not. At least in the matlab ADAPT version it can be selected if a metabolite is observable or not.
+Then, when you do least squares optimization, you can consider if you want to
+include it in the cost function or not. At least in the matlab ADAPT version it
+can be selected if a metabolite is observable or not.
 
-In a way, you tell the algorithm to model it, starting at the literature value, but then to forget about it for error minimization.
+In a way, you tell the algorithm to model it, starting at the literature value,
+but then to forget about it for error minimization.
 
 1. initialize model
 2. assign literature parameter
