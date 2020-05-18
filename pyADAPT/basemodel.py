@@ -13,7 +13,7 @@ Steps
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 
-# import networkx as nx
+import networkx as nx  # TODO visualize the Model as a network
 import numpy as np
 import pandas as pd
 from scipy.integrate import solve_ivp
@@ -149,6 +149,7 @@ class BaseModel(metaclass=ABCMeta):
 
         smin, smax
         """
+        # TODO remove
         p = self.parameters.copy()
         # if params is None:
         #     params = self.init_vary
@@ -161,6 +162,7 @@ class BaseModel(metaclass=ABCMeta):
     def sync_from_optimizer(self, optimizer):
         """ called at the end of Optimizer.run
         """
+        # TODO remove
         for i in range(len(optimizer)):
             self.parameters.iloc[i]["value"] = optimizer[i]
 

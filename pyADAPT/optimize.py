@@ -69,8 +69,13 @@ from this lame paper.
 """
 
 import datetime
+import threading  # one thread of main process dedicated to handling logging requests
 import multiprocessing as mp
-import logging  # TODO multiprocess logging (instead of print)
+import logging
+import logging.handlers
+import logging.config
+import asyncio
+import time
 
 import numpy as np
 import pandas as pd
@@ -80,6 +85,7 @@ from scipy.optimize import least_squares, leastsq
 from pyADAPT.dataset import DataSet
 from pyADAPT.basemodel import BaseModel
 from pyADAPT.regularization import default_regularization
+
 
 ITER = 1
 TIMESTEP = 2
@@ -114,12 +120,15 @@ class Optimizer(object):
             "R": default_regularization,
             "interpolation": "Hermite",
             "verbose": ITER,
+            "loglevel": logging.INFO,
             "init_method": None,  # pascal, natal are options
             "delta_t": 0.1,
-            "n_core": 4,
+            "n_core": mp.cpu_count(),
             "n_iter": 5,
-            "seed" : 1
+            "seed": 1,
+            "weights": np.ones(len(self.dataset)),  # TODO weight of the errors
         }
+
         # model don't know which states and fluxes are visible until data is given
         # 1. and arrange the states and fluxes in the model to be in the same order as the dataset
         self.dataset.align(self.model.state_order + self.model.flux_order)
@@ -127,8 +136,46 @@ class Optimizer(object):
         #! in van heerden's dataset, glucose(glc) is absent.
         # state_mask will be ['g1p', 'g6p', 'trh', 't6p', 'udg']
         self.state_mask = self.create_mask(self.dataset.names, self.model.state_order)
-
         self.flux_mask = self.create_mask(self.dataset.names, self.model.flux_order)
+
+        # logger
+        log_appendix = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
+
+        self.options["logging_configd"] = {
+            "version": 1,
+            "formatters": {
+                'detailed': {
+                    'class': 'logging.Formatter',
+                    'format': '%(asctime)s %(name)-15s %(levelname)-8s %(processName)-10s %(message)s'
+                }
+            },
+            "handlers": {
+                "console": {"class": "logging.StreamHandler", "level": "INFO",},
+                "file": {
+                    "class": "logging.FileHandler",
+                    "filename": f"adapt_{log_appendix}.log",
+                    "mode": "w",
+                    "formatter": "detailed",
+                },
+                "errors": {
+                    "class": "logging.FileHandler",
+                    "filename": f"adapt-errors_{log_appendix}.log",
+                    "mode": "w",
+                    "level": "ERROR",
+                    "formatter": "detailed",
+                },
+            },
+            "loggers": {
+                "optimizer": {"handlers": ["file", "errors"]},
+                "optimizer.iter": {"handlers": ["file", "errors"]},
+                "optimizer.iter.timestep": {"handlers": ["file", "errors"]},
+                "optimizer.init_ts0": {"handlers": ["file", "errors"]},
+            },
+            "root": {
+                "level": "INFO",
+                "handlers": ["console", "file", "errors"]
+            }
+        }
 
     def create_mask(self, names_data, names_model):
         mask = list()
@@ -136,12 +183,23 @@ class Optimizer(object):
             mask.append(names_model[i] in names_data)
         return mask
 
+    def logger_thread(self):
+        while True:
+            record = self.q.get()
+            if record is None:
+                break
+            logger = logging.getLogger(record.name)
+            logger.handle(record)
+
     def run(self, **options):
+        """ Main Process
+        """
         self.options.update(options)
         self.time = np.arange(
             self.dataset.begin_time, self.dataset.end_time, self.options["delta_t"]
         )
         self.options["n_ts"] = len(self.time)
+        logging.config.dictConfig(self.options["logging_configd"])
 
         self.parameter_trajectories_list = []
         self.state_trajectories_list = []
@@ -149,14 +207,24 @@ class Optimizer(object):
 
         # start optimizing (in parallel)
         if self.options["n_core"] > 1:
+            man = mp.Manager()
+            self.q = man.Queue()
             pool = mp.Pool(self.options["n_core"])
+
+            logger_thread = threading.Thread(target=self.logger_thread)
             pool_results = []
             for i_iter in range(self.options["n_iter"]):
                 pool_results.append(
+                    # make use of the main process's async apply waiting time
+                    # and receive logs from other subprocesses
                     pool.apply_async(self.fit_iteration, kwds={"i_iter": i_iter})
                 )
+            logger_thread.start()  # start logging thread
             pool.close()
             pool.join()
+            self.q.put(None)  # break out from logging loop
+            logger_thread.join()
+
             for res_obj in pool_results:
                 ptraj, straj, vtraj = res_obj.get()
                 self.parameter_trajectories_list.append(ptraj)
@@ -164,6 +232,7 @@ class Optimizer(object):
                 self.flux_trajectories_list.append(vtraj)
 
         else:
+            # TODO just drop the support for single processing, it would be much easier
             for i_iter in range(self.options["n_iter"]):
                 ptraj, straj, vtraj = self.fit_iteration(i_iter=i_iter, parallel=False)
                 self.parameter_trajectories_list.append(ptraj)
@@ -209,8 +278,17 @@ class Optimizer(object):
     def fit_iteration(self, i_iter=0, parallel=True):
         """ handle one iteration (one subprocess)
         """
+
+        qh = logging.handlers.QueueHandler(self.q)
+        root = logging.getLogger()
+        root.addHandler(qh)
+        root.setLevel(self.options["loglevel"])
+        logger = logging.getLogger("optimizer.iter")
+
         # reseed the random generator of subprocess
-        np.random.seed(self.options['seed'] + i_iter)
+        np.random.seed(self.options["seed"] + i_iter)
+        logger.info("reseeded rng")
+
         ps_name = mp.current_process().name if parallel else ""
         if self.options["verbose"] >= ITER:
             print(f"iteration: {i_iter}", ps_name)
@@ -255,18 +333,26 @@ class Optimizer(object):
         2. generate parameter
         3. calculate fluxes from new parameters and states
         """
-        self.state_trajectory[0, self.state_mask] = splines[: len(self.model.state_order), 0, 0]
+        self.state_trajectory[0, self.state_mask] = splines[
+            : len(self.model.state_order), 0, 0
+        ]
         for i, observable in enumerate(self.state_mask):
             if not observable:
-                self.state_trajectory[0, i] = self.model.initial_states[i] * np.random.rand()
+                self.state_trajectory[0, i] = (
+                    self.model.initial_states[i] * np.random.rand()
+                )
 
         # This is risky but according 3-σ principle, this is "almost" always true
-        param_init =  np.random.normal(self.parameters["init"], self.parameters['init'] * 0.2)
-        self.parameter_trajectory[0,: ] = param_init
+        param_init = np.random.normal(
+            self.parameters["init"], self.parameters["init"] * 0.2
+        )
+        self.parameter_trajectory[0, :] = param_init
         self.parameters.loc[:, "value"] = param_init
         # TODO add support for self.options['init']
         if self.model.flux_order:
-            self.flux_trajectory[0, :] = self.model.fluxes(0, self.state_trajectory[0,:], self.model.parameters["value"])
+            self.flux_trajectory[0, :] = self.model.fluxes(
+                0, self.state_trajectory[0, :], self.model.parameters["value"]
+            )
 
     def pascal_init(self, i_iter, data):
         """ The initial parameters and states finding method in Pascal van Beek's
@@ -284,7 +370,10 @@ class Optimizer(object):
         i_ts = 0
 
         while sse > self.options["sseThres"]:
-            params = self.parameters["init"] * (10 ** (2 * np.random.random_sample(size=(len(self.parameter_names),)) - 1))
+            params = self.parameters["init"] * (
+                10
+                ** (2 * np.random.random_sample(size=(len(self.parameter_names),)) - 1)
+            )
             lsq_res = least_squares(
                 self.objective_function,
                 params,
@@ -442,7 +531,8 @@ def optimize(model, dataset, *params, **options):
     routine.
     """
     optim = Optimizer(model, dataset, params)
-    optim.run(**options)
+    optim.run(**options),
+
     return (
         optim.parameter_trajectories,
         optim.state_trajectories,
@@ -456,6 +546,7 @@ if __name__ == "__main__":
     from pyADAPT.examples.toy import ToyModel
     from pyADAPT.dataset import DataSet
     import pyADAPT.trajectory as traj
+    import matplotlib.pyplot as plt
 
     model = ToyModel()
     data = DataSet(
@@ -466,11 +557,8 @@ if __name__ == "__main__":
         model, data, "k1", n_iter=10, delta_t=0.2, n_core=4, verbose=ITER
     )
 
-    import matplotlib.pyplot as plt
-
     fig, axes = plt.subplots()
     traj.plot(ptraj, axes=axes, color="green", alpha=0.2)
     traj.plot_mean(ptraj, axes=axes, color="red")
-
 
     plt.show()

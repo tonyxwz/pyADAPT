@@ -93,7 +93,7 @@ class DataSet(list):
         return [s.name for s in self]
 
     @property
-    def fluxe_names(self):
+    def flux_names(self):
         return [s.name for s in self if type(s) is Flux]
 
     @property

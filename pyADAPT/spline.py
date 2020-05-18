@@ -101,6 +101,7 @@ class Spline(list):
         return np.asarray([d.sample() for d in self])
 
     def errorbar(self, axes=None):
+        # TODO organize not only this, but also other plotting functions
         if axes is None:
             import matplotlib.pyplot as plt
 

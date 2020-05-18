@@ -15,7 +15,6 @@ class Trajectory(dict):
             data = data[i_iter]
 
     def interp(self, t):
-        # TODO
         pass
 
 
@@ -93,7 +92,7 @@ def plot_3d(traj: xr.DataArray, axes=None, **plot_options):
     if axes is None:
         fig = plt.figure()
         axes = fig.add_subplot(111, projection='3d')
-    # TODO
+    # TODO plot frequency in 3d axes
     axes.plot_surface()
 
 
