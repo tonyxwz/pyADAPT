@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """ This module provides some pre-defined regularization functions for ADAPT.
 
 A consistent calling signature for regularization functions should be defined.

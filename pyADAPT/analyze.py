@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """analyze the result of ADAPT
 
 a normal model can consist of a number of parameters that is suspected to be inaccurate,

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """ Data set format specification
 ADAPT as a stochastic simulation method, depends heavily on the data set format.
 The following dataset is good enough for the toy model, but depends heavily on

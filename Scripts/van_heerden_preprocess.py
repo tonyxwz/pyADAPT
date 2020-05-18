@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 return preprocessed van heerden dataset
 1. use only states

@@ -1,43 +1,51 @@
+# -*- coding: utf-8 -*-
 """
+=====================================
 classic approach parameter estimation
+=====================================
 
-mismatch between the different metabolites in Smallbone and vanHeerden
-This metabolites have little influence on the model (as far as we know). That is
-why the experimentalis did not take the work to measure. I would fix the initial
-contentration to the same metabolite value the Smallbone 2011 model uses, and
-let it run to steady state.
+Classical parameter estimation should estimate a confidence interval for each
+parameter. In the Smallbone model, all the "Vmax" parameters. This can be done
+in Monte Carlo's fashion, to run the simulation many times with truely random
+initial states and parameters. Finally, construct the confidence intervals from
+these results.
 
-Then, when you do least squares optimization, you can consider if you want to
-include it in the cost function or not. At least in the matlab ADAPT version it
-can be selected if a metabolite is observable or not.
+fit parameters:
+    ['pgi_Vmax', 'hxt_Vmax', 'hxk_Vmax', 'pgm_Vmax', 'tpp_Vmax',
+        'tps_Vmax', 'nth_Vmax', 'ugp_Vmax']
+states for comparison: ['g6p', 'g1p', 'udg', 't6p', 'trh']
 
-In a way, you tell the algorithm to model it, starting at the literature value,
-but then to forget about it for error minimization.
-
-1. initialize model
-2. assign literature parameter
-3. simulate until steady states on the time range of van Heerden's data set
-4.
+unlike the ADAPT method, classical approach don't need the random splines, but
+splines interpolated directly from van Heerden's dataset.
 """
+#%%
+from scipy.optimize import least_squares, leastsq
 import numpy as np
+import pandas as pd
+from pyADAPT.examples import Smallbone2011
+from van_heerden_preprocess import vhd_dataset
+
+
+smallbone = Smallbone2011()
+
+n_ts = 100
+data = dict()
+for s in vhd_dataset:
+    data[s.name] = s.interp_means(n_ts)
+
+#%% plot data
 import matplotlib.pyplot as plt
+plt.style.use(["science", "grid"])
+fig, axes = plt.subplots(2, 3, figsize=(9, 6))
+# with plt.style.context("science"):
+for i, s in enumerate(vhd_dataset.names):
+    ax:plt.Axes = axes.flatten()[i]
+    ax.plot(vhd_dataset[s].get_timepoints(n_ts), data[s])
+    ax.set_title(s)
+    ax.set_xlabel('time (s)')
+    ax.set_ylabel('concentration (mM)')
+
+fig.tight_layout()
 
 
-def cpe(model, data, params):
-    """ classical parameter estimation
-
-    """
-
-
-if __name__ == "__main__":
-    from pyADAPT.examples import Smallbone2011
-
-    model = Smallbone2011()
-
-    time_points = np.linspace(0, 340)  # van heerden time range from 0 to 340
-    x0 = [.09675, .1, 2.675, .05, .02, .7]  # Smallbone literature
-    states = model.compute_states(time_points=time_points, x0=x0)
-
-    plt.plot(time_points, states.T)
-    plt.title('test')
-    plt.show()
+# %%

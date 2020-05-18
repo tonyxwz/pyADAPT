@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 manipulating 3-D data with coordinates: iter, time id
 some wrappers over tedious xarray functions

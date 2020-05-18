@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """ It's not possible to standardize the data flow from disk to memory.
 At least the process after the data is loaded should be standardize into using
 numpy and python dictionaries only. 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """No configuration files for models anymore except for a python script that extends this
 abstract class `Model`.
 

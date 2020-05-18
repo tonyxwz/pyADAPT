@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import cProfile
 
 from pyADAPT import optimize, DataSet

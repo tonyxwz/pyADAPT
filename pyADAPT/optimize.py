@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 optimize module just runs ADAPT [^1]
 ===============================
@@ -68,13 +69,11 @@ print & plotting
 from this lame paper.
 """
 
-import datetime
-import threading  # one thread of main process dedicated to handling logging requests
+import threading
 import multiprocessing as mp
 import logging
 import logging.handlers
 import logging.config
-import asyncio
 import time
 
 import numpy as np
@@ -139,41 +138,38 @@ class Optimizer(object):
         self.flux_mask = self.create_mask(self.dataset.names, self.model.flux_order)
 
         # logger
-        log_appendix = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
+        self.time_stamp = time.strftime("%Y-%m-%d_%H.%M.%S", time.localtime())
 
-        self.options["logging_configd"] = {
+        self.options["logging_config_dict"] = {
             "version": 1,
             "formatters": {
                 'detailed': {
                     'class': 'logging.Formatter',
-                    'format': '%(asctime)s %(name)-15s %(levelname)-8s %(processName)-10s %(message)s'
+                    'format': '%(asctime)s %(name)-25s %(levelname)-8s %(processName)-10s %(message)s'
                 }
             },
             "handlers": {
-                "console": {"class": "logging.StreamHandler", "level": "INFO",},
+                "console": {"class": "logging.StreamHandler", "level": "WARNING",},
                 "file": {
                     "class": "logging.FileHandler",
-                    "filename": f"adapt_{log_appendix}.log",
+                    "filename": f"adapt_{self.time_stamp}.log",
                     "mode": "w",
                     "formatter": "detailed",
                 },
                 "errors": {
                     "class": "logging.FileHandler",
-                    "filename": f"adapt-errors_{log_appendix}.log",
+                    "filename": f"adapt-errors_{self.time_stamp}.log",
                     "mode": "w",
                     "level": "ERROR",
                     "formatter": "detailed",
                 },
             },
             "loggers": {
-                "optimizer": {"handlers": ["file", "errors"]},
-                "optimizer.iter": {"handlers": ["file", "errors"]},
-                "optimizer.iter.timestep": {"handlers": ["file", "errors"]},
-                "optimizer.init_ts0": {"handlers": ["file", "errors"]},
+                "optimizer": { "handlers": ["file", "errors"] },
             },
             "root": {
-                "level": "INFO",
-                "handlers": ["console", "file", "errors"]
+                "level": "ERROR",
+                "handlers": ["errors"]
             }
         }
 
@@ -199,7 +195,7 @@ class Optimizer(object):
             self.dataset.begin_time, self.dataset.end_time, self.options["delta_t"]
         )
         self.options["n_ts"] = len(self.time)
-        logging.config.dictConfig(self.options["logging_configd"])
+        logging.config.dictConfig(self.options["logging_config_dict"])
 
         self.parameter_trajectories_list = []
         self.state_trajectories_list = []
@@ -278,7 +274,7 @@ class Optimizer(object):
     def fit_iteration(self, i_iter=0, parallel=True):
         """ handle one iteration (one subprocess)
         """
-
+        # register the logging queue for every child process
         qh = logging.handlers.QueueHandler(self.q)
         root = logging.getLogger()
         root.addHandler(qh)
@@ -287,7 +283,7 @@ class Optimizer(object):
 
         # reseed the random generator of subprocess
         np.random.seed(self.options["seed"] + i_iter)
-        logger.info("reseeded rng")
+        # logger.info("reseeded rng")
 
         ps_name = mp.current_process().name if parallel else ""
         if self.options["verbose"] >= ITER:
@@ -333,6 +329,7 @@ class Optimizer(object):
         2. generate parameter
         3. calculate fluxes from new parameters and states
         """
+        logger = logging.getLogger("optimizer.iter.init_ts0")
         self.state_trajectory[0, self.state_mask] = splines[
             : len(self.model.state_order), 0, 0
         ]
@@ -341,7 +338,7 @@ class Optimizer(object):
                 self.state_trajectory[0, i] = (
                     self.model.initial_states[i] * np.random.rand()
                 )
-
+        logger.info(f"iter {i_iter} initialized")
         # This is risky but according 3-σ principle, this is "almost" always true
         param_init = np.random.normal(
             self.parameters["init"], self.parameters["init"] * 0.2
@@ -355,8 +352,8 @@ class Optimizer(object):
             )
 
     def pascal_init(self, i_iter, data):
-        """ The initial parameters and states finding method in Pascal van Beek's
-        master thesis in 2018
+        """ The initial parameters and states finding method inspired by
+        Pascal van Beek's master thesis in 2018:
             "Expanding ADAPT to model heterogeneous datasets and application
                 to hyperinsulinemic euglycemic clamp data"
         """
@@ -403,6 +400,8 @@ class Optimizer(object):
         """call least_squares
         access Optimizer options via `i_iter` and `i_ts` and `self`
         """
+        logger = logging.getLogger("optimizer.iter.timestep")
+        logger.info(f"iter:{i_iter}, ts:{i_ts}")
         time_span = self.time[i_ts - 1 : i_ts + 1]  # just two points
 
         lsq_result = least_squares(
