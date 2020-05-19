@@ -119,7 +119,7 @@ class Optimizer(object):
             "R": default_regularization,
             "interpolation": "Hermite",
             "verbose": ITER,
-            "loglevel": logging.INFO,
+            "loglevel": logging.DEBUG,
             "init_method": None,  # pascal, natal are options
             "delta_t": 0.1,
             "n_core": mp.cpu_count(),
@@ -143,33 +143,34 @@ class Optimizer(object):
         self.options["logging_config_dict"] = {
             "version": 1,
             "formatters": {
+                'brief': {
+                    'class': 'logging.Formatter',
+                    'format': '%(processName)-10s %(message)s'
+                },
                 'detailed': {
                     'class': 'logging.Formatter',
-                    'format': '%(asctime)s %(name)-25s %(levelname)-8s %(processName)-10s %(message)s'
+                    'format': '%(asctime)s %(name)-15s %(levelname)-8s %(processName)-10s %(message)s'
                 }
             },
             "handlers": {
-                "console": {"class": "logging.StreamHandler", "level": "WARNING",},
+                "console": {
+                    "class": "logging.StreamHandler",
+                    "formatter": 'brief',
+                    "level": "INFO"
+                },
                 "file": {
                     "class": "logging.FileHandler",
                     "filename": f"adapt_{self.time_stamp}.log",
                     "mode": "w",
                     "formatter": "detailed",
-                },
-                "errors": {
-                    "class": "logging.FileHandler",
-                    "filename": f"adapt-errors_{self.time_stamp}.log",
-                    "mode": "w",
-                    "level": "ERROR",
-                    "formatter": "detailed",
-                },
+                    "level": "DEBUG"
+                }
             },
             "loggers": {
-                "optimizer": { "handlers": ["file", "errors"] },
-            },
-            "root": {
-                "level": "ERROR",
-                "handlers": ["errors"]
+                "optim": {
+                    "handlers": ["file", "console"],
+                    "level": "DEBUG"   # change this level when necessary
+                },
             }
         }
 
@@ -196,7 +197,7 @@ class Optimizer(object):
         )
         self.options["n_ts"] = len(self.time)
         logging.config.dictConfig(self.options["logging_config_dict"])
-
+        logger = logging.getLogger("optim")
         self.parameter_trajectories_list = []
         self.state_trajectories_list = []
         self.flux_trajectories_list = []
@@ -254,7 +255,6 @@ class Optimizer(object):
             ],
             name="state trajectories",
         )
-
         self.flux_trajectories = xr.DataArray(
             data=np.array(self.flux_trajectories_list),
             coords=[
@@ -274,20 +274,38 @@ class Optimizer(object):
     def fit_iteration(self, i_iter=0, parallel=True):
         """ handle one iteration (one subprocess)
         """
-        # register the logging queue for every child process
-        qh = logging.handlers.QueueHandler(self.q)
-        root = logging.getLogger()
-        root.addHandler(qh)
-        root.setLevel(self.options["loglevel"])
-        logger = logging.getLogger("optimizer.iter")
 
-        # reseed the random generator of subprocess
+        """
+        TODO I could write a chapter in the final thesis about how logging works.
+
+        `logger`s in python are singletons, in other words, there's always only
+        one logger instance with the same name in one process, and logging.getLogger
+        always returns the reference to the same logger object as long as the name
+        is the same.
+
+        Things are a bit different in multiprocessing, since loggers are used
+        in different processes, different logger object with the same name can
+        live inside different processes. The logging system in pyADAPT supports
+        multiprocessing by launching a separate thread in the main process to
+        handle the log records. Because there are many iterations in one simulation
+        and each simulation is processed in a process. The parallelism in pyADAPT
+        employs process pool to finish the jobs. As mentioned before, loggers are
+        singletons. When a worker process is running a second time, there's no
+        need to add handlers to the logger anymore. Or the log will contain
+        many duplicated records.
+        """
+
+        qh = logging.handlers.QueueHandler(self.q)
+        logger = logging.getLogger("optim.iter")
+        if not logger.hasHandlers():
+            logger.setLevel(logging.DEBUG)
+            logger.addHandler(qh)
+
+        #! reseed the random generator of subprocess
         np.random.seed(self.options["seed"] + i_iter)
         # logger.info("reseeded rng")
 
-        ps_name = mp.current_process().name if parallel else ""
-        if self.options["verbose"] >= ITER:
-            print(f"iteration: {i_iter}", ps_name)
+        logger.info(f"iteration: %d", i_iter)
 
         self.parameter_trajectory = np.zeros(
             (self.options["n_ts"], len(self.parameter_names))
@@ -303,9 +321,6 @@ class Optimizer(object):
         self.init_ts0(i_iter, splines)
 
         for i_ts in range(1, self.options["n_ts"]):
-            if (i_ts % 10) == 0 and self.options["verbose"] >= TIMESTEP:
-                print(f"time step: {i_ts}", ps_name)
-
             (
                 self.parameter_trajectory[i_ts, :],
                 self.state_trajectory[i_ts, :],
@@ -329,17 +344,14 @@ class Optimizer(object):
         2. generate parameter
         3. calculate fluxes from new parameters and states
         """
-        logger = logging.getLogger("optimizer.iter.init_ts0")
-        self.state_trajectory[0, self.state_mask] = splines[
-            : len(self.model.state_order), 0, 0
-        ]
+        logger = logging.getLogger("optim.iter.init")
+        self.state_trajectory[0, self.state_mask] = splines[: len(self.model.state_order), 0, 0]
         for i, observable in enumerate(self.state_mask):
             if not observable:
-                self.state_trajectory[0, i] = (
-                    self.model.initial_states[i] * np.random.rand()
-                )
-        logger.info(f"iter {i_iter} initialized")
-        # This is risky but according 3-σ principle, this is "almost" always true
+                self.state_trajectory[0, i] = self.model.initial_states[i] * np.random.rand()
+        logger.debug("iter %d initialized", i_iter)
+
+        # This is risky but according 3-σ principle, this is "almost" always safe
         param_init = np.random.normal(
             self.parameters["init"], self.parameters["init"] * 0.2
         )
@@ -357,12 +369,14 @@ class Optimizer(object):
             "Expanding ADAPT to model heterogeneous datasets and application
                 to hyperinsulinemic euglycemic clamp data"
         """
+        logger = logging.getLogger("optim.iter.pascal")
 
     def natal_init(self, i_iter, data):
         """ Natal van Riel's parameter initialization
         Basically, it tries multiple times to fit the parameters to the data
         return: arrays of initial parameters
         """
+        logger = logging.getLogger("optim.iter.natal")
         sse = np.inf
         i_ts = 0
 
@@ -400,10 +414,10 @@ class Optimizer(object):
         """call least_squares
         access Optimizer options via `i_iter` and `i_ts` and `self`
         """
-        logger = logging.getLogger("optimizer.iter.timestep")
-        logger.info(f"iter:{i_iter}, ts:{i_ts}")
-        time_span = self.time[i_ts - 1 : i_ts + 1]  # just two points
+        logger = logging.getLogger("optim.iter.ts")
+        logger.debug("iter: %d, ts: %d", i_iter, i_ts)
 
+        time_span = self.time[i_ts - 1 : i_ts + 1]  # just two points
         lsq_result = least_squares(
             self.objective_function,
             initial_guess,
@@ -478,6 +492,7 @@ class Optimizer(object):
             ------
             np.ndarray: shape(len(states) + len(parameter penalty))
         """
+        logger = logging.getLogger("optim.iter.objective")
         if self.options["verbose"] >= OBJFUNC:
             pass  # print something about optimizer
 
@@ -560,4 +575,4 @@ if __name__ == "__main__":
     traj.plot(ptraj, axes=axes, color="green", alpha=0.2)
     traj.plot_mean(ptraj, axes=axes, color="red")
 
-    plt.show()
+    # plt.show()
