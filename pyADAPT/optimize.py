@@ -163,7 +163,7 @@ class Optimizer(object):
                     "filename": f"adapt_{self.time_stamp}.log",
                     "mode": "w",
                     "formatter": "detailed",
-                    "level": "DEBUG"
+                    "level": "DEBUG"  # everything goes into the file
                 }
             },
             "loggers": {
@@ -349,19 +349,21 @@ class Optimizer(object):
         for i, observable in enumerate(self.state_mask):
             if not observable:
                 self.state_trajectory[0, i] = self.model.initial_states[i] * np.random.rand()
-        logger.debug("iter %d initialized", i_iter)
 
         # This is risky but according 3-σ principle, this is "almost" always safe
         param_init = np.random.normal(
             self.parameters["init"], self.parameters["init"] * 0.2
         )
+
         self.parameter_trajectory[0, :] = param_init
         self.parameters.loc[:, "value"] = param_init
+
         # TODO add support for self.options['init']
         if self.model.flux_order:
             self.flux_trajectory[0, :] = self.model.fluxes(
                 0, self.state_trajectory[0, :], self.model.parameters["value"]
             )
+        logger.debug("init iter %d", i_iter)
 
     def pascal_init(self, i_iter, data):
         """ The initial parameters and states finding method inspired by
@@ -515,6 +517,7 @@ class Optimizer(object):
 
         # equation 3.4 [ADAPT 2013]
         residual = (end_pred - end_data[:, 0]) / end_data[:, 1]
+        residual = residual * self.options['weights']
         if self.options["R"] is not None:
             reg_term = self.options["lambda_r"] * self.options["R"](
                 params=params,
@@ -561,18 +564,22 @@ if __name__ == "__main__":
     from pyADAPT.dataset import DataSet
     import pyADAPT.trajectory as traj
     import matplotlib.pyplot as plt
+    plt.style.use(["science", "grid"])
 
     model = ToyModel()
     data = DataSet(
         raw_data_path="data/toyModel/toyData.mat",
         data_specs_path="data/toyModel/toyData.yaml",
     )
-    ptraj, straj, vtraj, time = optimize(
-        model, data, "k1", n_iter=10, delta_t=0.2, n_core=4, verbose=ITER
-    )
+    ptraj, straj, vtraj, time = optimize(model,data, "k1",
+        n_iter=10,
+        delta_t=0.2,
+        n_core=4,
+        verbose=ITER,
+        weights=np.array([1,.1,1,.5]))
 
     fig, axes = plt.subplots()
     traj.plot(ptraj, axes=axes, color="green", alpha=0.2)
     traj.plot_mean(ptraj, axes=axes, color="red")
 
-    # plt.show()
+    plt.show()
