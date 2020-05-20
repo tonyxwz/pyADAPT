@@ -21,19 +21,18 @@ def whosefault(log_path, n_iter=None, n_ts=None):
     print("iter\tts\twhen")
     for iter in range(len(flags)):
         row = flags[iter, 1:]
-        if not np.all(row):
+        if row[-1] == 0:  # not reached the last time step yet
+            # safely assume that steps before last 1 flag are finished
             pos = []
             pos.append((row == 1).argmin())
-            # some times log are missing/stuck in the queue
             # fixme: if an iter misses one record and not finished
-            if np.all(row[pos[-1]+1:] == 0):
-                # iteration () dies at timestep ()
-                reg2 = re.compile(r"(\d*-\d*-\d*)\s*(\d*:\d*:\d*,\d*).*iter:\s*"
-                                    +str(iter)+r"\s*,\s*ts:\s*"
-                                    +str(pos[-1]))
-                when = reg2.findall(logstr)
-                # print(type(when))
-                print(f"{iter}\t{pos}\t{' '.join(when[0])}")
+            # if np.all(row[pos[-1]+1:] == 0):
+            reg2 = re.compile(r"(?P<date>\d*-\d*-\d*)\s*(?P<time>\d*:\d*:\d*,\d*).*iter:\s*"
+                                +str(iter)+r"\s*,\s*ts:\s*"
+                                +str(pos[-1]))
+            when = reg2.search(logstr)
+            # iteration () dies at timestep ()
+            print(f"{iter}\t{pos}\t{when['date']} {when['time']}")
 
 def main():
     whosefault(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]))
