@@ -70,6 +70,7 @@ from this lame paper.
 """
 
 import threading
+import platform
 import multiprocessing as mp
 import logging
 import logging.handlers
@@ -145,11 +146,11 @@ class Optimizer(object):
             "formatters": {
                 'brief': {
                     'class': 'logging.Formatter',
-                    'format': '%(processName)-10s %(message)s'
+                    'format': '%(processName)-10s: %(message)s'
                 },
                 'detailed': {
                     'class': 'logging.Formatter',
-                    'format': '%(asctime)s %(name)-15s %(levelname)-8s %(processName)-10s %(message)s'
+                    'format': '%(asctime)s %(name)-15s %(levelname)-8s %(processName)-18s %(process)-5d %(message)s'
                 }
             },
             "handlers": {
@@ -160,7 +161,7 @@ class Optimizer(object):
                 },
                 "file": {
                     "class": "logging.FileHandler",
-                    "filename": f"adapt_{self.time_stamp}.log",
+                    "filename": f"adapt_{platform.node()}_{self.time_stamp}.log",
                     "mode": "w",
                     "formatter": "detailed",
                     "level": "DEBUG"  # everything goes into the file
@@ -192,12 +193,15 @@ class Optimizer(object):
         """ Main Process
         """
         self.options.update(options)
+        logging.config.dictConfig(self.options["logging_config_dict"])
+        logger = logging.getLogger("optim")
+
         self.time = np.arange(
             self.dataset.begin_time, self.dataset.end_time, self.options["delta_t"]
         )
         self.options["n_ts"] = len(self.time)
-        logging.config.dictConfig(self.options["logging_config_dict"])
-        logger = logging.getLogger("optim")
+        logger.info("n_ts:%d", self.options["n_ts"])
+        logger.info("n_iter:%d", self.options["n_iter"])
         self.parameter_trajectories_list = []
         self.state_trajectories_list = []
         self.flux_trajectories_list = []
@@ -582,4 +586,4 @@ if __name__ == "__main__":
     traj.plot(ptraj, axes=axes, color="green", alpha=0.2)
     traj.plot_mean(ptraj, axes=axes, color="red")
 
-    plt.show()
+    # plt.show()
