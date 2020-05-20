@@ -29,7 +29,6 @@ def whosefault(log_path):
         ts = int(match[1])
         flags[iter, ts] = 1
     print("iter\tts\twhen")
-    print(flags.shape)
     for iter in range(len(flags)):
         row = flags[iter, 1:]
         if row[-1] == 0:  # not reached the last time step yet
