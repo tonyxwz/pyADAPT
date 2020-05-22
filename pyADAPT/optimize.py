@@ -308,7 +308,8 @@ class Optimizer(object):
             logger.addHandler(qh)
 
         #! reseed the random generator of subprocess
-        np.random.seed(self.options["seed"] + i_iter)
+        # TODO change 200 to the max attempt numbers
+        np.random.seed(self.options["seed"] + i_iter * 200)
         # logger.info("reseeded rng")
 
         logger.info("iteration: %d", i_iter)
