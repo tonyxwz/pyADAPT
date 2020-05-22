@@ -25,7 +25,7 @@ def whosefault(log_path):
     if n_iter is not None:
         n_iter = int(n_iter["n_iter"])
 
-    counters = np.zeros((n_iter, n_ts))
+    counters = np.zeros((n_iter, n_ts), dtype=np.int)
 
     for match in res:
         iter = int(match[0])
@@ -38,7 +38,7 @@ def whosefault(log_path):
         iter = int(match)
         counters[iter, 0] += 1
 
-    print("iter\tts\tpid\twhen")
+    print("iter\tts\tpid\tattempt\twhen")
     for iter in range(len(counters)):
         if counters[iter, 0] != 0 and counters[iter, -1] == 0:
             row = counters[iter, 1:]
@@ -61,7 +61,7 @@ def whosefault(log_path):
                 # if iter is not run yet
                 continue
             # iteration () dies at timestep ()
-            print(f"{iter}\t{pos}\t{when['pid']}\t{when['date']} {when['time']}")
+            print(f"{iter}\t{pos}\t{when['pid']}\t{row[0]}\t{when['date']} {when['time']}")
 
 
 def main():
