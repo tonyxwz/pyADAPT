@@ -65,7 +65,24 @@ def whosefault(log_path):
 
 
 def main():
-    whosefault(sys.argv[1])
+    if len(sys.argv) > 1:
+        log= sys.argv[1]
+    else:
+        import glob
+        import platform
+
+        hostname = platform.node()
+        logs = glob.glob("adapt_"+hostname+"*.log")
+
+        latest = .0
+        for _log in logs:
+            date, time = _log.rsplit(".", 1)[0].rsplit('_')[-2:]
+            time = float("".join(date.split('-')+time.split('.')))
+            if time > latest:
+                latest = time
+                log = _log
+    print(log)
+    whosefault(log)
 
 
 if __name__ == "__main__":
