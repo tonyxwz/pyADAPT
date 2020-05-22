@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 find out which time step in which iteration caused the stuck
 """
