@@ -343,7 +343,7 @@ class Optimizer(object):
                     )
                 break  # break if not a single timestep timeouts
             except TimeoutError as toerr:
-                logger.warning("iter %d timeouts at ts %d on attempt %d", i_iter, i_ts, attempt)
+                logger.warning("iter %d timeouts at ts %s on attempt %d", i_iter, str(toerr), attempt)
 
         return (self.parameter_trajectory, self.state_trajectory, self.flux_trajectory)
 
@@ -357,7 +357,7 @@ class Optimizer(object):
         3. calculate fluxes from new parameters and states
         """
         logger = logging.getLogger("optim.iter.init")
-        with TimeOut(100) as timeout:
+        with TimeOut(self.options["timeout"], "0") as timeout:
             self.state_trajectory[0, self.state_mask] = splines[: len(self.model.state_order), 0, 0]
             for i, observable in enumerate(self.state_mask):
                 if not observable:
@@ -433,7 +433,7 @@ class Optimizer(object):
         logger.debug("iter: %d, ts: %d", i_iter, i_ts)
 
         time_span = self.time[i_ts - 1: i_ts + 1]  # just two points
-        with TimeOut(self.options["timeout"]) as timeout:
+        with TimeOut(self.options["timeout"], str(i_ts)) as timeout:
             lsq_result = least_squares(
                 self.objective_function,
                 initial_guess,
