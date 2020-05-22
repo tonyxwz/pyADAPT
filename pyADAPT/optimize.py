@@ -80,11 +80,12 @@ import time
 import numpy as np
 import pandas as pd
 import xarray as xr
-from scipy.optimize import least_squares, leastsq
+from scipy.optimize import least_squares
 
 from pyADAPT.dataset import DataSet
 from pyADAPT.basemodel import BaseModel
 from pyADAPT.regularization import default_regularization
+from pyADAPT.timeout import TimeOut
 
 
 ITER = 1
@@ -127,6 +128,7 @@ class Optimizer(object):
             "n_iter": 5,
             "seed": 1,
             "weights": np.ones(len(self.dataset)),  # TODO weight of the errors
+            "timeout": 100,  # seconds
         }
 
         # model don't know which states and fluxes are visible until data is given
@@ -309,7 +311,7 @@ class Optimizer(object):
         np.random.seed(self.options["seed"] + i_iter)
         # logger.info("reseeded rng")
 
-        logger.info(f"iteration: %d", i_iter)
+        logger.info("iteration: %d", i_iter)
 
         self.parameter_trajectory = np.zeros(
             (self.options["n_ts"], len(self.parameter_names))
@@ -321,21 +323,26 @@ class Optimizer(object):
             (self.options["n_ts"], len(self.model.flux_order))
         )
 
-        splines = self.dataset.interpolate(n_ts=self.options["n_ts"])
-        self.init_ts0(i_iter, splines)
+        for attempt in range(100):
+            try:
+                splines = self.dataset.interpolate(n_ts=self.options["n_ts"])
+                self.init_ts0(i_iter, splines)
 
-        for i_ts in range(1, self.options["n_ts"]):
-            (
-                self.parameter_trajectory[i_ts, :],
-                self.state_trajectory[i_ts, :],
-                self.flux_trajectory[i_ts, :],
-            ) = self.fit_timestep(
-                initial_guess=self.parameter_trajectory[i_ts - 1, :],
-                begin_states=self.state_trajectory[i_ts - 1, :],
-                end_data=splines[:, i_ts, :],
-                i_iter=i_iter,
-                i_ts=i_ts,
-            )
+                for i_ts in range(1, self.options["n_ts"]):
+                    (
+                        self.parameter_trajectory[i_ts, :],
+                        self.state_trajectory[i_ts, :],
+                        self.flux_trajectory[i_ts, :],
+                    ) = self.fit_timestep(
+                        initial_guess=self.parameter_trajectory[i_ts - 1, :],
+                        begin_states=self.state_trajectory[i_ts - 1, :],
+                        end_data=splines[:, i_ts, :],
+                        i_iter=i_iter,
+                        i_ts=i_ts,
+                    )
+                break  # break if not a single timestep timeouts
+            except TimeoutError as toerr:
+                logger.warning("iter %d timeouts at ts %d on attempt %d", i_iter, i_ts, attempt)
 
         return (self.parameter_trajectory, self.state_trajectory, self.flux_trajectory)
 
@@ -349,25 +356,26 @@ class Optimizer(object):
         3. calculate fluxes from new parameters and states
         """
         logger = logging.getLogger("optim.iter.init")
-        self.state_trajectory[0, self.state_mask] = splines[: len(self.model.state_order), 0, 0]
-        for i, observable in enumerate(self.state_mask):
-            if not observable:
-                self.state_trajectory[0, i] = self.model.initial_states[i] * np.random.rand()
+        with TimeOut(100) as timeout:
+            self.state_trajectory[0, self.state_mask] = splines[: len(self.model.state_order), 0, 0]
+            for i, observable in enumerate(self.state_mask):
+                if not observable:
+                    self.state_trajectory[0, i] = self.model.initial_states[i] * np.random.rand()
 
-        # This is risky but according 3-σ principle, this is "almost" always safe
-        param_init = np.random.normal(
-            self.parameters["init"], self.parameters["init"] * 0.2
-        )
-
-        self.parameter_trajectory[0, :] = param_init
-        self.parameters.loc[:, "value"] = param_init
-
-        # TODO add support for self.options['init']
-        if self.model.flux_order:
-            self.flux_trajectory[0, :] = self.model.fluxes(
-                0, self.state_trajectory[0, :], self.model.parameters["value"]
+            # This is risky but according 3-σ principle, this is "almost" always safe
+            param_init = np.random.normal(
+                self.parameters["init"], self.parameters["init"] * 0.2
             )
-        logger.debug("init iter %d", i_iter)
+
+            self.parameter_trajectory[0, :] = param_init
+            self.parameters.loc[:, "value"] = param_init
+
+            # TODO add support for self.options['init']
+            if self.model.flux_order:
+                self.flux_trajectory[0, :] = self.model.fluxes(
+                    0, self.state_trajectory[0, :], self.model.parameters["value"]
+                )
+            logger.debug("init iter %d", i_iter)
 
     def pascal_init(self, i_iter, data):
         """ The initial parameters and states finding method inspired by
@@ -423,21 +431,22 @@ class Optimizer(object):
         logger = logging.getLogger("optim.iter.ts")
         logger.debug("iter: %d, ts: %d", i_iter, i_ts)
 
-        time_span = self.time[i_ts - 1 : i_ts + 1]  # just two points
-        lsq_result = least_squares(
-            self.objective_function,
-            initial_guess,
-            kwargs={
-                "begin_states": begin_states,
-                "end_data": end_data,
-                "time_span": time_span,
-                "i_iter": i_iter,
-                "i_ts": i_ts,
-            },
-            bounds=(self.parameters["lb"], self.parameters["ub"]),
-            method=self.options["method"],
-            **lsq_options,
-        )
+        time_span = self.time[i_ts - 1: i_ts + 1]  # just two points
+        with TimeOut(self.options["timeout"]) as timeout:
+            lsq_result = least_squares(
+                self.objective_function,
+                initial_guess,
+                kwargs={
+                    "begin_states": begin_states,
+                    "end_data": end_data,
+                    "time_span": time_span,
+                    "i_iter": i_iter,
+                    "i_ts": i_ts,
+                },
+                bounds=(self.parameters["lb"], self.parameters["ub"]),
+                method=self.options["method"],
+                **lsq_options,
+            )
         # calculate the states and fluxes at the end of the time step using the
         # optimized parameters
         final_states = self.model.compute_states(
