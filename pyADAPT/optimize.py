@@ -129,6 +129,7 @@ class Optimizer(object):
             "seed": 1,
             "weights": np.ones(len(self.dataset)),  # TODO weight of the errors
             "timeout": 100,  # seconds
+            "attempt_limit": 100
         }
 
         # model don't know which states and fluxes are visible until data is given
@@ -202,6 +203,7 @@ class Optimizer(object):
             self.dataset.begin_time, self.dataset.end_time, self.options["delta_t"]
         )
         self.options["n_ts"] = len(self.time)
+        logger.info("optimize started")
         logger.info("n_ts:%d", self.options["n_ts"])
         logger.info("n_iter:%d", self.options["n_iter"])
         self.parameter_trajectories_list = []
@@ -270,7 +272,7 @@ class Optimizer(object):
             ],
             name="flux trajectories",
         )
-
+        logger.info("optimizer ended")
         return (
             self.parameter_trajectories,
             self.state_trajectories,
@@ -324,8 +326,9 @@ class Optimizer(object):
             (self.options["n_ts"], len(self.model.flux_order))
         )
 
-        for attempt in range(100):
+        for attempt in range(self.options["attempt_limit"]):
             try:
+                # reset trajectories or not
                 splines = self.dataset.interpolate(n_ts=self.options["n_ts"])
                 self.init_ts0(i_iter, splines)
 
