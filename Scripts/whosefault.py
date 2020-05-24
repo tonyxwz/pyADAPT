@@ -61,23 +61,23 @@ def whosefault(log_path):
                 # if iter is not run yet
                 continue
             # iteration () dies at timestep ()
-            print(f"{iter}\t{pos}\t{when['pid']}\t{row[0]}\t{when['date']} {when['time']}")
+            print(
+                f"{iter}\t{pos}\t{when['pid']}\t{row[0]}\t{when['date']} {when['time']}"
+            )
 
 
 def main():
     if len(sys.argv) > 1:
-        log= sys.argv[1]
+        log = sys.argv[1]
     else:
         import glob
-        import platform
 
-        hostname = platform.node()
-        logs = glob.glob("adapt_"+hostname+"*.log")
+        logs = glob.glob("adapt_" + "*.log")
 
-        latest = .0
+        latest = 0.0
         for _log in logs:
-            date, time = _log.rsplit(".", 1)[0].rsplit('_')[-2:]
-            time = float("".join(date.split('-')+time.split('.')))
+            date, time = _log.rsplit(".", 1)[0].rsplit("_")[-2:]
+            time = float("".join(date.split("-") + time.split(".")))
             if time > latest:
                 latest = time
                 log = _log
