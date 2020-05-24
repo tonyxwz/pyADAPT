@@ -4,7 +4,6 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-pyqt5-tools = "==5.12.*"
 jupyterlab = "*"
 pylint = "*"
 rope = "*"
@@ -19,10 +18,12 @@ spyder-kernels = "*"
 ipyparallel = "*"
 ipympl = "*"
 black = "*"
+mypy = "*"
 
 [packages]
 pyadapt = {editable = true,path = "."}
 tables = "*"
+mat4py = "*"
 
 [requires]
 python_version = "3.7"

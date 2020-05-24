@@ -29,6 +29,7 @@ REQUIRED = [
     "pandas",
     "xarray",
     "python-libsbml",
+    "mat4py",
     "networkx",
     "lmfit",
     "numdifftools",
