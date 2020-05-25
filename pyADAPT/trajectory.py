@@ -22,7 +22,10 @@ class Trajectory(dict):
 
 def latexify(s):
     s = s.split("_")
-    return "$" + s[0] + "_{" + s[1] + "}" + "$"
+    if len(s) == 1:
+        return s[0]
+    # it should be Vmax_{g1p} not G1p_{Vmax}
+    return "$" + s[1] + "_{" + s[0] + "}" + "$"
 
 
 def check_axes(func):
