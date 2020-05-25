@@ -7,6 +7,8 @@ from pyADAPT.examples import Smallbone2011
 from pyADAPT.optimize import Optimizer, ITER, optimize
 from van_heerden_preprocess import vhd_dataset
 import pyADAPT.trajectory as traj
+import numpy as np
+
 
 def main():
     smallbone = Smallbone2011()
@@ -18,6 +20,7 @@ def main():
     print(fit_params)
 
     optim = Optimizer(model=smallbone, dataset=vhd_dataset, parameter_names=fit_params)
+
     # optim.run(n_core=1, n_iter=1, delta_t=2)
     print(optim.parameters)
     print(optim.state_mask)
@@ -27,7 +30,16 @@ def main():
     # %%
 
     p, s, f, t = optimize(
-        smallbone, vhd_dataset, *fit_params, n_core=30, n_iter=120, delta_t=2, verbose=ITER
+        smallbone,
+        vhd_dataset,
+        *fit_params,
+        n_core=30,
+        n_iter=120,
+        delta_t=2,
+        #               g1p g6p trh t6p udg
+        weights=np.array([1, 1, 0.5, 1, 0.5]),
+        timeout=100,
+        attempt_limit=100
     )
 
     traj.save(p, "p.nc")
