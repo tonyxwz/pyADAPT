@@ -26,14 +26,18 @@ Fluxes
 | Trehalase                 | 6 nth           | (10) TREH              |
 | UDP–glucose phosphorylase | 7 ugp           | (7) UPG                |
 """
+import os
+from pprint import pprint
+
+import numpy as np
+import pandas as pd
+from mat4py import loadmat
+
+from pyADAPT.dataset import DataSet, plot_splines
+
 #%%
 # from pyADAPT.io import read_data_raw, read_mat
-from mat4py import loadmat
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
-from pprint import pprint
-from pyADAPT.dataset import DataSet, plot_splines
+
 
 __all__ = ["vhd_dataset"]
 
@@ -44,7 +48,12 @@ def moving_average(data_set, periods=3):
 
 
 #%%
-matpath = r"../data/trehalose/vHeerden_trehalose_data_micromolgdw.mat"
+matpath = os.path.join(
+    os.path.dirname(__file__),
+    os.pardir,
+    os.pardir,
+    r"data/trehalose/vHeerden_trehalose_data_micromolgdw.mat",
+)
 vanHeerden = loadmat(matpath)
 
 legenda_meta = np.squeeze(np.array(vanHeerden["data"]["legenda_metabolites"]))
@@ -103,7 +112,7 @@ for i, s in enumerate(legenda_meta):
     tmp["stds"] = s + "_stds"
     tmp["time"] = "t"
     tmp["unit"] = "mL"
-    tmp["time_unit"] = "TBD"
+    # tmp["time_unit"] = "second (s)"
     meta_struct[s] = tmp
 meta_specs["structure"] = meta_struct
 raw_meta["vhd"] = raw_meta
@@ -111,7 +120,19 @@ vhd_dataset = DataSet(name="vhd", raw_data=raw_meta, data_specs=meta_specs)
 
 
 if __name__ == "__main__":
-    fig, axes = plt.subplots(2, 3, figsize=(15, 8))
-    plot_splines(vhd_dataset, 100, 100, axes=axes)
+    import matplotlib.pyplot as plt
+
+    plt.style.use(["science", "grid"])
+    fig: plt.Figure = plt.figure(figsize=(9, 6))
+    gs = fig.add_gridspec(2, 6)
+    fig.add_subplot(gs[0, 0:2])
+    fig.add_subplot(gs[0, 2:4])
+    fig.add_subplot(gs[0, 4:6])
+    fig.add_subplot(gs[1, 1:3])
+    fig.add_subplot(gs[1, 3:5])
+    axes = fig.get_axes()
+    # axes = np.array([ax1, ax2, ax3, ax4, ax5])
+    plot_splines(vhd_dataset, 100, 100, axes=fig.axes)
     fig.tight_layout()
+    fig.savefig("van_heerden-100-100.png", dpi=200)
     plt.show()
