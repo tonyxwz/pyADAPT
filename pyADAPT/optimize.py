@@ -125,7 +125,7 @@ class Optimizer(object):
             "n_core": mp.cpu_count(),
             "n_iter": 5,
             "seed": 1,
-            "weights": np.ones(len(self.dataset)),  # TODO weight of the errors
+            "weights": np.ones(len(self.dataset)),
             "timeout": 100,  # seconds
             "attempt_limit": 100,
         }
@@ -242,7 +242,7 @@ class Optimizer(object):
                 self.flux_trajectories_list.append(vtraj)
 
         else:
-            # TODO just drop the support for single processing, it would be much easier
+            # TODO drop the support for single processing
             for i_iter in range(self.options["n_iter"]):
                 ptraj, straj, vtraj = self.fit_iteration(i_iter=i_iter, parallel=False)
                 self.parameter_trajectories_list.append(ptraj)
@@ -314,7 +314,7 @@ class Optimizer(object):
             logger.addHandler(qh)
 
         #! reseed the random generator of subprocess
-        # TODO change 200 to the max attempt numbers
+        # maybe a better way to guaranttee unique seed per process
         np.random.seed(self.options["seed"] + i_iter * 200)
         # logger.info("reseeded rng")
 

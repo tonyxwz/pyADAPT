@@ -44,7 +44,7 @@ def moving_average(data_set, periods=3):
 
 
 #%%
-matpath = r"data/trehalose/vHeerden_trehalose_data_micromolgdw.mat"
+matpath = r"../data/trehalose/vHeerden_trehalose_data_micromolgdw.mat"
 vanHeerden = loadmat(matpath)
 
 legenda_meta = np.squeeze(np.array(vanHeerden["data"]["legenda_metabolites"]))

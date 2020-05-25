@@ -1,9 +1,9 @@
 import signal
 from contextlib import contextmanager
 
-
+# TODO use threading timer to support windows
 class TimeOut:
-    def __init__(self, seconds=1, error_message='Timeout'):
+    def __init__(self, seconds=1, error_message="Timeout"):
         self.seconds = seconds
         self.error_message = error_message
 
