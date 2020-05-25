@@ -111,7 +111,7 @@ class Spline(list):
             plt = None
 
         axes.set_title(self.name)
-        axes.set_xlabel(self.time_unit + "(s)")
+        axes.set_xlabel(self.time_unit)
         axes.set_ylabel(self.unit)
         axes.errorbar(
             self.time,
