@@ -19,11 +19,9 @@ unlike the ADAPT method, classical approach don't need the random splines, but
 splines interpolated directly from van Heerden's dataset.
 """
 #%%
-from scipy.optimize import least_squares, leastsq
-import numpy as np
-import pandas as pd
 from pyADAPT.examples import Smallbone2011
 from van_heerden_preprocess import vhd_dataset
+import matplotlib.pyplot as plt
 
 
 smallbone = Smallbone2011()
@@ -34,18 +32,24 @@ for s in vhd_dataset:
     data[s.name] = s.interp_means(n_ts)
 
 #%% plot data
-import matplotlib.pyplot as plt
 plt.style.use(["science", "grid"])
-fig, axes = plt.subplots(2, 3, figsize=(9, 6))
+fig = plt.figure(figsize=(9, 6))
+ax1 = plt.subplot2grid((2, 6), loc=(0, 0), colspan=2)
+ax2 = plt.subplot2grid((2, 6), (0, 2), colspan=2)
+ax3 = plt.subplot2grid((2, 6), (0, 4), colspan=2)
+ax4 = plt.subplot2grid((2, 6), (1, 1), colspan=2)
+ax5 = plt.subplot2grid((2, 6), (1, 3), colspan=2)
+axes = [ax1, ax2, ax3, ax4, ax5]
+
 # with plt.style.context("science"):
 for i, s in enumerate(vhd_dataset.names):
-    ax:plt.Axes = axes.flatten()[i]
+    ax: plt.Axes = axes[i]
     ax.plot(vhd_dataset[s].get_timepoints(n_ts), data[s])
     ax.set_title(s)
-    ax.set_xlabel('time (s)')
-    ax.set_ylabel('concentration (mM)')
+    ax.set_xlabel("time (s)")
+    ax.set_ylabel("concentration (mM)")
 
 fig.tight_layout()
-
+fig.savefig("classical.png")
 
 # %%
