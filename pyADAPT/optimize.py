@@ -68,7 +68,6 @@ print & plotting
 [^1]: I am considering renaming ADAPT to Optimizer in order to be distant away
 from this lame paper.
 """
-
 import threading
 import platform
 import multiprocessing as mp
@@ -86,7 +85,6 @@ from pyADAPT.dataset import DataSet
 from pyADAPT.basemodel import BaseModel
 from pyADAPT.regularization import default_regularization
 from pyADAPT.timeout import TimeOut
-
 
 ITER = 1
 TIMESTEP = 2
@@ -129,7 +127,7 @@ class Optimizer(object):
             "seed": 1,
             "weights": np.ones(len(self.dataset)),  # TODO weight of the errors
             "timeout": 100,  # seconds
-            "attempt_limit": 100
+            "attempt_limit": 100,
         }
 
         # model don't know which states and fluxes are visible until data is given
@@ -147,35 +145,42 @@ class Optimizer(object):
         self.options["logging_config_dict"] = {
             "version": 1,
             "formatters": {
-                'brief': {
-                    'class': 'logging.Formatter',
-                    'format': '%(processName)-10s: %(message)s'
+                "brief": {
+                    "class": "logging.Formatter",
+                    "format": "%(processName)-10s: %(message)s",
                 },
-                'detailed': {
-                    'class': 'logging.Formatter',
-                    'format': '%(asctime)s %(name)-15s %(levelname)-8s %(processName)-18s %(process)-5d %(message)s'
-                }
+                "detailed": {
+                    "class": "logging.Formatter",
+                    "format": "%(asctime)s %(name)-15s %(levelname)-8s %(processName)-18s %(process)-5d %(message)s",
+                },
             },
             "handlers": {
                 "console": {
                     "class": "logging.StreamHandler",
-                    "formatter": 'brief',
-                    "level": "INFO"
+                    "formatter": "brief",
+                    "level": "INFO",
                 },
                 "file": {
                     "class": "logging.FileHandler",
                     "filename": f"adapt_{platform.node()}_{self.time_stamp}.log",
                     "mode": "w",
                     "formatter": "detailed",
-                    "level": "DEBUG"  # everything goes into the file
-                }
+                    "level": "DEBUG",  # everything goes into the file
+                },
+                "warnings": {
+                    "class": "logging.FileHandler",
+                    "filename": f"adapt_warnings_{platform.node()}_{self.time_stamp}.log",
+                    "mode": "w",
+                    "formatter": "detailed",
+                    "level": "WARNING",  # warning and above
+                },
             },
             "loggers": {
                 "optim": {
                     "handlers": ["file", "console"],
-                    "level": "DEBUG"   # change this level when necessary
+                    "level": "DEBUG",  # change this level when necessary
                 },
-            }
+            },
         }
 
     def create_mask(self, names_data, names_model):
@@ -282,7 +287,6 @@ class Optimizer(object):
     def fit_iteration(self, i_iter=0, parallel=True):
         """ handle one iteration (one subprocess)
         """
-
         """
         TODO I could write a chapter in the final thesis about how logging works.
 
@@ -346,7 +350,12 @@ class Optimizer(object):
                     )
                 break  # break if not a single timestep timeouts
             except TimeoutError as toerr:
-                logger.warning("iter %d timeouts at ts %s on attempt %d", i_iter, str(toerr), attempt)
+                logger.warning(
+                    "iter %d timeouts at ts %s on attempt %d",
+                    i_iter,
+                    str(toerr),
+                    attempt,
+                )
 
         return (self.parameter_trajectory, self.state_trajectory, self.flux_trajectory)
 
@@ -361,10 +370,14 @@ class Optimizer(object):
         """
         logger = logging.getLogger("optim.iter.init")
         with TimeOut(self.options["timeout"], "0") as timeout:
-            self.state_trajectory[0, self.state_mask] = splines[: len(self.model.state_order), 0, 0]
+            self.state_trajectory[0, self.state_mask] = splines[
+                : len(self.model.state_order), 0, 0
+            ]
             for i, observable in enumerate(self.state_mask):
                 if not observable:
-                    self.state_trajectory[0, i] = self.model.initial_states[i] * np.random.rand()
+                    self.state_trajectory[0, i] = (
+                        self.model.initial_states[i] * np.random.rand()
+                    )
 
             # This is risky but according 3-σ principle, this is "almost" always safe
             param_init = np.random.normal(
@@ -435,7 +448,7 @@ class Optimizer(object):
         logger = logging.getLogger("optim.iter.ts")
         logger.debug("iter: %d, ts: %d", i_iter, i_ts)
 
-        time_span = self.time[i_ts - 1: i_ts + 1]  # just two points
+        time_span = self.time[i_ts - 1 : i_ts + 1]  # just two points
         with TimeOut(self.options["timeout"], str(i_ts)) as timeout:
             lsq_result = least_squares(
                 self.objective_function,
@@ -534,7 +547,7 @@ class Optimizer(object):
 
         # equation 3.4 [ADAPT 2013]
         residual = (end_pred - end_data[:, 0]) / end_data[:, 1]
-        residual = residual * self.options['weights']
+        residual = residual * self.options["weights"]
         if self.options["R"] is not None:
             reg_term = self.options["lambda_r"] * self.options["R"](
                 params=params,
@@ -581,6 +594,7 @@ if __name__ == "__main__":
     from pyADAPT.dataset import DataSet
     import pyADAPT.trajectory as traj
     import matplotlib.pyplot as plt
+
     plt.style.use(["science", "grid"])
 
     model = ToyModel()
@@ -588,15 +602,21 @@ if __name__ == "__main__":
         raw_data_path="data/toyModel/toyData.mat",
         data_specs_path="data/toyModel/toyData.yaml",
     )
-    ptraj, straj, vtraj, time = optimize(model,data, "k1",
+    ptraj, straj, vtraj, time = optimize(
+        model,
+        data,
+        "k1",
         n_iter=10,
         delta_t=0.2,
         n_core=4,
         verbose=ITER,
-        weights=np.array([1,.1,1,.5]))
+        weights=np.array([1, 0.1, 1, 0.5]),
+    )
 
-    fig, axes = plt.subplots()
+    fig, axes = plt.subplots(figsize=(10, 8))
     traj.plot(ptraj, axes=axes, color="green", alpha=0.2)
     traj.plot_mean(ptraj, axes=axes, color="red")
 
     # plt.show()
+    fig.savefig("toy.pdf")
+    fig.savefig("toy.png")
