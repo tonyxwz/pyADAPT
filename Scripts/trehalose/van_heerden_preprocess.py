@@ -58,14 +58,17 @@ vanHeerden = loadmat(matpath)
 
 legenda_meta = np.squeeze(np.array(vanHeerden["data"]["legenda_metabolites"]))
 meta = np.squeeze(np.array(vanHeerden["data"]["metabolites"]))
+meta = meta / 2
 time_meta = np.squeeze(np.array(vanHeerden["data"]["time_metabolites"]))
 
 legenda_nucleotides = np.squeeze(np.array(vanHeerden["data"]["legenda_nucleotides"]))
 nucleotides = np.squeeze(np.array(vanHeerden["data"]["nucleotides"]))
+nucleotides = nucleotides / 2
 time_nucleotides = np.squeeze(np.array(vanHeerden["data"]["time_nucleotides"]))
 
 legenda_fluxes = np.squeeze(np.array(vanHeerden["data"]["legenda_fluxes"]))
 fluxes = np.squeeze(np.array(vanHeerden["data"]["fluxes"]))
+fluxes = fluxes / 2
 time_fluxes = np.squeeze(np.array(vanHeerden["data"]["time_fluxes"]))
 
 totP = np.squeeze(np.array(vanHeerden["data"]["totP"]))
@@ -80,7 +83,7 @@ time_totP = np.squeeze(np.array(vanHeerden["data"]["time_totP"]))
 # print(len(meta))
 # print(len(meta_std))
 
-meta_std = meta * 0.01
+meta_std = meta * 0.02
 # create fake standard deviations
 raw_meta = dict()
 meta_specs = {
