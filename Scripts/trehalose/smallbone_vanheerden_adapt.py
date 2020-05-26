@@ -20,22 +20,16 @@ def main():
             fit_params.append(id)
     print(fit_params)
 
-    optim = Optimizer(model=smallbone, dataset=vhd_dataset, parameter_names=fit_params)
-
-    # optim.run(n_core=1, n_iter=1, delta_t=2)
-    print(optim.parameters)
-    print(optim.state_mask)
-    print(optim.model.state_order)
-    print(optim.model.flux_order)
 
     if "compute" in platform.node():
         p, s, f, t = optimize(
             smallbone,
             vhd_dataset,
             *fit_params,
-            #                  alternative initial paramters from david's email
-            #
-            initial_parameters=None,
+            #                  alternative initial paramters from david's email (not including udg)
+            #                            (Glt)                      (TPS2)   (TPS1)          (!missing)
+            #                  pgi_Vmax hxt_Vmax hxk_Vmax pgm_Vmax tpp_Vmax tps_Vmax nth_Vmax ugp_Vmax
+            initial_parameters=[13.4667,    3.67,    4.75,     100,   81.45,   1000,     100,  36.8200],
             n_core=30,
             n_iter=120,
             delta_t=2,
@@ -44,11 +38,20 @@ def main():
             timeout=100,
             attempt_limit=100
         )
-
         traj.save(p, "p.nc")
         traj.save(s, "s.nc")
         traj.save(f, "f.nc")
+    else:
+        optim = Optimizer(model=smallbone, dataset=vhd_dataset, parameter_names=fit_params)
+        print(optim.parameters)
+        initial_parameters=[13.4667,    3.67,    4.75,     100,   81.45,   1000,     100,  36.8200]
+        optim.parameters.loc[:, 'init'] = initial_parameters
 
+        # optim.run(n_core=1, n_iter=1, delta_t=2)
+        print(optim.parameters)
+        print(optim.state_mask)
+        print(optim.model.state_order)
+        print(optim.model.flux_order)
 
 if __name__ == "__main__":
     main()
