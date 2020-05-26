@@ -8,6 +8,7 @@ from pyADAPT.optimize import Optimizer, ITER, optimize
 from van_heerden_preprocess import vhd_dataset
 import pyADAPT.trajectory as traj
 import numpy as np
+import platform
 
 
 def main():
@@ -27,24 +28,26 @@ def main():
     print(optim.model.state_order)
     print(optim.model.flux_order)
 
-    # %%
+    if "compute" in platform.node():
+        p, s, f, t = optimize(
+            smallbone,
+            vhd_dataset,
+            *fit_params,
+            #                  alternative initial paramters from david's email
+            #
+            initial_parameters=None,
+            n_core=30,
+            n_iter=120,
+            delta_t=2,
+            #               g1p g6p trh t6p udg
+            weights=np.array([1, 1, 0.5, 1, 0.5]),
+            timeout=100,
+            attempt_limit=100
+        )
 
-    p, s, f, t = optimize(
-        smallbone,
-        vhd_dataset,
-        *fit_params,
-        n_core=30,
-        n_iter=120,
-        delta_t=2,
-        #               g1p g6p trh t6p udg
-        weights=np.array([1, 1, 0.5, 1, 0.5]),
-        timeout=100,
-        attempt_limit=100
-    )
-
-    traj.save(p, "p.nc")
-    traj.save(s, "s.nc")
-    traj.save(f, "f.nc")
+        traj.save(p, "p.nc")
+        traj.save(s, "s.nc")
+        traj.save(f, "f.nc")
 
 
 if __name__ == "__main__":
