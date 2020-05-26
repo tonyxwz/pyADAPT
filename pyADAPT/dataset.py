@@ -109,6 +109,9 @@ class DataSet(list):
     def begin_time(self):
         return max([s.time[0] for s in self])
 
+    def get_timepoints(self, n_ts):
+        return np.linspace(self.begin_time, self.end_time, n_ts)
+
     def interpolate(self, n_ts=100, method="Hermite") -> np.ndarray:
         """In every ADAPT iteration, this function is called once to get a new
         spline for the optimizer to fit (from t0 till the end). the length of
@@ -125,10 +128,12 @@ class DataSet(list):
         ]
         ```
         """
-        inter_p = np.zeros((len(self), n_ts, 2))  # a stands for array
-        # inter_p [0,:, 0] = np.ones(n_ts) * self
-        # v = list(self.values())
+        inter_p = np.zeros((len(self), n_ts, 2))
+        # FIXME the interps below should use `time`
+        time = self.get_timepoints(n_ts)
         for i in range(len(self)):
+            # inter_p[i, :, 0] = self[i].interp_values(n_ts=n_ts)
+            # inter_p[i, :, 1] = self[i].interp_stds(n_ts=n_ts)
             inter_p[i, :, 0] = self[i].interp_values(n_ts=n_ts)
             inter_p[i, :, 1] = self[i].interp_stds(n_ts=n_ts)
         return inter_p
@@ -142,8 +147,7 @@ class DataSet(list):
 def plot_splines(D, N, n_ts=100, axes=None, seed=0, figsize=(10, 10)):
     if axes is not None:
         # assert axes.size == len(D)
-        ncols = axes.shape[1]
-        fig = axes.flatten()[0].get_figure()
+        fig = np.array(axes).flatten()[0].get_figure()
         plt = None
     else:
         import matplotlib.pyplot as plt
@@ -158,7 +162,7 @@ def plot_splines(D, N, n_ts=100, axes=None, seed=0, figsize=(10, 10)):
     for i in range(N):
         idp = D.interpolate(n_ts=n_ts)
         for j in range(idp.shape[0]):
-            ax = axes[j // ncols, j % ncols]
+            ax = axes[j]
             state = D[j]
             t_ = state.time
             t = np.linspace(t_[0], t_[-1], n_ts)

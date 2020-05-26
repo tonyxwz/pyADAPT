@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../Scripts"
+		}
+	],
+	"settings": {
+		"python.pythonPath": "/home/weizhou/.local/share/virtualenvs/pyADAPT-p7p2vqUJ/bin/python"
+	}
+}

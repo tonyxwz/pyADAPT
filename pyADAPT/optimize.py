@@ -114,18 +114,19 @@ class Optimizer(object):
             "method": "trf",
             "lambda_r": 1,
             "odesolver": "RK45",
-            "sseThres": 1000,
+            "sseThres": 1000,  # for natal's init method
             "ss_time": 1000,
             "R": default_regularization,
             "interpolation": "Hermite",
-            "verbose": ITER,
+            "verbose": ITER,  # deprecated, use loglevel
             "loglevel": logging.DEBUG,
             "init_method": None,  # pascal, natal are options
             "delta_t": 0.1,
             "n_core": mp.cpu_count(),
             "n_iter": 5,
             "seed": 1,
-            "weights": np.ones(len(self.dataset)),  # TODO weight of the errors
+            "initial_parameters": None,  # TODO give alternatives to the model parameter['init']
+            "weights": np.ones(len(self.dataset)),
             "timeout": 100,  # seconds
             "attempt_limit": 100,
         }
@@ -211,6 +212,10 @@ class Optimizer(object):
         logger.info("optimize started")
         logger.info("n_ts:%d", self.options["n_ts"])
         logger.info("n_iter:%d", self.options["n_iter"])
+
+        if self.options["initial_parameters"] is not None:
+            self.parameters.loc[:, "init"] = self.options["initial_parameters"]
+
         self.parameter_trajectories_list = []
         self.state_trajectories_list = []
         self.flux_trajectories_list = []
@@ -242,7 +247,7 @@ class Optimizer(object):
                 self.flux_trajectories_list.append(vtraj)
 
         else:
-            # TODO just drop the support for single processing, it would be much easier
+            # TODO drop the support for single processing
             for i_iter in range(self.options["n_iter"]):
                 ptraj, straj, vtraj = self.fit_iteration(i_iter=i_iter, parallel=False)
                 self.parameter_trajectories_list.append(ptraj)
@@ -314,7 +319,7 @@ class Optimizer(object):
             logger.addHandler(qh)
 
         #! reseed the random generator of subprocess
-        # TODO change 200 to the max attempt numbers
+        # maybe a better way to guaranttee unique seed per process
         np.random.seed(self.options["seed"] + i_iter * 200)
         # logger.info("reseeded rng")
 
@@ -359,6 +364,9 @@ class Optimizer(object):
 
         return (self.parameter_trajectory, self.state_trajectory, self.flux_trajectory)
 
+    def initialize_trajectories(self, i_iter, splines):
+        pass
+
     def init_ts0(self, i_iter, splines):
         """ time step 0 is handled differently because there's no previous
         time step information at this moment
@@ -370,8 +378,9 @@ class Optimizer(object):
         """
         logger = logging.getLogger("optim.iter.init")
         with TimeOut(self.options["timeout"], "0") as timeout:
+            # splines: |observable states | observable fluxes|
             self.state_trajectory[0, self.state_mask] = splines[
-                : len(self.model.state_order), 0, 0
+                : sum(self.state_mask), 0, 0
             ]
             for i, observable in enumerate(self.state_mask):
                 if not observable:
@@ -380,10 +389,12 @@ class Optimizer(object):
                     )
 
             # This is risky but according 3-σ principle, this is "almost" always safe
+            # TODO change the way parameters are initialized (see onenote)
             param_init = np.random.normal(
                 self.parameters["init"], self.parameters["init"] * 0.2
             )
-
+            # need to update both because the calculation uses the dataframe while
+            # returning trajectory needs the ndarray
             self.parameter_trajectory[0, :] = param_init
             self.parameters.loc[:, "value"] = param_init
 
