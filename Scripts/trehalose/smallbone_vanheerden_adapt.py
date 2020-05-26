@@ -36,7 +36,8 @@ def main():
             #               g1p g6p trh t6p udg
             weights=np.array([1, 1, 0.5, 1, 0.5]),
             timeout=100,
-            attempt_limit=100
+            attempt_limit=100,
+            lambda_r=10
         )
         traj.save(p, "p.nc")
         traj.save(s, "s.nc")
