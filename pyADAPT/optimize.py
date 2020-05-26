@@ -214,7 +214,7 @@ class Optimizer(object):
         logger.info("n_iter:%d", self.options["n_iter"])
 
         if self.options["initial_parameters"] is not None:
-            self.parameters.loc["init"] = self.options["initial_parameters"]
+            self.parameters.loc[:, "init"] = self.options["initial_parameters"]
 
         self.parameter_trajectories_list = []
         self.state_trajectories_list = []
