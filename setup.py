@@ -36,6 +36,7 @@ REQUIRED = [
     "pyyaml",
     "cached-property",
     "jinja2",
+    "libroadrunner",
 ]
 
 # What packages are optional?
