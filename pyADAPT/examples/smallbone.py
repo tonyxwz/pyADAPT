@@ -4,6 +4,7 @@ import numpy as np
 
 class Smallbone2011(BaseModel):
     def __init__(self):
+        # TODO add initial parametrs in __init__()
         self.name = "Smallbone_Trehalose_Model"
         self.description = "Trehalose cycle"
         self.add_parameter("cell", 1.00000, False, 0.0, np.inf)
@@ -87,6 +88,7 @@ class Smallbone2011(BaseModel):
 
         super().__init__(
             state_order=["glc", "g1p", "g6p", "trh", "t6p", "udg"],
+            # from smallbone model xml
             initial_states=[0.09675, 0.1, 2.675, 0.05, 0.02, 0.7],
             flux_order=["pgi", "hxt", "hxk", "pgm", "tpp", "tps", "nth", "ugp"],
         )
@@ -305,4 +307,3 @@ if __name__ == "__main__":
         init_method=None,
         verbose=2,
     )
-

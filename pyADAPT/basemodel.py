@@ -40,6 +40,7 @@ class BaseModel(metaclass=ABCMeta):
     One should inherit from this class and extend the constructor method and the
     `ode` method to specify the structure of the model
     """
+
     def __new__(cls, *args, **kwargs):
         instance = super().__new__(cls)
         instance.name = "Base Model"
@@ -51,11 +52,9 @@ class BaseModel(metaclass=ABCMeta):
         # instance.mat = np.ndarray()  # stoichiometry matrix
         return instance
 
-    def __init__(self,
-                 state_order=[],
-                 initial_states=[],
-                 flux_order=[],
-                 input_order=[]):
+    def __init__(
+        self, state_order=[], initial_states=[], flux_order=[], input_order=[]
+    ):
         self.name: str
         self.notes: str
         self.map: dict
@@ -115,15 +114,16 @@ class BaseModel(metaclass=ABCMeta):
         return " ".join([super().__repr__(), self.name])
 
     def compute_states(
-            self,
-            new_params=[],  # parameters that need to be optimized
-            time_points=None,  # the time span of the computation
-            x0=None,  # the states at the first time point
-            new_param_names=[],  # the parameter's names, in the same order
-            method="RK45",  # odesolver, only RK45/RK23/DOP853 since no jacobians
-            rtol=1e-3,  # relative tolerance
-            atol=1e-6,  # absolute tolerance
-            **solver_options):
+        self,
+        new_params=[],  # parameters that need to be optimized
+        time_points=None,  # the time span of the computation
+        x0=None,  # the states at the first time point
+        new_param_names=[],  # the parameter's names, in the same order
+        odesolver="RK45",  # odesolver
+        rtol=1e-3,  # relative tolerance
+        atol=1e-6,  # absolute tolerance
+        **solver_options
+    ):
         # integrate state_ode to get state values
         if new_param_names:
             self.parameters.loc[new_param_names, "value"] = new_params
@@ -135,11 +135,12 @@ class BaseModel(metaclass=ABCMeta):
             lambda t, x: self.state_ode(t, x, self.parameters["value"]),
             t_span,
             x0,
-            method=method,
+            method=odesolver,
             t_eval=time_points,
             rtol=rtol,
             atol=atol,
-            **solver_options)
+            **solver_options
+        )
 
         return sol.y
 
@@ -156,8 +157,7 @@ class BaseModel(metaclass=ABCMeta):
         #     params = self.init_vary
         for k, v in p.items():
             if v.vary:  # values of dict observables is boolean
-                v.value = p[k] * np.power(10, (
-                    (smax - smin) * np.random.rand() + smin))
+                v.value = p[k] * np.power(10, ((smax - smin) * np.random.rand() + smin))
         return p
 
     def sync_from_optimizer(self, optimizer):

@@ -111,7 +111,7 @@ class Optimizer(object):
         self.parameter_names = list(parameter_names)
         self.parameters: pd.DataFrame = self.model.parameters.loc[self.parameter_names]
         self.options = {
-            "method": "trf",
+            "optimizer": "trf",
             "lambda_r": 1,
             "odesolver": "RK45",
             "sseThres": 1000,  # for natal's init method
@@ -364,9 +364,6 @@ class Optimizer(object):
 
         return (self.parameter_trajectory, self.state_trajectory, self.flux_trajectory)
 
-    def initialize_trajectories(self, i_iter, splines):
-        pass
-
     def init_ts0(self, i_iter, splines):
         """ time step 0 is handled differently because there's no previous
         time step information at this moment
@@ -405,6 +402,31 @@ class Optimizer(object):
                 )
             logger.debug("init iter %d", i_iter)
 
+    def initialize_trajectories(self, i_iter, splines):
+        """optimize t0obj
+        """
+
+    def t0obj(self):
+        """objective function for:
+        1. minimize the errors between sampled states and the steady states of the model
+        2. pushing fluxes to 0 (steady states)
+
+        there are two proposed ways to do this:
+        1. initial value problem.
+        (might not guarantee the steady states are connecting the splines)
+            1. solve the ODE on interval [-(ss_time+1), -1] -> sol
+            2. get sol.y at t = -1
+            3. calculate the fluxes at -1
+            4. return residuals
+        2. boundary value problem
+        (looks promising but I haven't learned to use the API, and it doesn't guarantee
+         solution existance, at least analytically)
+            solve_ivp on [-(sstime+1), -1]
+                left boundary: f(-sstime) = A
+                right boundary: f(-1) = B,
+                                f'(-1) = 0 (fluxes)
+        """
+
     def pascal_init(self, i_iter, data):
         """ The initial parameters and states finding method inspired by
         Pascal van Beek's master thesis in 2018:
@@ -431,7 +453,7 @@ class Optimizer(object):
                 self.objective_function,
                 params,
                 bounds=(self.parameters["lb"], self.parameters["ub"]),
-                method=self.options["method"],
+                method=self.options["optimizer"],
                 kwargs={
                     "begin_states": data[:, i_ts, 0],
                     "interp_data": data[:, i_ts, :],
@@ -472,7 +494,7 @@ class Optimizer(object):
                     "i_ts": i_ts,
                 },
                 bounds=(self.parameters["lb"], self.parameters["ub"]),
-                method=self.options["method"],
+                method=self.options["optimizer"],
                 **lsq_options,
             )
         # calculate the states and fluxes at the end of the time step using the
@@ -482,6 +504,7 @@ class Optimizer(object):
             time_points=time_span,
             x0=begin_states,
             new_param_names=self.parameter_names,
+            odesolver=self.options["odesolver"],
         )[:, -1]
         if self.model.flux_order:
             final_fluxes = self.model.fluxes(
@@ -544,6 +567,7 @@ class Optimizer(object):
             time_points=time_span,
             x0=begin_states,
             new_param_names=self.parameter_names,
+            odesolver=self.options["odesolver"],
         )
         end_states = end_states[:, -1]
         if len(self.model.flux_order):
@@ -619,6 +643,7 @@ if __name__ == "__main__":
         "k1",
         n_iter=10,
         delta_t=0.2,
+        odesolver="LSODA",
         n_core=4,
         verbose=ITER,
         weights=np.array([1, 0.1, 1, 0.5]),
@@ -628,6 +653,6 @@ if __name__ == "__main__":
     traj.plot(ptraj, axes=axes, color="green", alpha=0.2)
     traj.plot_mean(ptraj, axes=axes, color="red")
 
-    # plt.show()
-    fig.savefig("toy.pdf")
-    fig.savefig("toy.png")
+    # # plt.show()
+    # fig.savefig("toy.pdf")
+    # fig.savefig("toy.png")
