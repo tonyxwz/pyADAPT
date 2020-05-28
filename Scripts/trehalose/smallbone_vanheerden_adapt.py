@@ -12,6 +12,7 @@ import platform
 from mat4py import loadmat
 import os
 import time
+import sys
 
 
 def main():
@@ -23,6 +24,8 @@ def main():
     )
     time_stamp = time.strftime("%Y-%m-%d_%H.%M.%S", time.localtime())
     new_params = loadmat(matpath)["p"]
+    if len(sys.argv) > 1:
+        prefix = sys.argv[1]
     syn = {
         "GLT_KeqGLT": None,
         "GLT_KmGLC": "hxt_Kglc",
@@ -85,9 +88,9 @@ def main():
             lambda_r=10,
             odesolver="Radau",
         )
-        traj.save(p, f"p-{time_stamp}.nc")
-        traj.save(s, f"s-{time_stamp}.nc")
-        traj.save(f, f"f-{time_stamp}.nc")
+        traj.save(p, f"p_{prefix}_{time_stamp}.nc")
+        traj.save(s, f"s_{prefix}_{time_stamp}.nc")
+        traj.save(f, f"f_{prefix}_{time_stamp}.nc")
     else:
         optim = Optimizer(
             model=smallbone, dataset=vhd_dataset, parameter_names=fit_params
