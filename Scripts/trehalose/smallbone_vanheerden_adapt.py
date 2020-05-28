@@ -11,6 +11,7 @@ import numpy as np
 import platform
 from mat4py import loadmat
 import os
+import time
 
 
 def main():
@@ -20,6 +21,7 @@ def main():
         os.pardir,
         r"data/trehalose/parametersDavid.mat",
     )
+    time_stamp = time.strftime("%Y-%m-%d_%H.%M.%S", time.localtime())
     new_params = loadmat(matpath)["p"]
     syn = {
         "GLT_KeqGLT": None,
@@ -81,11 +83,11 @@ def main():
             timeout=100,
             attempt_limit=100,
             lambda_r=10,
-            odesolver="Radau"
+            odesolver="Radau",
         )
-        traj.save(p, "p.nc")
-        traj.save(s, "s.nc")
-        traj.save(f, "f.nc")
+        traj.save(p, f"p-{time_stamp}.nc")
+        traj.save(s, f"s-{time_stamp}.nc")
+        traj.save(f, f"f-{time_stamp}.nc")
     else:
         optim = Optimizer(
             model=smallbone, dataset=vhd_dataset, parameter_names=fit_params
