@@ -48,19 +48,21 @@ def whosefault(log_path):
 
             # fixme: if an iter misses one record and not finished
             # if np.all(row[pos[-1]+1:] == 0):
-            reg2 = re.compile(
+            when = re.search(
                 r"(?P<date>\d*-\d*-\d*)\s*(?P<time>\d*:\d*:\d*,\d*).*"
                 + r"\s+(?P<pid>\d+)\s+"
                 + r"iter:\s*"
                 + str(iter)
                 + r"\s*,\s*ts:\s*"
-                + str(pos)
+                + str(pos),
+                logstr,
             )
-            when = reg2.search(logstr)
+            # when = reg2.search(logstr)
             if when is None:
                 # if iter is not run yet
                 continue
             # iteration () dies at timestep ()
+            # FIXME: row[0] is containing attempt_limit+1
             print(
                 f"{iter}\t{pos}\t{when['pid']}\t{row[0]}\t{when['date']} {when['time']}"
             )
