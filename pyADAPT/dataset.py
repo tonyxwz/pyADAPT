@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 
 from pyADAPT.spline import State, Flux
 from pyADAPT.io import read_data_raw, read_data_specs
+from pyADAPT.visualize import check_axes_single
 
 
 class DataSet(list):
@@ -27,13 +28,19 @@ class DataSet(list):
     """
 
     def __init__(
-        self, raw_data_path="", data_specs_path="", raw_data={}, data_specs={}, name=""
+        self,
+        raw_data_path="",
+        data_specs_path="",
+        raw_data={},
+        data_specs={},
+        name="",
+        padding=True,
     ):
         """
-        raw_data: phenotypes organized into a dictionary
-
-        data_info: instructions of the data, such as which time variable
+        - raw_data: phenotypes organized into a dictionary
+        - data_info: instructions of the data, such as which time variable
             should be used for which state.
+        - padding: padding before t0, default no padding (trust the data)
         """
         self.data_specs = data_specs if data_specs else read_data_specs(data_specs_path)
 
@@ -44,13 +51,8 @@ class DataSet(list):
             if raw_data
             else read_data_raw(raw_data_path, group=self.name)
         )
-
-        self.structure = {}
-
-        assert "structure" in self.data_specs
-
-        for k, v in self.data_specs.items():
-            self.__setattr__(k, v)
+        self.padding = padding
+        self.structure = self.data_specs["structure"]
 
         for k, v in self.structure.items():
             time = self.raw_data[v["time"]]
@@ -78,6 +80,7 @@ class DataSet(list):
                 means=means,
                 stds=stds,
                 unit=unit,
+                padding=self.padding,  # propagate to States
             )
 
             self.append(s)
@@ -108,26 +111,22 @@ class DataSet(list):
 
     @property
     def begin_time(self):
+        # FIXME assert that all the first knot of all the splines are the same
         return max([s.time[0] for s in self])
 
     def get_timepoints(self, n_ts):
         return np.linspace(self.begin_time, self.end_time, n_ts)
 
-    def interpolate(self, n_ts=100, method="Hermite") -> np.ndarray:
+    def interpolate(self, n_ts=100, method="pchip") -> np.ndarray:
         """In every ADAPT iteration, this function is called once to get a new
         spline for the optimizer to fit (from t0 till the end). the length of
         the list of the splines should equal the number of states in the data.
 
+        only supporting pchip interpolator now because it preserves monotonicity
+        # TODO how to guarantee f'(t0) = 0; t0 != time[0]
         return
         ------
         numpy.ndarray in the same order as `self`
-        ```
-        [
-            [value, std],,z
-            ......,
-            [value, std]
-        ]
-        ```
         """
         inter_p = np.zeros((len(self), n_ts, 2))
         # FIXME the interps below should use `time`
@@ -135,14 +134,17 @@ class DataSet(list):
         for i in range(len(self)):
             # inter_p[i, :, 0] = self[i].interp_values(n_ts=n_ts)
             # inter_p[i, :, 1] = self[i].interp_stds(n_ts=n_ts)
-            inter_p[i, :, 0] = self[i].interp_values(n_ts=n_ts)
-            inter_p[i, :, 1] = self[i].interp_stds(n_ts=n_ts)
+            inter_p[i, :, 0] = self[i].value_spline(time)
+            inter_p[i, :, 1] = self[i].std_spline(time)
         return inter_p
 
     def __getitem__(self, index):
         if type(index) is str:
             index = self.names.index(index)
         return super().__getitem__(index)
+
+    def plot(self, nsamples, n_ts, axes):
+        pass
 
 
 def plot_splines(D, N, n_ts=100, axes=None, seed=0, figsize=(10, 10)):
@@ -184,11 +186,11 @@ def get_cols(N, ratio=1):
 
 if __name__ == "__main__":
     from pprint import pprint, pformat
-    import matplotlib.pyplot as plt
 
     D = DataSet(
-        raw_data_path="data/toyModel/toyData.mat",
-        data_specs_path="data/toyModel/toyData.yaml",
+        raw_data_path="../data/toyModel/toyData.mat",
+        data_specs_path="../data/toyModel/toyData.yaml",
+        padding=True,
     )
 
     idp = D.interpolate(n_ts=10)
@@ -201,14 +203,5 @@ if __name__ == "__main__":
     # all for stds
     pprint(idp[:, :, 1])
 
-    n_interp = 100
-    n_ts = 200
-    fig0, axes0 = plt.subplots(2, 2, figsize=(8, 8))
-    plot_splines(D, n_interp, n_ts, axes=axes0)
-
     order = ["s2", "s4", "s1", "s3"]
     D.align(order)
-    idp = D.interpolate(n_ts=10)
-    fig1, axes1 = plt.subplots(2, 2, figsize=(8, 8))
-    plot_splines(D, n_interp, n_ts, axes=axes1)
-    plt.show()
