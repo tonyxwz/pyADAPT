@@ -7,6 +7,7 @@ import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from functools import wraps
 
 
 class Trajectory(dict):
@@ -28,7 +29,7 @@ def latexify(s):
     return "$" + s[1] + "_{" + s[0] + "}" + "$"
 
 
-def check_axes(func):
+def check_axes_traj(func):
     # `@` to create a axes is not given
     def wrapper(traj: xr.DataArray, axes=None, **kw):
         if axes is None:
@@ -45,6 +46,17 @@ def check_axes(func):
     return wrapper
 
 
+def check_axes_single(func):
+    @wraps(func)
+    def wrapper(*args, axes=None, **kw):
+        if axes is None:
+            _fig, axes = plt.subplot()
+        func(*args, axes=axes, **kw)
+        return axes
+
+    return wrapper
+
+
 def mean(traj: xr.DataArray):
     return traj.mean(dim="iter")
 
@@ -53,7 +65,7 @@ def time_points(traj):
     return traj.coords["time"].data
 
 
-@check_axes
+@check_axes_traj
 def plot_mean(traj: xr.DataArray, axes=None, **plot_options):
     axes = np.asarray(axes).flatten()
     assert len(axes) == len(traj.coords["id"])
@@ -85,7 +97,7 @@ def to_matrix(tr: xr.DataArray, size=(50, 50)):
     return heatmap
 
 
-@check_axes
+@check_axes_traj
 def plot_heatmap(
     traj: xr.DataArray,
     size=(50, 50),
@@ -99,7 +111,7 @@ def plot_heatmap(
         axes[i].imshow(to_matrix(tr, size=size).T, origin="lower", cmap=cmap)
 
 
-@check_axes
+@check_axes_traj
 def plot_3d(traj: xr.DataArray, axes=None, **plot_options):
     if axes is None:
         fig = plt.figure()
@@ -108,25 +120,8 @@ def plot_3d(traj: xr.DataArray, axes=None, **plot_options):
     axes.plot_surface()
 
 
-@check_axes
+@check_axes_traj
 def plot(traj: xr.DataArray, axes=None, **plot_options):
     for j, p in enumerate(traj.coords["id"]):
         for i_iter in traj.coords["iter"]:
             axes[j].plot(time_points(traj), traj.loc[i_iter, :, p], **plot_options)
-
-
-def save(traj, path):
-    traj.to_netcdf(path)
-
-
-def load(path):
-    return xr.open_dataarray(path)
-
-
-if __name__ == "__main__":
-    ptraj = load(r"C:\Users\tonyx\source\pyADAPT\notebooks\ptraj.nc")
-    straj = load(r"C:\Users\tonyx\source\pyADAPT\notebooks\straj.nc")
-    vtraj = load(r"C:\Users\tonyx\source\pyADAPT\notebooks\vtraj.nc")
-    fig, axes = plt.subplots(2, 2, figsize=(10, 10))
-    t = plot_heatmap(straj, axes=axes)
-    plt.show()
