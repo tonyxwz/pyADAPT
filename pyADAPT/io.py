@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """ It's not possible to standardize the data flow from disk to memory.
 At least the process after the data is loaded should be standardize into using
-numpy and python dictionaries only. 
+numpy and python dictionaries only.
 """
 import numpy as np
-from yaml import load, dump
+import yaml
+import xarray as xr
 
 try:
     from yaml import CLoader as Loader, CDumper as Dumper
@@ -21,7 +22,7 @@ def read_data_specs(path_str):
     with open(path_str, "r") as f:
         ext = path_str.split(".")[-1]
         if ext == "yaml":
-            info = load(f, Loader=Loader)
+            info = yaml.load(f, Loader=Loader)
         elif ext == "json":
             info = json.load(f)
     return info
@@ -63,6 +64,14 @@ def read_mat(matpath=""):
 def save_npy(data):
     # np.save is simple enough; no need for this function
     pass
+
+
+def save_traj(traj, path):
+    traj.to_netcdf(path)
+
+
+def load_traj(path):
+    return xr.open_dataarray(path)
 
 
 if __name__ == "__main__":

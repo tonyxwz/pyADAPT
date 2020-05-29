@@ -655,4 +655,4 @@ if __name__ == "__main__":
 
     # # plt.show()
     # fig.savefig("toy.pdf")
-    # fig.savefig("toy.png")
+    fig.savefig("test_optimize.png")

@@ -2,17 +2,21 @@
 """
 actually run the Smallbone model on van Heerden's dataset
 """
+import os
+import platform
+import sys
+import time
+
+import numpy as np
+from mat4py import loadmat
+
+import pyADAPT.visualize as vis
+
 # %%
 from pyADAPT.examples import Smallbone2011
-from pyADAPT.optimize import Optimizer, ITER, optimize
-from van_heerden_preprocess import vhd_dataset
-import pyADAPT.visualize as vis
-import numpy as np
-import platform
-from mat4py import loadmat
-import os
-import time
-import sys
+from pyADAPT.optimize import ITER, Optimizer, optimize
+from pyADAPT.io import load_traj, save_traj
+from van_heerden_preprocess import vhd
 
 
 def main():
@@ -69,8 +73,9 @@ def main():
             fit_params.append(id)
     print(fit_params)
 
+    vhd_dataset = vhd(padding=True)
     if "compute" in platform.node():
-        p, s, f, t = optimize(
+        p, s, f, _t = optimize(
             smallbone,
             vhd_dataset,
             *fit_params,
@@ -88,9 +93,9 @@ def main():
             lambda_r=10,
             odesolver="Radau",
         )
-        traj.save(p, f"p_{prefix}_{time_stamp}.nc")
-        traj.save(s, f"s_{prefix}_{time_stamp}.nc")
-        traj.save(f, f"f_{prefix}_{time_stamp}.nc")
+        save_traj(p, f"p_{prefix}_{time_stamp}.nc")
+        save_traj(s, f"s_{prefix}_{time_stamp}.nc")
+        save_traj(f, f"f_{prefix}_{time_stamp}.nc")
     else:
         optim = Optimizer(
             model=smallbone, dataset=vhd_dataset, parameter_names=fit_params

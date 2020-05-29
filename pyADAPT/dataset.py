@@ -148,7 +148,7 @@ class DataSet(list):
 
 
 def plot_splines(D, N, n_ts=100, axes=None, seed=0, figsize=(10, 10)):
-    # TODO remove
+    # FIXME
     if axes is not None:
         # assert axes.size == len(D)
         fig = np.array(axes).flatten()[0].get_figure()
@@ -171,7 +171,7 @@ def plot_splines(D, N, n_ts=100, axes=None, seed=0, figsize=(10, 10)):
             t_ = state.time
             t = np.linspace(t_[0], t_[-1], n_ts)
             ax.plot(t, idp[j, :, 0], color="red", alpha=0.15)
-            state.plot_samples(ax)
+            state.plot_sample(ax)
 
             if not ax.title.get_label():
                 state.errorbar(ax)
