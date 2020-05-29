@@ -15,10 +15,11 @@ class ToyModel(BaseModel):
         self.add_parameter(name="k5", value=1, vary=False, lb=0)
 
         super().__init__(
-            state_order=['s1', 's2', 's3', 's4'],
+            state_order=["s1", "s2", "s3", "s4"],
             #  init_states=[],
-            flux_order=['v1', 'v2', 'v3', 'v4', 'v5', 'v6'],
-            input_order=['u1', 'u2'])
+            flux_order=["v1", "v2", "v3", "v4", "v5", "v6"],
+            input_order=["u1", "u2"],
+        )
 
     def state_ode(self, t, x, p):
         """ODE function of the toy model
@@ -41,13 +42,13 @@ class ToyModel(BaseModel):
         u = self.inputs(t)
         # also possible if don't mind the "no-member" lint error
         # u1 = u[self.u1]
-        u1 = u[self['u1']]
-        u2 = u[self['u2']]
+        u1 = u[self["u1"]]
+        u2 = u[self["u2"]]
 
-        s1 = x[self['s1']]
-        s2 = x[self['s2']]
-        s3 = x[self['s3']]
-        s4 = x[self['s4']]
+        s1 = x[self["s1"]]
+        s2 = x[self["s2"]]
+        s3 = x[self["s3"]]
+        s4 = x[self["s4"]]
 
         k1 = p["k1"]
         k2 = p["k2"]
@@ -74,7 +75,7 @@ if __name__ == "__main__":
     import os
     from pyADAPT.dataset import DataSet
     from pyADAPT.optimize import optimize
-    import pyADAPT.trajectory as traj
+    import pyADAPT.visualize as vis
 
     model = ToyModel()
     data = DataSet(
@@ -82,9 +83,6 @@ if __name__ == "__main__":
         data_specs_path="data/toyModel/toyData.yaml",
     )
 
-    ptraj, straj, vtraj, time = optimize(model,
-                                         data,
-                                         "k1",
-                                         n_iter=4,
-                                         delta_t=0.2,
-                                         n_core=1)
+    ptraj, straj, vtraj, time = optimize(
+        model, data, "k1", n_iter=4, delta_t=0.2, n_core=1
+    )

@@ -10,6 +10,7 @@ Current, xarray/pandas and pickle seems promising
 import pickle
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 from pyADAPT.spline import State, Flux
 from pyADAPT.io import read_data_raw, read_data_specs
@@ -145,6 +146,7 @@ class DataSet(list):
 
 
 def plot_splines(D, N, n_ts=100, axes=None, seed=0, figsize=(10, 10)):
+    # TODO remove
     if axes is not None:
         # assert axes.size == len(D)
         fig = np.array(axes).flatten()[0].get_figure()

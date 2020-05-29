@@ -6,7 +6,7 @@ actually run the Smallbone model on van Heerden's dataset
 from pyADAPT.examples import Smallbone2011
 from pyADAPT.optimize import Optimizer, ITER, optimize
 from van_heerden_preprocess import vhd_dataset
-import pyADAPT.trajectory as traj
+import pyADAPT.visualize as vis
 import numpy as np
 import platform
 from mat4py import loadmat
@@ -26,7 +26,7 @@ def main():
     new_params = loadmat(matpath)["p"]
     if len(sys.argv) > 1:
         prefix = sys.argv[1]
-    syn = {
+    rename_map = {
         "GLT_KeqGLT": None,
         "GLT_KmGLC": "hxt_Kglc",
         "GLT_VmGLT": "hxt_Vmax",

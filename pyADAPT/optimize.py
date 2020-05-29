@@ -282,7 +282,7 @@ class Optimizer(object):
             ],
             name="flux trajectories",
         )
-        logger.info("optimizer ended")
+        logger.info("optimizer quit successfully")
         return (
             self.parameter_trajectories,
             self.state_trajectories,
@@ -627,7 +627,7 @@ if __name__ == "__main__":
     from pyADAPT.examples.lotka import LotkaVolterra
     from pyADAPT.examples.toy import ToyModel
     from pyADAPT.dataset import DataSet
-    import pyADAPT.trajectory as traj
+    import pyADAPT.visualize as vis
     import matplotlib.pyplot as plt
 
     plt.style.use(["science", "grid"])
@@ -650,8 +650,8 @@ if __name__ == "__main__":
     )
 
     fig, axes = plt.subplots(figsize=(10, 8))
-    traj.plot(ptraj, axes=axes, color="green", alpha=0.2)
-    traj.plot_mean(ptraj, axes=axes, color="red")
+    vis.plot(ptraj, axes=axes, color="green", alpha=0.2)
+    vis.plot_mean(ptraj, axes=axes, color="red")
 
     # # plt.show()
     # fig.savefig("toy.pdf")

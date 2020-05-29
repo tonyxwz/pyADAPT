@@ -3,14 +3,14 @@
 #%% success iters
 import numpy as np
 
-i = np.loadtxt("success-iters")
+i = np.loadtxt("success-iters2")
 print(i)
 # %%
-import pyADAPT.trajectory as traj
+import pyADAPT.visualize as vis
 
-s = traj.load("s_5-22_smallbone.nc")
-f = traj.load("f_5-22_smallbone.nc")
-p = traj.load("p_5-22_smallbone.nc")
+s = traj.load("s_sbml-params_2020-05-28_19.44.30.nc")
+f = traj.load("f_sbml-params_2020-05-28_19.44.30.nc")
+p = traj.load("p_sbml-params_2020-05-28_19.44.30.nc")
 
 # %%
 s = s.sel(iter=i)
@@ -22,10 +22,10 @@ import matplotlib.pyplot as plt
 
 plt.style.use(["science", "grid"])
 fig, axes = plt.subplots(2, 4, figsize=(9, 5))
-traj.plot(p, axes=axes, color="blue", alpha=0.2)
-traj.plot_mean(p, axes=axes, color="red")
+vis.plot(p, axes=axes, color="blue", alpha=0.2)
+vis.plot_mean(p, axes=axes, color="red")
 fig.tight_layout()
-fig.savefig("p_success.png", dpi=200)
+fig.savefig("p_success2.png", dpi=200)
 
 # %%
 # fig2 = plt.figure(figsize=(9, 5))
@@ -36,18 +36,18 @@ fig.savefig("p_success.png", dpi=200)
 # ax5 = plt.subplot2grid((2, 6), (1, 3), colspan=2)
 # axes2 = np.asarray([ax1, ax2, ax3, ax4, ax5])
 fig2, axes2 = plt.subplots(2, 3, figsize=(9, 5))
-traj.plot(s, axes=axes2, color="blue", alpha=0.2)
-traj.plot_mean(s, axes=axes2, color="red")
+vis.plot(s, axes=axes2, color="blue", alpha=0.2)
+vis.plot_mean(s, axes=axes2, color="red")
 fig2.tight_layout()
-fig2.savefig("s_success.png", dpi=200)
+fig2.savefig("s_success2.png", dpi=200)
 
 
 # %%
 fig3, axes3 = plt.subplots(2, 4, figsize=(9, 5))
-traj.plot(f, axes=axes3, color="blue", alpha=0.2)
-traj.plot_mean(f, axes=axes3, color="red")
+vis.plot(f, axes=axes3, color="blue", alpha=0.2)
+vis.plot_mean(f, axes=axes3, color="red")
 fig3.tight_layout()
-fig3.savefig("f_success.png", dpi=200)
+fig3.savefig("f_success2.png", dpi=200)
 
 
 # %%

@@ -43,6 +43,7 @@ __all__ = ["vhd_dataset"]
 
 
 def moving_average(data_set, periods=3):
+    # ? preprocess the
     weights = np.ones(periods) / periods
     return np.convolve(data_set, weights, mode="valid")
 
@@ -74,15 +75,8 @@ time_fluxes = np.squeeze(np.array(vanHeerden["data"]["time_fluxes"]))
 totP = np.squeeze(np.array(vanHeerden["data"]["totP"]))
 time_totP = np.squeeze(np.array(vanHeerden["data"]["time_totP"]))
 
-# only use states, drop the fluxes
 
 # meta_std = meta * np.random.random_sample(meta.shape) * 0.05
-# print(len(legenda_meta))
-# print(legenda_meta)
-# print(time_meta)
-# print(len(meta))
-# print(len(meta_std))
-
 meta_std = meta * 0.02
 # create fake standard deviations
 raw_meta = dict()
@@ -120,7 +114,7 @@ for i, s in enumerate(legenda_meta):
 meta_specs["structure"] = meta_struct
 raw_meta["vhd"] = raw_meta
 vhd_dataset = DataSet(name="vhd", raw_data=raw_meta, data_specs=meta_specs)
-
+vhd_dataset.align(["glc", "g1p", "g6p", "trh", "t6p", "udg"])
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
@@ -128,11 +122,11 @@ if __name__ == "__main__":
     plt.style.use(["science", "grid"])
     fig: plt.Figure = plt.figure(figsize=(9, 6))
     gs = fig.add_gridspec(2, 6)
-    fig.add_subplot(gs[0, 0:2])
-    fig.add_subplot(gs[0, 2:4])
-    fig.add_subplot(gs[0, 4:6])
-    fig.add_subplot(gs[1, 1:3])
-    fig.add_subplot(gs[1, 3:5])
+    fig.add_subplot(gs[0, 1:3])
+    fig.add_subplot(gs[0, 3:5])
+    fig.add_subplot(gs[1, 0:2])
+    fig.add_subplot(gs[1, 2:4])
+    fig.add_subplot(gs[1, 4:6])
     axes = fig.get_axes()
     # axes = np.array([ax1, ax2, ax3, ax4, ax5])
     plot_splines(vhd_dataset, 100, 100, axes=fig.axes)

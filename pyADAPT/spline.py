@@ -2,7 +2,7 @@
 import numpy as np
 from scipy.interpolate import PchipInterpolator, CubicHermiteSpline, CubicSpline
 from cached_property import cached_property
-
+import matplotlib.pyplot as plt
 from pyADAPT.sampling import NormalDist
 
 __all__ = ["Spline", "State", "Flux"]
@@ -100,13 +100,14 @@ class Spline(list):
         """ random sample of all the data points as an array """
         return np.asarray([d.sample() for d in self])
 
+    def plot_mean(self, axes=None):
+
+
     def errorbar(self, axes=None):
         # TODO organize not only this, but also other plotting functions
         if axes is None:
-            import matplotlib.pyplot as plt
-
             plt.style.use("ggplot")
-            _, axes = plt.subplots()
+            fig, axes = plt.subplots()
         else:
             plt = None
 
@@ -128,14 +129,11 @@ class Spline(list):
 
     def plot_samples(self, axes=None):
         if axes is None:
-            import matplotlib.pyplot as plt
-
             plt.style.use("ggplot")
-            _, axes = plt.subplots()
+            fig, axes = plt.subplots()
         else:
             plt = None
         axes.plot(self.time, self.last_sampled, ".g", alpha=0.5, markersize=5)
-
         return axes
 
 
