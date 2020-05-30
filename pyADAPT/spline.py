@@ -7,7 +7,7 @@ from scipy.interpolate import CubicHermiteSpline, CubicSpline, PchipInterpolator
 from pyADAPT.sampling import NormalDist
 from pyADAPT.visualize import check_axes_single
 
-__all__ = ["Spline", "State", "Flux"]
+__all__ = ["DataLine", "State", "Flux"]
 
 
 class DataLine(list):
