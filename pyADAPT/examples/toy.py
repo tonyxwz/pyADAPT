@@ -16,7 +16,12 @@ class ToyModel(BaseModel):
 
         super().__init__(
             state_order=["s1", "s2", "s3", "s4"],
-            #  init_states=[],
+            initial_states=[
+                0.7816040810002559,
+                0.12261792269520326,
+                0.4933864895926286,
+                0.4329020930954989,
+            ],
             flux_order=["v1", "v2", "v3", "v4", "v5", "v6"],
             input_order=["u1", "u2"],
         )
