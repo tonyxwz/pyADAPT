@@ -97,6 +97,10 @@ class BaseModel(metaclass=ABCMeta):
         for p in l:
             self.add_parameter(**p)
 
+    @property
+    def has_flux(self):
+        return len(self.flux_order) > 0
+
     @abstractmethod
     def state_ode(self, t, x, p):
         """ t: time, x: state at t, p: parameters, u: constant
@@ -128,9 +132,8 @@ class BaseModel(metaclass=ABCMeta):
         if new_param_names:
             self.parameters.loc[new_param_names, "value"] = new_params
 
+        # t_span = np.linspace(time_points[0], time_points[-1], 1000)
         t_span = [time_points[0], time_points[-1]]
-
-        # https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html
         sol = solve_ivp(
             lambda t, x: self.state_ode(t, x, self.parameters["value"]),
             t_span,
@@ -141,7 +144,6 @@ class BaseModel(metaclass=ABCMeta):
             atol=atol,
             **solver_options
         )
-
         return sol.y
 
     # move this method to Optimizer
