@@ -32,6 +32,7 @@ from pprint import pprint
 import numpy as np
 import pandas as pd
 from mat4py import loadmat
+from scipy.ndimage import gaussian_filter1d
 
 from pyADAPT.dataset import DataSet, plot_splines
 
@@ -48,7 +49,7 @@ def moving_average(data_set, periods=3):
     return np.convolve(data_set, weights, mode="valid")
 
 
-def vhd(padding=True):
+def vhd(padding=True, smooth=True, stdev=2, order=0):
     #%%
     matpath = os.path.join(
         os.path.dirname(__file__),
@@ -104,6 +105,9 @@ def vhd(padding=True):
         if not s in ["G1P", "G6P", "Tre", "Tre6P", "UDP_Glc"]:
             continue
         s = rename_map[s]
+        if s in ["trh", "udg"] and smooth:
+            meta[:, i] = gaussian_filter1d(meta[:, i], stdev, order=order)
+            meta[:, i] = gaussian_filter1d(meta[:, i], stdev, order=order)
         raw_meta[s + "_stds"] = meta_std[:, i]
         raw_meta[s + "_means"] = meta[:, i]
         tmp = dict()
@@ -117,10 +121,7 @@ def vhd(padding=True):
     raw_meta["vhd"] = raw_meta
 
     vhd_dataset = DataSet(
-        name="vhd", 
-        raw_data=raw_meta,
-        data_specs=meta_specs,
-        padding=padding,
+        name="vhd", raw_data=raw_meta, data_specs=meta_specs, padding=padding,
     )
     vhd_dataset.align(["glc", "g1p", "g6p", "trh", "t6p", "udg"])
     return vhd_dataset
