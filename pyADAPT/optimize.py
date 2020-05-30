@@ -470,7 +470,7 @@ class Optimizer(object):
             new_param_names=self.parameter_names,
             odesolver=self.options["odesolver"],
         )[:, -1]
-        dy = self.model.state_ode(0, y, self.model.params["value"])
+        dy = self.model.state_ode(0, y, self.model.parameters["value"])
         # TODO add extra weighting to the concatenation
         return np.r_[y - target, dy]
 
