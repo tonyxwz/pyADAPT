@@ -472,7 +472,7 @@ class Optimizer(object):
         )[:, -1]
         dy = self.model.state_ode(0, y, self.model.parameters["value"])
         # TODO add extra weighting to the concatenation
-        return np.r_[y - target, dy]
+        return np.r_[y[self.state_mask] - target, dy]
 
     def pascal_init(self, i_iter, data):
         """ The initial parameters and states finding method inspired by
