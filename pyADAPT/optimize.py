@@ -339,7 +339,7 @@ class Optimizer(object):
             try:
                 # reset trajectories or not
                 splines = self.dataset.interpolate(n_ts=self.options["n_ts"])
-                self.init_ts0(i_iter, splines)
+                self.initialize_trajectories(i_iter, splines)
 
                 for i_ts in range(1, self.options["n_ts"]):
                     (
@@ -374,7 +374,7 @@ class Optimizer(object):
         3. calculate fluxes from new parameters and states
         """
         logger = logging.getLogger("optim.iter.init")
-        with TimeOut(self.options["timeout"], "0") as timeout:
+        with TimeOut(self.options["timeout"], "0") as _timeout:
             # splines: |observable states | observable fluxes|
             self.state_trajectory[0, self.state_mask] = splines[
                 : sum(self.state_mask), 0, 0
@@ -386,7 +386,6 @@ class Optimizer(object):
                     )
 
             # This is risky but according 3-σ principle, this is "almost" always safe
-            # TODO change the way parameters are initialized (see onenote)
             param_init = np.random.normal(
                 self.parameters["init"], self.parameters["init"] * 0.2
             )
@@ -395,7 +394,6 @@ class Optimizer(object):
             self.parameter_trajectory[0, :] = param_init
             self.parameters.loc[:, "value"] = param_init
 
-            # TODO add support for self.options['init']
             if self.model.flux_order:
                 self.flux_trajectory[0, :] = self.model.fluxes(
                     0, self.state_trajectory[0, :], self.model.parameters["value"]
@@ -405,20 +403,57 @@ class Optimizer(object):
     def initialize_trajectories(self, i_iter, splines):
         """optimize t0obj
         """
+        logger = logging.getLogger("optim.iter.t0")
+        with TimeOut(self.options["timeout"], "0") as _timeout:
+            # splines: |observable states | observable fluxes|
+            self.state_trajectory[0, self.state_mask] = splines[
+                : sum(self.state_mask), 0, 0
+            ]
+            for i, observable in enumerate(self.state_mask):
+                if not observable:
+                    # unobservable state trajectories are left for ADAPT to build
+                    self.state_trajectory[0, i] = (
+                        self.model.initial_states[i] * np.random.rand()
+                    )
+            param_init = self.parameters.loc[:, "init"]
+            op = least_squares(
+                self.t0obj,
+                param_init,
+                args=(splines[: sum(self.state_mask), 0, 0],),
+                bounds=(self.parameters["lb"], self.parameters["ub"]),
+                method=self.options["optimizer"],
+            )
 
-    def t0obj(self):
-        """objective function for:
-        1. minimize the errors between sampled states and the steady states of the model
+            if op.success:
+                level = logging.DEBUG
+            else:
+                level = logging.WARNING
+
+            self.parameter_trajectory[0, :] = op.x
+            self.parameters.loc[:, "value"] = op.x
+
+            if self.model.flux_order:
+                self.flux_trajectory[0, :] = self.model.fluxes(
+                    0, self.state_trajectory[0, :], self.model.parameters["value"]
+                )
+            logger.log(level, "init iter %d %s", i_iter, op.message)
+
+    def t0obj(self, params, target):
+        """objective function at initial time step
+
+        find **parameters** which
+        1. minimize the errors between sampled states and the (long term) steady
+            states of the model.
         2. pushing fluxes to 0 (steady states)
 
         there are two proposed ways to do this:
         1. initial value problem.
-        (might not guarantee the steady states are connecting the splines)
+        (might not guarantee the steady states are seamlessly connected to the splines)
             1. solve the ODE on interval [-(ss_time+1), -1] -> sol
             2. get sol.y at t = -1
             3. calculate the fluxes at -1
             4. return residuals
-        2. boundary value problem
+        2. boundary value problem (dropped)
         (looks promising but I haven't learned to use the API, and it doesn't guarantee
          solution existance, at least analytically)
             solve_ivp on [-(sstime+1), -1]
@@ -426,6 +461,18 @@ class Optimizer(object):
                 right boundary: f(-1) = B,
                                 f'(-1) = 0 (fluxes)
         """
+        # sstime: how long to simulate the steady state process
+        # taking the first approach
+        y = self.model.compute_states(
+            new_params=params,
+            time_points=[self.time[0] - self.options["ss_time"], self.time[0]],
+            x0=self.model.initial_states,
+            new_param_names=self.parameter_names,
+            odesolver=self.options["odesolver"],
+        )[:, -1]
+        dy = self.model.state_ode(0, y, params)
+        # TODO add extra weighting to the concatenation
+        return np.r_[y - target, dy]
 
     def pascal_init(self, i_iter, data):
         """ The initial parameters and states finding method inspired by
@@ -433,14 +480,14 @@ class Optimizer(object):
             "Expanding ADAPT to model heterogeneous datasets and application
                 to hyperinsulinemic euglycemic clamp data"
         """
-        logger = logging.getLogger("optim.iter.pascal")
+        _logger = logging.getLogger("optim.iter.pascal")
 
     def natal_init(self, i_iter, data):
         """ Natal van Riel's parameter initialization
         Basically, it tries multiple times to fit the parameters to the data
         return: arrays of initial parameters
         """
-        logger = logging.getLogger("optim.iter.natal")
+        _logger = logging.getLogger("optim.iter.natal")
         sse = np.inf
         i_ts = 0
 
@@ -525,38 +572,38 @@ class Optimizer(object):
         **kw,
     ):
         """ Objective function
+            ==================
+        The function minimized by least squares method. For ADAPT, an objective
+        should:
 
-            The function minimized by least squares method. For ADAPT, an objective
-            should:
+        1. compute the states at the end of the `timespan`, using the give
+            `parameters`, `begin_states`.
+        2. choose those `end_states` and `interp_states` which are "observable"
+        3. calculate and choose observable fluxes
+        4. calculate residual
+        5. calculate regularization term
+        6. concatenate errors and regularization terms
 
-            1. compute the states at the end of the `timespan`, using the give
-                `parameters`, `begin_states`.
-            2. choose those `end_states` and `interp_states` which are "observable"
-            3. calculate and choose observable fluxes
-            4. calculate residual
-            5. calculate regularization term
-            6. concatenate errors and regularization terms
+        Parameters
+        ----------
+        params
+            the parameters θ of the model, or x in scipy's term
+            it should be the length of the parameters to be varied
+        begin_states
+            the begin states of this time step (end of previous time step)
+        interp_data
+            shape(len(states), 2), states, stds
+            the interpolated experimental DATA at the end of the time span,
+            containing the states and corresponding standard deviations.
+        time_span
+            the time span to solve the ODE
+        parameter_names
+            list of strings, names of the parameters to optimize, other parameters
+            are set as fixed (constant) parameters
 
-            Parameters
-            ----------
-            params
-                the parameters θ of the model, or x in scipy's term
-                it should be the length of the parameters to be varied
-            begin_states
-                the begin states of this time step (end of previous time step)
-            interp_data
-                shape(len(states), 2), states, stds
-                the interpolated experimental DATA at the end of the time span,
-                containing the states and corresponding standard deviations.
-            time_span
-                the time span to solve the ODE
-            parameter_names
-                list of strings, names of the parameters to optimize, other parameters
-                are set as fixed (constant) parameters
-
-            Return
-            ------
-            np.ndarray: shape(len(states) + len(parameter penalty))
+        Return
+        ------
+        np.ndarray: shape(len(states) + len(parameter penalty))
         """
         logger = logging.getLogger("optim.iter.objective")
         if self.options["verbose"] >= OBJFUNC:
