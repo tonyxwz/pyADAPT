@@ -95,17 +95,16 @@ class Optimizer(object):
     """optimizes an ADAPT model
 
     naming:
-    ------
-
     - self.parameters: the parameters in the model need optimizing
     - self.parameter_trajectory: parameter trajectory in one iteration
     - self.parameter_trajectories_list: list of numpy.ndarray
     - self.parameter_trajectories: xarray.DataArray, trajectories returned
-
     same for states and fluxes
     """
 
-    def __init__(self, model: BaseModel, dataset: DataSet, parameter_names: list):
+    def __init__(
+        self, model: BaseModel, dataset: DataSet, parameter_names: list, **options
+    ):
         self.model = model
         self.dataset = dataset
         self.parameter_names = list(parameter_names)
@@ -130,19 +129,15 @@ class Optimizer(object):
             "timeout": 100,  # seconds
             "attempt_limit": 100,
         }
-
         # model don't know which states and fluxes are visible until data is given
-        # 1. and arrange the states and fluxes in the model to be in the same order as the dataset
+        # arrange the states and fluxes in the dataset to be in the same order as the model
         self.dataset.align(self.model.state_order + self.model.flux_order)
-        # 2. create the mask here
-        #! in van heerden's dataset, glucose(glc) is absent.
+        # in van heerden's dataset, glucose(glc) is absent.
         # state_mask will be ['g1p', 'g6p', 'trh', 't6p', 'udg']
         self.state_mask = self.create_mask(self.dataset.names, self.model.state_order)
         self.flux_mask = self.create_mask(self.dataset.names, self.model.flux_order)
-
         # logger
         self.time_stamp = time.strftime("%Y-%m-%d_%H.%M.%S", time.localtime())
-
         self.options["logging_config_dict"] = {
             "version": 1,
             "formatters": {
@@ -178,11 +173,12 @@ class Optimizer(object):
             },
             "loggers": {
                 "optim": {
-                    "handlers": ["file", "console"],
+                    "handlers": ["file", "console", "warnings"],
                     "level": "DEBUG",  # change this level when necessary
                 },
             },
         }
+        self.options.update(options)
 
     def create_mask(self, names_data, names_model):
         mask = list()
@@ -209,10 +205,10 @@ class Optimizer(object):
             self.dataset.begin_time, self.dataset.end_time, self.options["delta_t"]
         )
         self.options["n_ts"] = len(self.time)
+
         logger.info("optimize started")
         logger.info("n_ts:%d", self.options["n_ts"])
         logger.info("n_iter:%d", self.options["n_iter"])
-
         if self.options["initial_parameters"] is not None:
             self.parameters.loc[:, "init"] = self.options["initial_parameters"]
 
@@ -220,24 +216,21 @@ class Optimizer(object):
         self.state_trajectories_list = []
         self.flux_trajectories_list = []
 
-        # start optimizing (in parallel)
-        if self.options["n_core"] > 1:
-            man = mp.Manager()
-            self.q = man.Queue()
-            pool = mp.Pool(self.options["n_core"])
+        man = mp.Manager()
+        self.q = man.Queue()
 
+        if self.options["n_core"] > 1:
+            pool = mp.Pool(self.options["n_core"])
             logger_thread = threading.Thread(target=self.logger_thread)
             pool_results = []
+            logger_thread.start()  # start logging thread
             for i_iter in range(self.options["n_iter"]):
                 pool_results.append(
-                    # make use of the main process's async apply waiting time
-                    # and receive logs from other subprocesses
                     pool.apply_async(self.fit_iteration, kwds={"i_iter": i_iter})
                 )
-            logger_thread.start()  # start logging thread
             pool.close()
             pool.join()
-            self.q.put(None)  # break out from logging loop
+            self.q.put(None)  # stop logger thread
             logger_thread.join()
 
             for res_obj in pool_results:
@@ -247,14 +240,14 @@ class Optimizer(object):
                 self.flux_trajectories_list.append(vtraj)
 
         else:
-            # TODO drop the support for single processing
+            logger.warning("running large models on single process can be very slow")
             for i_iter in range(self.options["n_iter"]):
                 ptraj, straj, vtraj = self.fit_iteration(i_iter=i_iter, parallel=False)
                 self.parameter_trajectories_list.append(ptraj)
                 self.state_trajectories_list.append(straj)
                 self.flux_trajectories_list.append(vtraj)
 
-        # convert the lists into xarray
+        # TODO define a class for trajectory
         self.parameter_trajectories = xr.DataArray(
             data=np.array(self.parameter_trajectories_list),
             coords=[
@@ -289,10 +282,13 @@ class Optimizer(object):
             self.flux_trajectories,
         )
 
+    def create_empty_trajectories(self, n_ts):
+        self.parameter_trajectory = np.zeros((n_ts, len(self.parameter_names)))
+        self.state_trajectory = np.zeros((n_ts, len(self.model.state_order)))
+        self.flux_trajectory = np.zeros((n_ts, len(self.model.flux_order)))
+
     def fit_iteration(self, i_iter=0, parallel=True):
         """ handle one iteration (one subprocess)
-        """
-        """
         TODO I could write a chapter in the final thesis about how logging works.
 
         `logger`s in python are singletons, in other words, there's always only
@@ -311,35 +307,20 @@ class Optimizer(object):
         need to add handlers to the logger anymore. Or the log will contain
         many duplicated records.
         """
-
         qh = logging.handlers.QueueHandler(self.q)
         logger = logging.getLogger("optim.iter")
         if not logger.hasHandlers():
             logger.setLevel(logging.DEBUG)
             logger.addHandler(qh)
-
-        #! reseed the random generator of subprocess
         # maybe a better way to guaranttee unique seed per process
         np.random.seed(self.options["seed"] + i_iter * 200)
-        # logger.info("reseeded rng")
-
         logger.info("iteration: %d", i_iter)
-
-        self.parameter_trajectory = np.zeros(
-            (self.options["n_ts"], len(self.parameter_names))
-        )
-        self.state_trajectory = np.zeros(
-            (self.options["n_ts"], len(self.model.state_order))
-        )
-        self.flux_trajectory = np.zeros(
-            (self.options["n_ts"], len(self.model.flux_order))
-        )
 
         for attempt in range(self.options["attempt_limit"]):
             try:
-                # reset trajectories or not
+                self.create_empty_trajectories(self.options["n_ts"])
                 splines = self.dataset.interpolate(n_ts=self.options["n_ts"])
-                self.initialize_trajectories(i_iter, splines)
+                self.overture(i_iter, splines)
 
                 for i_ts in range(1, self.options["n_ts"]):
                     (
@@ -361,17 +342,12 @@ class Optimizer(object):
                     str(toerr),
                     attempt,
                 )
-
         return (self.parameter_trajectory, self.state_trajectory, self.flux_trajectory)
 
-    def init_ts0(self, i_iter, splines):
-        """ time step 0 is handled differently because there's no previous
-        time step information at this moment
-
-        what need to be done at t=0?
-        1. generate state
-        2. generate parameter
-        3. calculate fluxes from new parameters and states
+    def overture_variation_lazy(self, i_iter, splines):
+        """This variation only does no optimzation at all, simply put the random value
+        in the trajectory. This is useful when applying the "try many times and select
+        only the best x results" strategy.
         """
         logger = logging.getLogger("optim.iter.init")
         with TimeOut(self.options["timeout"], "0") as _timeout:
@@ -384,7 +360,6 @@ class Optimizer(object):
                     self.state_trajectory[0, i] = (
                         self.model.initial_states[i] * np.random.rand()
                     )
-
             # This is risky but according 3-σ principle, this is "almost" always safe
             param_init = np.random.normal(
                 self.parameters["init"], self.parameters["init"] * 0.2
@@ -394,57 +369,55 @@ class Optimizer(object):
             self.parameter_trajectory[0, :] = param_init
             self.parameters.loc[:, "value"] = param_init
 
-            if self.model.flux_order:
+            if self.model.has_flux:
                 self.flux_trajectory[0, :] = self.model.fluxes(
                     0, self.state_trajectory[0, :], self.model.parameters["value"]
                 )
             logger.debug("init iter %d", i_iter)
 
-    def initialize_trajectories(self, i_iter, splines):
-        """optimize t0obj
+    def overture(self, i_iter, splines):
+        """optimization before optimization, **init fit**, selling point in this effort
         """
-        logger = logging.getLogger("optim.iter.t0")
+        logger = logging.getLogger("optim.iter.overture")
         with TimeOut(self.options["timeout"], "0") as _timeout:
-            # splines: |observable states | observable fluxes|
+            # splines: [ observable states | observable fluxes ]
             self.state_trajectory[0, self.state_mask] = splines[
                 : sum(self.state_mask), 0, 0
             ]
             for i, observable in enumerate(self.state_mask):
                 if not observable:
-                    # unobservable state trajectories are left for ADAPT to build
+                    # unobservable state trajectories are left for ADAPT completely
                     self.state_trajectory[0, i] = (
                         self.model.initial_states[i] * np.random.rand()
                     )
             param_init = self.parameters.loc[:, "init"]
+            # print("param_init:", param_init)
             op = least_squares(
-                self.t0obj,
+                self.overture_obj,
                 param_init,
                 args=(splines[: sum(self.state_mask), 0, 0],),
                 bounds=(self.parameters["lb"], self.parameters["ub"]),
                 method=self.options["optimizer"],
             )
-
             if op.success:
                 level = logging.DEBUG
             else:
                 level = logging.WARNING
-
             self.parameter_trajectory[0, :] = op.x
             self.parameters.loc[:, "value"] = op.x
-
-            if self.model.flux_order:
+            if self.model.has_flux:
                 self.flux_trajectory[0, :] = self.model.fluxes(
                     0, self.state_trajectory[0, :], self.model.parameters["value"]
                 )
             logger.log(level, "init iter %d %s", i_iter, op.message)
 
-    def t0obj(self, params, target):
+    def overture_obj(self, params, target):
         """objective function at initial time step
 
         find **parameters** which
         1. minimize the errors between sampled states and the (long term) steady
             states of the model.
-        2. pushing fluxes to 0 (steady states)
+        2. pushing dy to 0 (steady states)
 
         there are two proposed ways to do this:
         1. initial value problem.
@@ -460,34 +433,40 @@ class Optimizer(object):
                 left boundary: f(-sstime) = A
                 right boundary: f(-1) = B,
                                 f'(-1) = 0 (fluxes)
+        Limitation: there's no support for fluxes for now
         """
         # sstime: how long to simulate the steady state process
         # taking the first approach
         y = self.model.compute_states(
             new_params=params,
-            time_points=[self.time[0] - self.options["ss_time"], self.time[0]],
-            x0=self.model.initial_states,
             new_param_names=self.parameter_names,
+            x0=self.model.initial_states,
+            time_points=[self.time[0] - self.options["ss_time"], self.time[0]],
             odesolver=self.options["odesolver"],
         )[:, -1]
-        dy = self.model.state_ode(0, y, self.model.parameters["value"])
+        dy = self.model.state_ode(self.time[0], y, self.model.parameters["value"])
         # TODO add extra weighting to the concatenation
         return np.r_[y[self.state_mask] - target, dy]
 
-    def pascal_init(self, i_iter, data):
-        """ The initial parameters and states finding method inspired by
+    def overture_var_pascal(self, i_iter, splines):
+        """ Overture variation Pascal
+        The initial parameters and states finding method as described in
         Pascal van Beek's master thesis in 2018:
             "Expanding ADAPT to model heterogeneous datasets and application
                 to hyperinsulinemic euglycemic clamp data"
+        The difference between this method and my method in `initialize_trajectories`
+        is that here the parameters are optimized on the entire time span while in my
+        method, the optimization happens before the time span.
         """
-        _logger = logging.getLogger("optim.iter.pascal")
+        _logger = logging.getLogger("optim.iter.overture")
 
-    def natal_init(self, i_iter, data):
-        """ Natal van Riel's parameter initialization
-        Basically, it tries multiple times to fit the parameters to the data
+    def overture_var_natal(self, i_iter, splines):
+        """ Overture variation Natal
+        Basically, it tries multiple times until find a set of parameters that
+        fits the data well.
         return: arrays of initial parameters
         """
-        _logger = logging.getLogger("optim.iter.natal")
+        _logger = logging.getLogger("optim.iter.overture")
         sse = np.inf
         i_ts = 0
 
@@ -502,8 +481,8 @@ class Optimizer(object):
                 bounds=(self.parameters["lb"], self.parameters["ub"]),
                 method=self.options["optimizer"],
                 kwargs={
-                    "begin_states": data[:, i_ts, 0],
-                    "interp_data": data[:, i_ts, :],
+                    "begin_states": splines[:, i_ts, 0],
+                    "interp_data": splines[:, i_ts, :],
                     "time_span": [self.time[0] - self.options["ss_time"], self.time[0]],
                     "R": None,
                     "i_iter": i_iter,
@@ -553,7 +532,7 @@ class Optimizer(object):
             new_param_names=self.parameter_names,
             odesolver=self.options["odesolver"],
         )[:, -1]
-        if self.model.flux_order:
+        if self.model.has_flux:
             final_fluxes = self.model.fluxes(
                 time_span[-1], final_states, self.model.parameters["value"]
             )
@@ -606,8 +585,6 @@ class Optimizer(object):
         np.ndarray: shape(len(states) + len(parameter penalty))
         """
         logger = logging.getLogger("optim.iter.objective")
-        if self.options["verbose"] >= OBJFUNC:
-            pass  # print something about optimizer
 
         end_states = self.model.compute_states(
             new_params=params,
@@ -625,7 +602,7 @@ class Optimizer(object):
         end_pred = end_states[self.state_mask]
 
         if len(self.model.flux_order):
-            end_pred = np.concatenate([end_pred, end_fluxes])
+            end_pred = np.r_[end_pred, end_fluxes]
 
         # equation 3.4 [ADAPT 2013]
         residual = (end_pred - end_data[:, 0]) / end_data[:, 1]
@@ -639,7 +616,7 @@ class Optimizer(object):
                 i_ts=i_ts,
                 time_span=time_span,
             )
-            residual = np.concatenate([residual, reg_term])
+            residual = np.r_[residual, reg_term]
         return residual
 
 
