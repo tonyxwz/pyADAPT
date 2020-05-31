@@ -34,7 +34,7 @@ import pandas as pd
 from mat4py import loadmat
 from scipy.ndimage import gaussian_filter1d
 
-from pyADAPT.dataset import DataSet, plot_splines
+from pyADAPT.dataset import DataSet
 
 #%%
 # from pyADAPT.io import read_data_raw, read_mat
@@ -80,7 +80,7 @@ def vhd(padding=True, smooth=True, stdev=2, order=0):
     time_totP = np.squeeze(np.array(vanHeerden["data"]["time_totP"]))
 
     # meta_std = meta * np.random.random_sample(meta.shape) * 0.05
-    meta_std = meta * 0.02
+    meta_std = meta * 0.05  # add an argument for this 0.05
     # create fake standard deviations
     raw_meta = dict()
     meta_specs = {
@@ -131,16 +131,18 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
     plt.style.use(["science", "grid"])
-    fig: plt.Figure = plt.figure(figsize=(9, 6))
-    gs = fig.add_gridspec(2, 6)
-    fig.add_subplot(gs[0, 1:3])
-    fig.add_subplot(gs[0, 3:5])
-    fig.add_subplot(gs[1, 0:2])
-    fig.add_subplot(gs[1, 2:4])
-    fig.add_subplot(gs[1, 4:6])
-    axes = fig.get_axes()
     # axes = np.array([ax1, ax2, ax3, ax4, ax5])
-    plot_splines(vhd(), 100, 100, axes=fig.axes)
-    fig.tight_layout()
-    fig.savefig("van_heerden-100-100.png", dpi=200)
-    plt.show()
+
+    for smooth in [True, False]:
+        fig: plt.Figure = plt.figure(figsize=(9, 6))
+        gs = fig.add_gridspec(2, 6)
+        fig.add_subplot(gs[0, 1:3])
+        fig.add_subplot(gs[0, 3:5])
+        fig.add_subplot(gs[1, 0:2])
+        fig.add_subplot(gs[1, 2:4])
+        fig.add_subplot(gs[1, 4:6])
+        axes = fig.get_axes()
+        D = vhd(smooth=smooth)
+        D.fancy_plot(100, 100, axes=fig.axes.copy())
+        fig.tight_layout()
+        fig.savefig(f"van_heerden-{'smooth-' if smooth else ''}100-100.png", dpi=200)

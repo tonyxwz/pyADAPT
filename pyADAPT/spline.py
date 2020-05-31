@@ -125,7 +125,6 @@ class DataLine(list):
     def smoothing(self, kernel):
         pass
 
-    @check_axes_single
     def errorbar(self, axes=None):
         # TODO draw means in different color
         axes.set_title(self.name)
@@ -141,7 +140,6 @@ class DataLine(list):
             elinewidth=0.3,
         )
 
-    @check_axes_single
     def plot_sample(self, axes=None):
         axes.plot(self.time, self.sample(), ".g", alpha=0.5, markersize=5)
 

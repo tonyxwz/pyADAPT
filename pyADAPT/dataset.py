@@ -117,6 +117,9 @@ class DataSet(list):
     def get_timepoints(self, n_ts):
         return np.linspace(self.begin_time, self.end_time, n_ts)
 
+    def get_steplength(self, n_ts):
+        return (self.end_time - self.begin_time) / n_ts
+
     def interpolate(self, n_ts=100, method="pchip") -> np.ndarray:
         """In every ADAPT iteration, this function is called once to get a new
         spline for the optimizer to fit (from t0 till the end). the length of
@@ -143,41 +146,29 @@ class DataSet(list):
             index = self.names.index(index)
         return super().__getitem__(index)
 
-    def plot(self, nsamples, n_ts, axes):
-        pass
+    def fancy_plot(self, n_samples=None, n_ts=None, axes=None):
+        # plot splines
+        # plot errorbar
+        # emphasis samples
+        self.plot_splines(n_samples=n_samples, n_ts=n_ts, axes=axes)
+        for i, s in enumerate(self):
+            ax = axes[i]
+            s.errorbar(ax)
 
-
-def plot_splines(D, N, n_ts=100, axes=None, seed=0, figsize=(10, 10)):
-    # FIXME
-    if axes is not None:
-        # assert axes.size == len(D)
-        fig = np.array(axes).flatten()[0].get_figure()
-        plt = None
-    else:
-        import matplotlib.pyplot as plt
-
-        plt.style.use("ggplot")
-        ncols = get_cols(len(D))
-        nrows = int(np.ceil(len(D) / ncols))
-        fig, axes = plt.subplots(nrows, ncols, squeeze=False)
-        fig.canvas.set_window_title(f"Interpolation of {D.name}")
-
-    np.random.seed(seed)
-    for i in range(N):
-        idp = D.interpolate(n_ts=n_ts)
-        for j in range(idp.shape[0]):
-            ax = axes[j]
-            state = D[j]
-            t_ = state.time
-            t = np.linspace(t_[0], t_[-1], n_ts)
-            ax.plot(t, idp[j, :, 0], color="red", alpha=0.15)
-            state.plot_sample(ax)
-
-            if not ax.title.get_label():
-                state.errorbar(ax)
-    fig.tight_layout()
-    if plt:
-        plt.show()
+    def plot_splines(self, n_ts=100, n_samples=100, axes=None):
+        time = self.get_timepoints(n_ts)
+        ts = self.get_steplength(n_ts)
+        for i in range(n_samples):
+            splines = self.interpolate(n_ts=n_ts)
+            for j, s in enumerate(self):
+                ax: plt.Axes = axes[j]
+                x = splines[j, :, 0]
+                if not ax.title:
+                    ax.set_title(s.name)
+                ax.plot(time, x, color="red", alpha=0.15)
+                spots = np.round(s.time / ts).astype(np.int)
+                spots[-1] = spots[-1] - 1
+                ax.plot(s.time, x[spots], ".g", alpha=0.15)
 
 
 def get_cols(N, ratio=1):
