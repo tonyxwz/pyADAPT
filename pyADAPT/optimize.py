@@ -119,7 +119,7 @@ class Optimizer(object):
             "interpolation": "Hermite",
             "verbose": ITER,  # deprecated, use loglevel
             "loglevel": logging.DEBUG,
-            "init_method": None,  # pascal, natal are options
+            "overture_variation": None,  # pascal, natal are options
             "delta_t": 0.1,
             "n_core": mp.cpu_count(),
             "n_iter": 5,
@@ -127,7 +127,7 @@ class Optimizer(object):
             "initial_parameters": None,  # TODO give alternatives to the model parameter['init']
             "weights": np.ones(len(self.dataset)),
             "timeout": 100,  # seconds
-            "attempt_limit": 100,
+            "max_retry": 100,
         }
         # model don't know which states and fluxes are visible until data is given
         # arrange the states and fluxes in the dataset to be in the same order as the model
@@ -186,6 +186,11 @@ class Optimizer(object):
             mask.append(names_model[i] in names_data)
         return mask
 
+    def set_timestep(self, delta_t):
+        # the end time might not be the actual end time
+        self.time = np.arange(self.dataset.begin_time, self.dataset.end_time, delta_t)
+        self.options["n_ts"] = len(self.time)
+
     def logger_thread(self):
         while True:
             record = self.q.get()
@@ -200,11 +205,7 @@ class Optimizer(object):
         self.options.update(options)
         logging.config.dictConfig(self.options["logging_config_dict"])
         logger = logging.getLogger("optim")
-
-        self.time = np.arange(
-            self.dataset.begin_time, self.dataset.end_time, self.options["delta_t"]
-        )
-        self.options["n_ts"] = len(self.time)
+        self.set_timestep(self.options["delta_t"])
 
         logger.info("optimize started")
         logger.info("n_ts:%d", self.options["n_ts"])
@@ -316,7 +317,7 @@ class Optimizer(object):
         np.random.seed(self.options["seed"] + i_iter * 200)
         logger.info("iteration: %d", i_iter)
 
-        for attempt in range(self.options["attempt_limit"]):
+        for attempt in range(self.options["max_retry"]):
             try:
                 self.create_empty_trajectories(self.options["n_ts"])
                 splines = self.dataset.interpolate(n_ts=self.options["n_ts"])
@@ -343,37 +344,6 @@ class Optimizer(object):
                     attempt,
                 )
         return (self.parameter_trajectory, self.state_trajectory, self.flux_trajectory)
-
-    def overture_variation_lazy(self, i_iter, splines):
-        """This variation only does no optimzation at all, simply put the random value
-        in the trajectory. This is useful when applying the "try many times and select
-        only the best x results" strategy.
-        """
-        logger = logging.getLogger("optim.iter.init")
-        with TimeOut(self.options["timeout"], "0") as _timeout:
-            # splines: |observable states | observable fluxes|
-            self.state_trajectory[0, self.state_mask] = splines[
-                : sum(self.state_mask), 0, 0
-            ]
-            for i, observable in enumerate(self.state_mask):
-                if not observable:
-                    self.state_trajectory[0, i] = (
-                        self.model.initial_states[i] * np.random.rand()
-                    )
-            # This is risky but according 3-σ principle, this is "almost" always safe
-            param_init = np.random.normal(
-                self.parameters["init"], self.parameters["init"] * 0.2
-            )
-            # need to update both because the calculation uses the dataframe while
-            # returning trajectory needs the ndarray
-            self.parameter_trajectory[0, :] = param_init
-            self.parameters.loc[:, "value"] = param_init
-
-            if self.model.has_flux:
-                self.flux_trajectory[0, :] = self.model.fluxes(
-                    0, self.state_trajectory[0, :], self.model.parameters["value"]
-                )
-            logger.debug("init iter %d", i_iter)
 
     def overture(self, i_iter, splines):
         """optimization before optimization, **init fit**, selling point in this effort
@@ -410,6 +380,7 @@ class Optimizer(object):
                     0, self.state_trajectory[0, :], self.model.parameters["value"]
                 )
             logger.log(level, "init iter %d %s", i_iter, op.message)
+        return op
 
     def overture_obj(self, params, target):
         """objective function at initial time step
@@ -446,7 +417,39 @@ class Optimizer(object):
         )[:, -1]
         dy = self.model.state_ode(self.time[0], y, self.model.parameters["value"])
         # TODO add extra weighting to the concatenation
-        return np.r_[y[self.state_mask] - target, dy]
+        weight = 3
+        return np.r_[y[self.state_mask] - target, weight * dy]
+
+    def overture_variation_lazy(self, i_iter, splines):
+        """This variation only does no optimzation at all, simply put the random value
+        in the trajectory. This is useful when applying the "try many times and select
+        only the best x results" strategy.
+        """
+        logger = logging.getLogger("optim.iter.init")
+        with TimeOut(self.options["timeout"], "0") as _timeout:
+            # splines: |observable states | observable fluxes|
+            self.state_trajectory[0, self.state_mask] = splines[
+                : sum(self.state_mask), 0, 0
+            ]
+            for i, observable in enumerate(self.state_mask):
+                if not observable:
+                    self.state_trajectory[0, i] = (
+                        self.model.initial_states[i] * np.random.rand()
+                    )
+            # This is risky but according 3-σ principle, this is "almost" always safe
+            param_init = np.random.normal(
+                self.parameters["init"], self.parameters["init"] * 0.2
+            )
+            # need to update both because the calculation uses the dataframe while
+            # returning trajectory needs the ndarray
+            self.parameter_trajectory[0, :] = param_init
+            self.parameters.loc[:, "value"] = param_init
+
+            if self.model.has_flux:
+                self.flux_trajectory[0, :] = self.model.fluxes(
+                    0, self.state_trajectory[0, :], self.model.parameters["value"]
+                )
+            logger.debug("init iter %d", i_iter)
 
     def overture_var_pascal(self, i_iter, splines):
         """ Overture variation Pascal
@@ -618,6 +621,9 @@ class Optimizer(object):
             )
             residual = np.r_[residual, reg_term]
         return residual
+
+    def test_helper(self):
+        pass
 
 
 def optimize(model, dataset, *params, **options):
