@@ -166,8 +166,7 @@ class DataSet(list):
                 if not ax.title:
                     ax.set_title(s.name)
                 ax.plot(time, x, color="red", alpha=0.15)
-                spots = np.round(s.time / ts).astype(np.int)
-                spots[-1] = spots[-1] - 1
+                spots = np.searchsorted(time, s.time, side="left")
                 ax.plot(s.time, x[spots], ".g", alpha=0.15)
 
 
