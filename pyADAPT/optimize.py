@@ -112,7 +112,7 @@ class Optimizer(object):
         self.options = {
             "optimizer": "trf",
             "lambda_r": 1,
-            "odesolver": "RK45",
+            "odesolver": "BDF",
             "sseThres": 1000,  # for natal's init method
             "ss_time": 1000,
             "R": default_regularization,
