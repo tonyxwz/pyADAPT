@@ -30,6 +30,9 @@ def main():
     new_params = loadmat(matpath)["p"]
     if len(sys.argv) > 1:
         prefix = sys.argv[1]
+    # FIXME I think I will not use David's parameters
+    # because only smallbone's parameters can reach to a steady states
+    # plus, the new initialization method provids a workaround.
     rename_map = {
         "GLT_KeqGLT": None,
         "GLT_KmGLC": "hxt_Kglc",
@@ -74,7 +77,7 @@ def main():
     print(fit_params)
 
     vhd_dataset = vhd(padding=True)
-    if "compute" in platform.node():
+    if "compute-0" in platform.node():
         p, s, f, _t = optimize(
             smallbone,
             vhd_dataset,
@@ -82,9 +85,9 @@ def main():
             #                  alternative initial paramters from david's email (not including udg)
             #                            (Glt)                      (TPS2)   (TPS1)          (!missing)
             #                  pgi_Vmax hxt_Vmax hxk_Vmax pgm_Vmax tpp_Vmax tps_Vmax nth_Vmax ugp_Vmax
-            initial_parameters=[13.4667, 3.67, 4.75, 100, 81.45, 1000, 100, 36.8200],
+            # initial_parameters=[13.4667, 3.67, 4.75, 100, 81.45, 1000, 100, 36.8200],
             n_core=30,
-            n_iter=120,
+            n_iter=120,  # TODO increase to a crazy number
             delta_t=2,
             #               g1p g6p trh t6p udg
             weights=np.array([1, 1, 0.5, 1, 0.5]),
