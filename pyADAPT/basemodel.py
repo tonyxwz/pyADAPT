@@ -124,7 +124,7 @@ class BaseModel(metaclass=ABCMeta):
         x0=None,  # the states at the first time point
         new_param_names=[],  # the parameter's names, in the same order
         odesolver="RK45",  # odesolver
-        rtol=1e-3,  # relative tolerance
+        rtol=1e-3,  # relative tolerance TODO
         atol=1e-6,  # absolute tolerance
         **solver_options
     ):

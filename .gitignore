@@ -144,3 +144,5 @@ Pipfile.lock
 *.prof
 # netCDF data format
 *.nc
+*.png
+*.pdf

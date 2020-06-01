@@ -91,8 +91,9 @@ def main():
             delta_t=2,
             #               g1p g6p trh t6p udg
             weights=np.array([1, 1, 0.5, 1, 0.5]),
-            timeout=100,
-            attempt_limit=100,
+            timeout=1000,  # this should be enough for the bootstrapping
+            ss_time=5000,
+            max_retry=100,
             lambda_r=10,
             odesolver="Radau",
         )

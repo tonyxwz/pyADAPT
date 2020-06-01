@@ -191,6 +191,9 @@ class Optimizer(object):
         self.time = np.arange(self.dataset.begin_time, self.dataset.end_time, delta_t)
         self.options["n_ts"] = len(self.time)
 
+    def bootstrap(self):
+        pass
+
     def logger_thread(self):
         while True:
             record = self.q.get()
@@ -417,6 +420,7 @@ class Optimizer(object):
         )[:, -1]
         dy = self.model.state_ode(self.time[0], y, self.model.parameters["value"])
         # TODO add extra weighting to the concatenation
+        # FIXME when concatenating residuals with different meaning, normalize them first
         weight = 3
         return np.r_[y[self.state_mask] - target, weight * dy]
 
@@ -611,7 +615,7 @@ class Optimizer(object):
         residual = (end_pred - end_data[:, 0]) / end_data[:, 1]
         residual = residual * self.options["weights"]
         if self.options["R"] is not None:
-            reg_term = self.options["lambda_r"] * self.options["R"](
+            reg_term = self.options["R"](
                 params=params,
                 parameter_trajectory=self.parameter_trajectory,
                 state_trajectory=self.state_trajectory,
@@ -619,11 +623,10 @@ class Optimizer(object):
                 i_ts=i_ts,
                 time_span=time_span,
             )
+            # FIXME normalize
+            # self.options["lambda_r"] *
             residual = np.r_[residual, reg_term]
         return residual
-
-    def test_helper(self):
-        pass
 
 
 def optimize(model, dataset, *params, **options):
