@@ -7,10 +7,11 @@ i = np.loadtxt("success-iters2")
 print(i)
 # %%
 import pyADAPT.visualize as vis
+from pyADAPT.io import load_traj, save_traj
 
-s = traj.load("s_sbml-params_2020-05-28_19.44.30.nc")
-f = traj.load("f_sbml-params_2020-05-28_19.44.30.nc")
-p = traj.load("p_sbml-params_2020-05-28_19.44.30.nc")
+s = load_traj("s_sbml-params_2020-05-28_19.44.30.nc")
+f = load_traj("f_sbml-params_2020-05-28_19.44.30.nc")
+p = load_traj("p_sbml-params_2020-05-28_19.44.30.nc")
 
 # %%
 s = s.sel(iter=i)
