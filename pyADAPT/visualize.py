@@ -10,17 +10,6 @@ from mpl_toolkits.mplot3d import Axes3D
 from functools import wraps
 
 
-class Trajectory(dict):
-    """Never mind..."""
-
-    def __init__(self, data=[], coords=[], name=""):
-        for i_iter in coords["iter"]:
-            data = data[i_iter]
-
-    def interp(self, t):
-        pass
-
-
 def latexify(s):
     s = s.split("_")
     if len(s) == 1:
