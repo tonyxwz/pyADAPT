@@ -293,7 +293,7 @@ class Optimizer(object):
 
     def fit_iteration(self, i_iter=0, parallel=True):
         """ handle one iteration (one subprocess)
-        TODO I could write a chapter in the final thesis about how logging works.
+        TODO write a chapter in the final thesis about how logging works.
 
         `logger`s in python are singletons, in other words, there's always only
         one logger instance with the same name in one process, and logging.getLogger
@@ -393,20 +393,12 @@ class Optimizer(object):
             states of the model.
         2. pushing dy to 0 (steady states)
 
-        there are two proposed ways to do this:
-        1. initial value problem.
+        formulate this problem into an initial value problem.
         (might not guarantee the steady states are seamlessly connected to the splines)
             1. solve the ODE on interval [-(ss_time+1), -1] -> sol
             2. get sol.y at t = -1
             3. calculate the fluxes at -1
             4. return residuals
-        2. boundary value problem (dropped)
-        (looks promising but I haven't learned to use the API, and it doesn't guarantee
-         solution existance, at least analytically)
-            solve_ivp on [-(sstime+1), -1]
-                left boundary: f(-sstime) = A
-                right boundary: f(-1) = B,
-                                f'(-1) = 0 (fluxes)
         Limitation: there's no support for fluxes for now
         """
         # sstime: how long to simulate the steady state process
@@ -419,10 +411,14 @@ class Optimizer(object):
             odesolver=self.options["odesolver"],
         )[:, -1]
         dy = self.model.state_ode(self.time[0], y, self.model.parameters["value"])
+
+        y = y[self.state_mask] - target
+        # turned out that normalization is neither necessary nor effective
+        # y = y / np.linalg.norm(y)
+        # dy = dy / np.linalg.norm(dy)
         # TODO add extra weighting to the concatenation
-        # FIXME when concatenating residuals with different meaning, normalize them first
-        weight = 3
-        return np.r_[y[self.state_mask] - target, weight * dy]
+        # weight = 3
+        return np.r_[y, dy]
 
     def overture_variation_lazy(self, i_iter, splines):
         """This variation only does no optimzation at all, simply put the random value
@@ -614,6 +610,7 @@ class Optimizer(object):
         # equation 3.4 [ADAPT 2013]
         residual = (end_pred - end_data[:, 0]) / end_data[:, 1]
         residual = residual * self.options["weights"]
+        # residual = residual / np.linalg.norm(residual)
         if self.options["R"] is not None:
             reg_term = self.options["R"](
                 params=params,
@@ -623,7 +620,7 @@ class Optimizer(object):
                 i_ts=i_ts,
                 time_span=time_span,
             )
-            # FIXME normalize
+            reg_term = self.options["lambda_r"] * reg_term
             # self.options["lambda_r"] *
             residual = np.r_[residual, reg_term]
         return residual

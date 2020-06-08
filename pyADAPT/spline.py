@@ -126,7 +126,7 @@ class DataLine(list):
         pass
 
     def errorbar(self, axes=None):
-        # TODO draw means in different color
+        # draw means in different color
         axes.set_title(self.name)
         axes.set_xlabel(self.time_unit)
         axes.set_ylabel(self.unit)

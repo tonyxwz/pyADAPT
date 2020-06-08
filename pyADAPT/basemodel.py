@@ -5,16 +5,14 @@ abstract class `Model`.
 Steps
 =====
 1: toymodel without considering the model input
-        with only constant parameters               *
-3: toymodel validation
-4: Tiemann's model, fully implemented
-5: Clamp model in Pascal van Beek's work
-6: Discuss the Model with David and Natal
+        with only constant parameters ... ok
+2: toymodel validation ... ok
+3: Discuss the Smallbone Model with David and Natal
 """
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 
-import networkx as nx  # TODO visualize the Model as a network
+# import networkx as nx  # visualize the Model as a network
 import numpy as np
 import pandas as pd
 from scipy.integrate import solve_ivp
@@ -119,9 +117,9 @@ class BaseModel(metaclass=ABCMeta):
 
     def compute_states(
         self,
-        new_params=[],  # parameters that need to be optimized
         time_points=None,  # the time span of the computation
         x0=None,  # the states at the first time point
+        new_params=[],  # parameters that need to be optimized
         new_param_names=[],  # the parameter's names, in the same order
         odesolver="RK45",  # odesolver
         rtol=1e-3,  # relative tolerance TODO
@@ -165,7 +163,6 @@ class BaseModel(metaclass=ABCMeta):
     def sync_from_optimizer(self, optimizer):
         """ called at the end of Optimizer.run
         """
-        # TODO remove
         for i in range(len(optimizer)):
             self.parameters.iloc[i]["value"] = optimizer[i]
 
