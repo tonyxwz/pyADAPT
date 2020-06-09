@@ -79,28 +79,28 @@ def main():
 
     # van heerden's dataset *without* padding
     vhd_dataset = vhd(padding=False)
-    for para in fit_params:
-        p, s, f, _t = optimize(
-            smallbone,
-            vhd_dataset,
-            para,
-            #                  alternative initial paramters from david's email (not including udg)
-            #                            (Glt)                      (TPS2)   (TPS1)          (!missing)
-            #                  pgi_Vmax hxt_Vmax hxk_Vmax pgm_Vmax tpp_Vmax tps_Vmax nth_Vmax ugp_Vmax
-            # initial_parameters=[13.4667, 3.67, 4.75, 100, 81.45, 1000, 100, 36.8200],
-            n_iter=256,  # TODO increase to a crazy number
-            delta_t=2,
-            #               g1p g6p trh t6p udg
-            weights=np.array([1, 1, 0.5, 1, 0.5]),
-            timeout=1000,  # this should be enough for the bootstrapping
-            ss_time=5000,
-            max_retry=100,
-            lambda_r=10,
-            odesolver="Radau",
-        )
-        save_traj(p, f"p_{para}_{time_stamp}.nc")
-        save_traj(s, f"s_{para}_{time_stamp}.nc")
-        save_traj(f, f"f_{para}_{time_stamp}.nc")
+    # for para in fit_params:
+    p, s, f, _t = optimize(
+        smallbone,
+        vhd_dataset,
+        *fit_params,
+        #                  alternative initial paramters from david's email (not including udg)
+        #                            (Glt)                      (TPS2)   (TPS1)          (!missing)
+        #                  pgi_Vmax hxt_Vmax hxk_Vmax pgm_Vmax tpp_Vmax tps_Vmax nth_Vmax ugp_Vmax
+        # initial_parameters=[13.4667, 3.67, 4.75, 100, 81.45, 1000, 100, 36.8200],
+        n_iter=256,  # TODO increase to a crazy number
+        delta_t=2,
+        #               g1p g6p trh t6p udg
+        # weights=np.array([1, 1, 0.5, 1, 0.5]),
+        timeout=1000,  # this should be enough for the bootstrapping
+        ss_time=5000,
+        max_retry=100,
+        lambda_r=10,
+        odesolver="Radau",
+    )
+    save_traj(p, f"p_{prefix}{time_stamp}.nc")
+    save_traj(s, f"s_{prefix}{time_stamp}.nc")
+    save_traj(f, f"f_{prefix}{time_stamp}.nc")
 
 
 if __name__ == "__main__":
