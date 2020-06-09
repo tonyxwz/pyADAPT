@@ -12,7 +12,6 @@ from mat4py import loadmat
 
 import pyADAPT.visualize as vis
 
-# %%
 from pyADAPT.examples import Smallbone2011
 from pyADAPT.optimize import ITER, Optimizer, optimize
 from pyADAPT.io import load_traj, save_traj
@@ -29,7 +28,9 @@ def main():
     time_stamp = time.strftime("%Y-%m-%d_%H.%M.%S", time.localtime())
     new_params = loadmat(matpath)["p"]
     if len(sys.argv) > 1:
-        prefix = sys.argv[1]
+        prefix = sys.argv[1] + "_"
+    else:
+        prefix = ""
     # FIXME I think I will not use David's parameters
     # because only smallbone's parameters can reach to a steady states
     # plus, the new initialization method provids a workaround.
@@ -63,7 +64,7 @@ def main():
         "TPS2_vmax": "tpp_Vmax",
         "NTH1_vmax": "nth_Vmax",
     }
-    print(list(new_params.keys()))
+    # print(list(new_params.keys()))
 
     smallbone = Smallbone2011()
     # smallbone.parameters.loc[list(new_params.keys()), "init"] = list(
@@ -76,43 +77,29 @@ def main():
             fit_params.append(id)
     print(fit_params)
 
-    vhd_dataset = vhd(padding=True)
-    if "compute-0" in platform.node():
-        p, s, f, _t = optimize(
-            smallbone,
-            vhd_dataset,
-            *fit_params,
-            #                  alternative initial paramters from david's email (not including udg)
-            #                            (Glt)                      (TPS2)   (TPS1)          (!missing)
-            #                  pgi_Vmax hxt_Vmax hxk_Vmax pgm_Vmax tpp_Vmax tps_Vmax nth_Vmax ugp_Vmax
-            # initial_parameters=[13.4667, 3.67, 4.75, 100, 81.45, 1000, 100, 36.8200],
-            n_core=30,
-            n_iter=120,  # TODO increase to a crazy number
-            delta_t=2,
-            #               g1p g6p trh t6p udg
-            weights=np.array([1, 1, 0.5, 1, 0.5]),
-            timeout=1000,  # this should be enough for the bootstrapping
-            ss_time=5000,
-            max_retry=100,
-            lambda_r=10,
-            odesolver="Radau",
-        )
-        save_traj(p, f"p_{prefix}_{time_stamp}.nc")
-        save_traj(s, f"s_{prefix}_{time_stamp}.nc")
-        save_traj(f, f"f_{prefix}_{time_stamp}.nc")
-    else:
-        optim = Optimizer(
-            model=smallbone, dataset=vhd_dataset, parameter_names=fit_params
-        )
-        print(optim.parameters)
-        initial_parameters = [13.4667, 3.67, 4.75, 100, 81.45, 1000, 100, 36.8200]
-        optim.parameters.loc[:, "init"] = initial_parameters
-
-        # optim.run(n_core=1, n_iter=1, delta_t=2)
-        print(optim.parameters)
-        print(optim.state_mask)
-        print(optim.model.state_order)
-        print(optim.model.flux_order)
+    # van heerden's dataset *without* padding
+    vhd_dataset = vhd(padding=False)
+    p, s, f, _t = optimize(
+        smallbone,
+        vhd_dataset,
+        *fit_params,
+        #                  alternative initial paramters from david's email (not including udg)
+        #                            (Glt)                      (TPS2)   (TPS1)          (!missing)
+        #                  pgi_Vmax hxt_Vmax hxk_Vmax pgm_Vmax tpp_Vmax tps_Vmax nth_Vmax ugp_Vmax
+        # initial_parameters=[13.4667, 3.67, 4.75, 100, 81.45, 1000, 100, 36.8200],
+        n_iter=8,  # TODO increase to a crazy number
+        delta_t=2,
+        #               g1p g6p trh t6p udg
+        weights=np.array([1, 1, 0.5, 1, 0.5]),
+        timeout=1000,  # this should be enough for the bootstrapping
+        ss_time=5000,
+        max_retry=100,
+        lambda_r=10,
+        odesolver="Radau",
+    )
+    save_traj(p, f"p_{prefix}{time_stamp}.nc")
+    save_traj(s, f"s_{prefix}{time_stamp}.nc")
+    save_traj(f, f"f_{prefix}{time_stamp}.nc")
 
 
 if __name__ == "__main__":

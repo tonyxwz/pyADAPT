@@ -324,7 +324,7 @@ class Optimizer(object):
             try:
                 self.create_empty_trajectories(self.options["n_ts"])
                 splines = self.dataset.interpolate(n_ts=self.options["n_ts"])
-                self.overture(i_iter, splines)
+                self.overture_var_lazy(i_iter, splines)
 
                 for i_ts in range(1, self.options["n_ts"]):
                     (
@@ -420,7 +420,7 @@ class Optimizer(object):
         # weight = 3
         return np.r_[y, dy]
 
-    def overture_variation_lazy(self, i_iter, splines):
+    def overture_var_lazy(self, i_iter, splines):
         """This variation only does no optimzation at all, simply put the random value
         in the trajectory. This is useful when applying the "try many times and select
         only the best x results" strategy.
