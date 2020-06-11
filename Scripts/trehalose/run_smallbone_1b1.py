@@ -35,7 +35,7 @@ def main():
                 # if id[-5:] == "_Vmax":
                 fit_params.append(id)
     print(fit_params)
-
+    # return
     # van heerden's dataset *without* padding
     vhd_dataset = vhd(padding=False)
     for para in fit_params:
@@ -79,9 +79,9 @@ def main():
         f_fig.tight_layout()
         f_fig.savefig(f"figures/fluxes_{para}.png")
 
-        save_traj(p, f"p_{para}_{time_stamp}.nc")
-        save_traj(s, f"s_{para}_{time_stamp}.nc")
-        save_traj(f, f"f_{para}_{time_stamp}.nc")
+        save_traj(p, f"data/p_{para}_{time_stamp}.nc")
+        save_traj(s, f"data/s_{para}_{time_stamp}.nc")
+        save_traj(f, f"data/f_{para}_{time_stamp}.nc")
 
 
 if __name__ == "__main__":
