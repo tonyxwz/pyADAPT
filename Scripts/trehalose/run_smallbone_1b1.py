@@ -47,7 +47,7 @@ def main():
             #                            (Glt)                      (TPS2)   (TPS1)          (!missing)
             #                  pgi_Vmax hxt_Vmax hxk_Vmax pgm_Vmax tpp_Vmax tps_Vmax nth_Vmax ugp_Vmax
             # initial_parameters=[13.4667, 3.67, 4.75, 100, 81.45, 1000, 100, 36.8200],
-            n_iter=4,  # TODO increase to a crazy number
+            n_iter=256,  # TODO increase to a crazy number
             delta_t=2,
             #               g1p g6p trh t6p udg
             # weights=np.array([1, 1, 0.5, 1, 0.5]),
