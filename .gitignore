@@ -146,3 +146,8 @@ Pipfile.lock
 *.nc
 *.png
 *.pdf
+Scripts/jacobians.ipynb
+Scripts/ODE and SciPy.ipynb
+Scripts/sbml/run_trehalose.ipynb
+Scripts/trehalose/response_to_input.ipynb
+Scripts/trehalose/sbml_howtos.ipynb
