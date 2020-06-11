@@ -119,7 +119,7 @@ class Optimizer(object):
             "interpolation": "Hermite",
             "verbose": ITER,  # deprecated, use loglevel
             "loglevel": logging.DEBUG,
-            "overture_variation": None,  # pascal, natal are options
+            "overture_variation": "default",  # vanilla, lazy
             "delta_t": 0.1,
             "n_core": mp.cpu_count(),
             "n_iter": 5,
@@ -324,7 +324,10 @@ class Optimizer(object):
             try:
                 self.create_empty_trajectories(self.options["n_ts"])
                 splines = self.dataset.interpolate(n_ts=self.options["n_ts"])
-                self.overture_var_lazy(i_iter, splines)
+                if self.options["overture_variation"] == "default":
+                    self.overture(i_iter, splines)
+                elif self.options["overture_variation"] == "lazy":
+                    self.overture_var_lazy(i_iter, splines)
 
                 for i_ts in range(1, self.options["n_ts"]):
                     (
@@ -413,11 +416,7 @@ class Optimizer(object):
         dy = self.model.state_ode(self.time[0], y, self.model.parameters["value"])
 
         y = y[self.state_mask] - target
-        # turned out that normalization is neither necessary nor effective
-        # y = y / np.linalg.norm(y)
-        # dy = dy / np.linalg.norm(dy)
         # TODO add extra weighting to the concatenation
-        # weight = 3
         return np.r_[y, dy]
 
     def overture_var_lazy(self, i_iter, splines):
@@ -620,7 +619,7 @@ class Optimizer(object):
                 i_ts=i_ts,
                 time_span=time_span,
             )
-            reg_term = self.options["lambda_r"] * reg_term
+            reg_term *= self.options["lambda_r"]
             # self.options["lambda_r"] *
             residual = np.r_[residual, reg_term]
         return residual
@@ -677,6 +676,7 @@ if __name__ == "__main__":
         n_core=4,
         verbose=ITER,
         weights=np.array([1, 0.1, 1, 0.5]),
+        overture_variation="default",
     )
 
     fig, axes = plt.subplots(figsize=(10, 8))
