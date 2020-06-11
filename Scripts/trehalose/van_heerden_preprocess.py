@@ -107,7 +107,6 @@ def vhd(padding=True, smooth=True, stdev=2, order=0):
         s = rename_map[s]
         if s in ["trh", "udg"] and smooth:
             meta[:, i] = gaussian_filter1d(meta[:, i], stdev, order=order)
-            meta[:, i] = gaussian_filter1d(meta[:, i], stdev, order=order)
         raw_meta[s + "_stds"] = meta_std[:, i]
         raw_meta[s + "_means"] = meta[:, i]
         tmp = dict()
@@ -134,7 +133,7 @@ if __name__ == "__main__":
     # axes = np.array([ax1, ax2, ax3, ax4, ax5])
 
     for smooth in [True, False]:
-        fig: plt.Figure = plt.figure(figsize=(9, 6))
+        fig: plt.Figure = plt.figure(figsize=(8, 5))
         gs = fig.add_gridspec(2, 6)
         fig.add_subplot(gs[0, 1:3])
         fig.add_subplot(gs[0, 3:5])
