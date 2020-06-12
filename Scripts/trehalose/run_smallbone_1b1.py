@@ -62,7 +62,7 @@ def main():
         vis.plot(p, axes=p_axes, color="blue", alpha=0.2)
         vis.plot_mean(p, axes=p_axes, color="red")
         p_fig.tight_layout()
-        p_fig.savefig(f"figures/p_{para}.png")
+        p_fig.savefig(f"figures/{para}_p.png")
 
         s_fig, s_axes = plt.subplots(2, 3, figsize=(9, 5), dpi=200)
         vis.plot(s, axes=s_axes, color="blue", alpha=0.2)
@@ -71,13 +71,13 @@ def main():
             ca = s_axes.flatten()[i + 1]
             s1.errorbar(ca)
         s_fig.tight_layout()
-        s_fig.savefig(f"figures/states_{para}.png")
+        s_fig.savefig(f"figures/{para}_states.png")
 
         f_fig, f_axes = plt.subplots(2, 4, figsize=(9, 5), dpi=200)
         vis.plot(f, axes=f_axes, color="blue", alpha=0.2)
         vis.plot_mean(f, axes=f_axes, color="red")
         f_fig.tight_layout()
-        f_fig.savefig(f"figures/fluxes_{para}.png")
+        f_fig.savefig(f"figures/{para}_fluxes.png")
 
         save_traj(p, f"data/p_{para}_{time_stamp}.nc")
         save_traj(s, f"data/s_{para}_{time_stamp}.nc")
