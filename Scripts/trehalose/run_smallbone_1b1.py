@@ -29,11 +29,11 @@ def main():
     fit_params = list()
     id: str
     for id in smallbone.parameters.index:
-        params = id.split("_")
-        if params[0] in ["pgi", "hxt", "hxk", "pgm", "tpp", "tps", "nth", "ugp"]:
-            if params[1] not in ["shock", "activity"]:  #!
-                # if id[-5:] == "_Vmax":
-                fit_params.append(id)
+        # params = id.split("_")
+        # if params[0] in ["pgi", "hxt", "hxk", "pgm", "tpp", "tps", "nth", "ugp"]:
+        #       if params[1] not in ["shock", "activity"]:  #!
+        if id[-5:] == "_Vmax":
+            fit_params.append(id)
     print(fit_params)
     # return
     # van heerden's dataset *without* padding
