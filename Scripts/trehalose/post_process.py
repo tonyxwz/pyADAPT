@@ -9,9 +9,9 @@ import numpy as np
 import pyADAPT.visualize as vis
 from pyADAPT.io import load_traj, save_traj
 
-name = "hxt_Vmax"
-s = load_traj(f"s_{name}_2020-06-09_02.12.56.nc")
-f = load_traj(f"f_{name}_2020-06-09_02.12.56.nc")
+name = "ugp_Vmax"
+s = load_traj(f"s_{name}_2020-06-09_12.51.02.nc")
+# f = load_traj(f"f_{name}_2020-06-09_02.12.56.nc")
 p = load_traj(f"p_{name}_2020-06-09_12.51.02.nc")
 
 # %%
@@ -44,12 +44,12 @@ fig2.tight_layout()
 fig2.savefig(f"s_{name}.png", dpi=200)
 
 
-# %%
-fig3, axes3 = plt.subplots(2, 4, figsize=(9, 5))
-vis.plot(f, axes=axes3, color="blue", alpha=0.2)
-vis.plot_mean(f, axes=axes3, color="red")
-fig3.tight_layout()
-fig3.savefig(f"f_{name}.png", dpi=200)
+# # %%
+# fig3, axes3 = plt.subplots(2, 4, figsize=(9, 5))
+# vis.plot(f, axes=axes3, color="blue", alpha=0.2)
+# vis.plot_mean(f, axes=axes3, color="red")
+# fig3.tight_layout()
+# fig3.savefig(f"f_{name}.png", dpi=200)
 
 
 # %%

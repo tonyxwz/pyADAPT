@@ -85,13 +85,18 @@ class Smallbone2011(BaseModel):
                 [0.0, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, 1.0],
             ]
         )
-
+        # self.activation= {
+        #     "glx" : +110
+        # }
         super().__init__(
             state_order=["glc", "g1p", "g6p", "trh", "t6p", "udg"],
             # from smallbone model xml
             initial_states=[0.09675, 0.1, 2.675, 0.05, 0.02, 0.7],
             flux_order=["pgi", "hxt", "hxk", "pgm", "tpp", "tps", "nth", "ugp"],
         )
+
+    def activation(self):
+        pass
 
     def fluxes(self, t, x, p):
         # measured

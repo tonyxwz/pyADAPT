@@ -144,6 +144,9 @@ class BaseModel(metaclass=ABCMeta):
         )
         return sol.y
 
+    def activate(self):
+        raise NotImplementedError
+
     # move this method to Optimizer
     def randomize_params(self, smin, smax, params=None):
         """using the formula in van Beek's thesis and matlab function in:

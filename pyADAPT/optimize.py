@@ -75,6 +75,7 @@ import logging
 import logging.handlers
 import logging.config
 import time
+import math
 
 import numpy as np
 import pandas as pd
@@ -124,7 +125,7 @@ class Optimizer(object):
             "n_core": mp.cpu_count(),
             "n_iter": 5,
             "seed": 1,
-            "initial_parameters": None,  # TODO give alternatives to the model parameter['init']
+            "initial_parameters": None,  # TODO give alternatives to self.model.parameter['init']
             "weights": np.ones(len(self.dataset)),
             "timeout": 100,  # seconds
             "max_retry": 100,
@@ -187,8 +188,12 @@ class Optimizer(object):
         return mask
 
     def set_timestep(self, delta_t):
-        # the end time might not be the actual end time
+        # ! arange not include the last time point, use linspace instead
         self.time = np.arange(self.dataset.begin_time, self.dataset.end_time, delta_t)
+        # TODO set time steps -> [-t0 - dt, t0, ]
+        # self.options["n_ts"] = math.ceil()
+        # self.time = np.linspace
+        # self.time = np.r_[self.dataset.begin_time - delta_t, n]
         self.options["n_ts"] = len(self.time)
 
     def bootstrap(self):
@@ -211,6 +216,7 @@ class Optimizer(object):
         self.set_timestep(self.options["delta_t"])
 
         logger.info("optimize started")
+        logger.info("parameters: %s", str(self.parameter_names))
         logger.info("n_ts:%d", self.options["n_ts"])
         logger.info("n_iter:%d", self.options["n_iter"])
         if self.options["initial_parameters"] is not None:
@@ -219,6 +225,7 @@ class Optimizer(object):
         self.parameter_trajectories_list = []
         self.state_trajectories_list = []
         self.flux_trajectories_list = []
+        # self.spline_list = []  # TODO save splines in order to plot the overture part
 
         man = mp.Manager()
         self.q = man.Queue()
@@ -251,7 +258,6 @@ class Optimizer(object):
                 self.state_trajectories_list.append(straj)
                 self.flux_trajectories_list.append(vtraj)
 
-        # TODO define a class for trajectory
         self.parameter_trajectories = xr.DataArray(
             data=np.array(self.parameter_trajectories_list),
             coords=[
@@ -279,6 +285,7 @@ class Optimizer(object):
             ],
             name="flux trajectories",
         )
+        # self.splines = xr.DataArray
         logger.info("optimizer quit successfully")
         return (
             self.parameter_trajectories,
@@ -327,7 +334,7 @@ class Optimizer(object):
                 if self.options["overture_variation"] == "default":
                     self.overture(i_iter, splines)
                 elif self.options["overture_variation"] == "lazy":
-                    self.overture_var_lazy(i_iter, splines)
+                    self.overture_lazy(i_iter, splines)
 
                 for i_ts in range(1, self.options["n_ts"]):
                     (
@@ -355,18 +362,9 @@ class Optimizer(object):
         """optimization before optimization, **init fit**, selling point in this effort
         """
         logger = logging.getLogger("optim.iter.overture")
+        # splines: [ observable states | observable fluxes ]
+        param_init = self.parameters.loc[:, "init"]
         with TimeOut(self.options["timeout"], "0") as _timeout:
-            # splines: [ observable states | observable fluxes ]
-            self.state_trajectory[0, self.state_mask] = splines[
-                : sum(self.state_mask), 0, 0
-            ]
-            for i, observable in enumerate(self.state_mask):
-                if not observable:
-                    # unobservable state trajectories are left for ADAPT completely
-                    self.state_trajectory[0, i] = (
-                        self.model.initial_states[i] * np.random.rand()
-                    )
-            param_init = self.parameters.loc[:, "init"]
             # print("param_init:", param_init)
             op = least_squares(
                 self.overture_obj,
@@ -375,17 +373,32 @@ class Optimizer(object):
                 bounds=(self.parameters["lb"], self.parameters["ub"]),
                 method=self.options["optimizer"],
             )
-            if op.success:
-                level = logging.DEBUG
-            else:
-                level = logging.WARNING
-            self.parameter_trajectory[0, :] = op.x
-            self.parameters.loc[:, "value"] = op.x
-            if self.model.has_flux:
-                self.flux_trajectory[0, :] = self.model.fluxes(
-                    0, self.state_trajectory[0, :], self.model.parameters["value"]
+
+        self.state_trajectory[0, self.state_mask] = splines[
+            : sum(self.state_mask), 0, 0
+        ]
+        for i, observable in enumerate(self.state_mask):
+            if not observable:
+                # unobservable state trajectories are left for ADAPT completely
+                # N(mean, 0.2 * mean)
+                self.state_trajectory[0, i] = (
+                    self.model.initial_states[i]
+                    + np.random.randn() * 0.2 * self.model.initial_states[i]
                 )
-            logger.log(level, "init iter %d %s", i_iter, op.message)
+
+        self.parameter_trajectory[0, :] = op.x
+        self.parameters.loc[:, "value"] = op.x
+        if self.model.has_flux:
+            self.flux_trajectory[0, :] = self.model.fluxes(
+                0, self.state_trajectory[0, :], self.model.parameters["value"]
+            )
+
+        if op.success:
+            level = logging.DEBUG
+        else:
+            level = logging.WARNING
+        logger.log(level, "init iter %d %s", i_iter, op.message)
+
         return op
 
     def overture_obj(self, params, target):
@@ -415,12 +428,12 @@ class Optimizer(object):
         )[:, -1]
         dy = self.model.state_ode(self.time[0], y, self.model.parameters["value"])
 
-        y = y[self.state_mask] - target
+        y = (y[self.state_mask] - target) / y[self.state_mask]
         # TODO add extra weighting to the concatenation
         return np.r_[y, dy]
 
-    def overture_var_lazy(self, i_iter, splines):
-        """This variation only does no optimzation at all, simply put the random value
+    def overture_lazy(self, i_iter, splines):
+        """This variation does no optimzation at all, simply put the random value
         in the trajectory. This is useful when applying the "try many times and select
         only the best x results" strategy.
         """
@@ -450,7 +463,7 @@ class Optimizer(object):
                 )
             logger.debug("init iter %d", i_iter)
 
-    def overture_var_pascal(self, i_iter, splines):
+    def overture_pascal(self, i_iter, splines):
         """ Overture variation Pascal
         The initial parameters and states finding method as described in
         Pascal van Beek's master thesis in 2018:
@@ -462,7 +475,7 @@ class Optimizer(object):
         """
         _logger = logging.getLogger("optim.iter.overture")
 
-    def overture_var_natal(self, i_iter, splines):
+    def overture_natal(self, i_iter, splines):
         """ Overture variation Natal
         Basically, it tries multiple times until find a set of parameters that
         fits the data well.
@@ -611,7 +624,7 @@ class Optimizer(object):
         residual = residual * self.options["weights"]
         # residual = residual / np.linalg.norm(residual)
         if self.options["R"] is not None:
-            reg_term = self.options["R"](
+            reg_term = self.options["lambda_r"] * self.options["R"](
                 params=params,
                 parameter_trajectory=self.parameter_trajectory,
                 state_trajectory=self.state_trajectory,
@@ -619,8 +632,6 @@ class Optimizer(object):
                 i_ts=i_ts,
                 time_span=time_span,
             )
-            reg_term *= self.options["lambda_r"]
-            # self.options["lambda_r"] *
             residual = np.r_[residual, reg_term]
         return residual
 
@@ -672,10 +683,10 @@ if __name__ == "__main__":
         "k1",
         n_iter=10,
         delta_t=0.2,
-        odesolver="LSODA",
+        odesolver="BDF",
         n_core=4,
         verbose=ITER,
-        weights=np.array([1, 0.1, 1, 0.5]),
+        # weights=np.array([1, 0.1, 1, 0.5]),
         overture_variation="default",
     )
 
@@ -685,4 +696,5 @@ if __name__ == "__main__":
 
     # # plt.show()
     # fig.savefig("toy.pdf")
+    fig.tight_layout()
     fig.savefig("test_optimize.png")

@@ -55,6 +55,7 @@ def main():
         max_retry=100,
         lambda_r=10,
         odesolver="Radau",
+        overture_variation="lazy",
     )
     save_traj(p, f"p_{prefix}{time_stamp}.nc")
     save_traj(s, f"s_{prefix}{time_stamp}.nc")
