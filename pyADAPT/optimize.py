@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-optimize module just runs ADAPT [^1]
+optimize module just runs ADAPT
 ===============================
 
 Motivation
@@ -64,9 +64,6 @@ optimize
                                 optim.model.compute_states
                                     scipy:solve_ivp()
 print & plotting
-
-[^1]: I am considering renaming ADAPT to Optimizer in order to be distant away
-from this lame paper.
 """
 import threading
 import platform

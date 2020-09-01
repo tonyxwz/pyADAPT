@@ -1,40 +1,41 @@
+from pyADAPT.basemodel import BaseModel
 import numpy as np
-from pyADAPT import Model
+inf = np.inf
 
-
-class {{model_name}}(Model):
+class {{model_name}}(BaseModel):
     def __init__(self):
         self.name = "{{model_name}}"
-        self.descrption = """{{model_description}}"""
-        {% for predictor in predictors %}
-        self.add_predictor(name="{{predictor.name}}", value={{predictor.value}}){% endfor %}
-        {% for constant in constans %}
-        self.add_constant(name="{{constant.name}}", value={{constant.value}}){% endfor %}
-
+        self.description = """{{model.notes}}"""
         {# here the parameter lower and upper bounds have to be considered #}
-        {% for parameter in parameters %}
-        self.add_parameter(name="{{parameter.name}}",
-            value={{parameter.value}},
-            vary={{parameter.vary}},
-            lb={% if %}{{parameter.lb}},
-            ub={{parameter.ub}}
-        ){% endfor %}
+        {% for index, parameter in model.parameters.iterrows() %}
+        self.add_parameter(name="{{parameter.name}}", value={{parameter.value}}, vary={{parameter.vary}}, lb={{parameter.lb}}, ub={{parameter.ub}}){% endfor %}
 
-        {% for state in states %}
-        self.add_state(name="{{state.name}}", init={{state.init}}){% endfor %}
+        self.sm = np.array(
+            {{sm}}
+        )
 
-        super().__init__()
+        super().__init__(
+            state_order={{model.state_order}},
+            initial_states={{initial_states}},
+            flux_order={{model.flux_order}}
+        )
+
+    def fluxes(self, t, x, p):
+        {% for s in model.state_order %}
+        {{s}} = x[self["{{s}}"]]{% endfor %}
+
+        {% for p in model.parameters.index %}
+        {{p}} = p['{{p}}']{% endfor %}
+
+        {% for k,v in model.reactions.items() %}
+        {{k}} = {{v.text_formula}}{% endfor%}
+
+        return np.array([{% for k in model.reactions.keys() %}{{k}}, {% endfor %}])
 
     def inputs(self, t):
-        {# this is the first thing to consider when building a model, although being very simplified in the toy model#}
         # return the input at time `t`
-        pass
-    def fluxes(self, t, x, p):
-        {# then define the fluxes #}
-        pass
-    def reactions(self, t, x, p):
-        return self.fluxes(t, x, p)
+        return super().inputs(t)
 
-    def odefunc(self, t, x, p):
-        {# the ode definition here #}
-        pass
+    def state_ode(self, t, x, p):
+        v = self.fluxes(t, x, p)
+        return np.dot(self.sm, v)

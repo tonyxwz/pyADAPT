@@ -6,6 +6,7 @@ import re
 import jinja2
 from jinja2 import PackageLoader, Environment
 from pyADAPT.sbml.sbml_model import SBMLModel
+import numpy as np
 
 
 class Converter(object):
@@ -16,20 +17,24 @@ class Converter(object):
         # since I already have the SBMLModel implemented
         # self.fsloader = jinja2.FileSystemLoader(searchpath="./templates")
         self.pkgloader = jinja2.PackageLoader(package_name="pyADAPT",
-                                              package_path="templates")
+                                                package_path="templates")
         self.sbml_model = SBMLModel(sbml)
         self.environ = jinja2.Environment(loader=self.pkgloader)
 
         self.params = params
+        self.change_to_keyword = lambda varStr: "Model" + re.sub(
+            r"\W|^(?=\d)", "_", varStr)
 
         if len(output):
             if output[-3:] != ".py":
                 output = output + ".py"
         else:
+            # only replace the last instance
             output = sbml[::-1].replace(".xml"[::-1], ".py"[::-1], 1)[::-1]
         self.output = output
-        self.change_to_keyword = lambda varStr: "Model" + re.sub(
-            r"\W|^(?=\d)", "_", varStr)
+
+    def model_expr(self):
+        pass
 
     def convert(self):
         tmplt = self.environ.get_template("model.py.j2")
@@ -42,43 +47,14 @@ class Converter(object):
         model_specs = dict()
         model_specs["model_name"] = model_name
         model_specs["model_description"] = self.sbml_model.notes
-        model_specs["predictor"] = None
+        # model_specs["predictor"] = None
 
         model_string = tmplt.render({
-            "model_name":
-            model_name,
-            "model_description":
-            self.sbml_model.notes,
-            "predictors": [
-                {
-                    "name": "g2",
-                    "value": 63
-                },
-                {
-                    "name": "t4",
-                    "value": 56
-                },
-            ],
-            "constants": [{
-                "name": "u1",
-                "value": 1
-            }, {
-                "name": "u2",
-                "value": 3
-            }],
-            "parameters": [{
-                "name": "k1",
-                "value": 4,
-                "vary": True,
-                "lb": 0
-            }],
-            "states": [{
-                "name": "s1",
-                "init": 1
-            }, {
-                "name": "s2",
-                "init": 2
-            }],
+            "model_name": model_name,
+            "model_description": self.sbml_model.notes,
+            "model": self.sbml_model,
+            "sm": np.array2string(self.sbml_model.stoich_matrix, separator=","),
+            "initial_states": np.array2string(self.sbml_model.initial_states, separator=",")
         })
 
         with open(self.output, "w") as f:
@@ -92,5 +68,5 @@ class Converter(object):
 
 
 if __name__ == "__main__":
-    converter = Converter(r"data\trehalose\smallbone.xml")
+    converter = Converter(r"data/trehalose/smallbone.xml")
     print(converter.convert())

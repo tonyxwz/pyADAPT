@@ -9,19 +9,18 @@ import sys
 import argparse
 import click
 from pyADAPT.sbml.sbml_model import SBMLModel
-from pyADAPT.adapt import ADAPT
+from pyADAPT.optimize import Optimizer
 from pyADAPT.optimize import optimize
+from pyADAPT.convert import Converter
 
 
 def Main():
     parser = argparse.ArgumentParser(
         prog="pyADAPT",
-        description=
-        "Run analysis of dynamic adaptations of parameter trajectories on a given SBML model.",
+        description="Run analysis of dynamic adaptations of parameter trajectories on a given SBML model.",
         allow_abbrev=True,
         add_help=True,
-        epilog=
-        "For bug report or suggestions: <https://github.com/tonyxwz/pyADAPT>",
+        epilog="For bug report or suggestions: <https://github.com/tonyxwz/pyADAPT>",
     )
 
     parser.add_argument(
@@ -32,7 +31,7 @@ def Main():
     parser.add_argument(
         "-f",
         "--sbml",
-        metavar="SBML",
+        metavar="model.xml",
         dest="sbml",
         help="a sbml file that contains the model to by analyzed",
     )
@@ -43,32 +42,36 @@ def Main():
         nargs="+",
         help='the parameters to "ADAPT"',
     )
-    parser.add_argument("--quiet",
-                        action="store_true",
-                        help="don't print result to console")
     parser.add_argument(
+        "--quiet", action="store_true", help="don't print result to console"
+    )
+    parser.add_argument(
+        "-o",
         "--output",
-        metavar="results.txt",
+        metavar="results.txt/Model.py",
         action="store",
-        help="file to write analysis",
+        help="file to write",
     )
     parser.add_argument("--version", action="version", version="%(prog)s 1.0")
 
-    print(sys.argv)
+    # print(sys.argv)
     args = parser.parse_args()
-    print(args)
+    # print(args)
 
     if args.job != "gui":
-        if (args.parameters is None) or (args.sbml is None):
-            print(
-                "error:",
-                f"{parser.prog} {args.job} requires at least a model file AND a parameter list",
-            )
-            parser.print_help()
-            sys.exit()
+        # if (args.parameters is None) or (args.sbml is None):
+        #     print(
+        #         "error:",
+        #         f"{parser.prog} {args.job} requires at least a model file AND a parameter list",
+        #     )
+        #     parser.print_help()
+        #     sys.exit()
         # pass argument to the analysis or convert routine
-        elif args.job == "convert":
-            print("converting")
+        if args.job == "convert":
+            # print(args.sbml, args.output)
+            converter = Converter(args.sbml, output=args.output)
+            converter.convert()
+
         elif args.job == "analyze":
             print(f"analyzing {args.parameters} of {args.sbml}")
         else:

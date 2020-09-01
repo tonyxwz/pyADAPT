@@ -71,6 +71,7 @@ class SBMLModel(BaseModel):
     Smallbone et al. For other Model of different structure, further extending
     might be required.
     """
+
     def __init__(self, sbml_path):
         """Initialize a ADAPT model from a sbml file
 
@@ -85,12 +86,7 @@ class SBMLModel(BaseModel):
         self.name = self.sbml.model.name
         self.notes = self.sbml.model.notes_string
 
-        self.math_functions = {
-            "log": log,
-            "log10": log10,
-            "log2": log2,
-            "exp": exp
-        }
+        self.math_functions = {"log": log, "log10": log10, "log2": log2, "exp": exp}
         # add to _parameters
         for c in self.sbml.getModel().getListOfCompartments():
             self.add_parameter(c.id, c.size, False, lb=0, ub=np.inf)
@@ -104,28 +100,7 @@ class SBMLModel(BaseModel):
         for p in self.sbml.getModel().getListOfParameters():
             r = rules.get(p.id)
             if r is None:
-                self.add_parameter(p.id,
-                                   p.value,
-                                   not p.constant,
-                                   lb=0,
-                                   ub=np.inf)
-
-        # ias: list of initial assignments
-        ias = self.sbml.getModel().getListOfInitialAssignments()
-        for s in self.sbml.getModel().getListOfSpecies():
-            name = s.id
-            ia = ias.get(name)
-            if ia is not None:
-                formula = libsbml.formulaToString(ia.getMath())
-                conc = eval(formula, {},
-                            {p[0]: p[1]
-                             for p in self._parameters})
-            elif s.boundary_condition and s.initial_concentration == 0:
-                conc = 1.0
-            else:
-                conc = s.initial_concentration
-
-            self.add_state(name=s.id, value=conc, observable=True)
+                self.add_parameter(p.id, p.value, not p.constant, lb=0, ub=np.inf)
 
         # add reactions as pyADAPT.sbml.reaction.Reaction
         self.reactions = OrderedDict()
@@ -139,10 +114,40 @@ class SBMLModel(BaseModel):
                     name=param_name,
                     value=param.value,
                     vary=False,
-                    parent=rxn.id,
+                    lb=0,
+                    ub=np.inf
+                    # parent=rxn.id,
                 )
 
-        super().__init__()
+        # ias: list of initial assignments
+        state_order = []
+        initial_states = []
+        flux_order = self.reactions.keys()
+
+        ias = self.sbml.getModel().getListOfInitialAssignments()
+        for s in self.sbml.getModel().getListOfSpecies():
+            name = s.id
+            ia = ias.get(name)
+            if ia is not None:
+                formula = libsbml.formulaToString(ia.getMath())
+                conc = eval(formula, {}, {p[0]: p[1] for p in self._parameters})
+            elif s.boundary_condition and s.initial_concentration == 0:
+                conc = 1.0
+            else:
+                conc = s.initial_concentration
+
+            if s.boundary_condition:
+                self.add_parameter(s.id, conc, False)
+            else:
+                state_order.append(s.id)
+                initial_states.append(conc)
+            # self.add_state(name=s.id, value=conc, observable=True)
+        super().__init__(
+            state_order=state_order,
+            initial_states=initial_states,
+            flux_order=list(flux_order),
+        )
+
         self.stoich_matrix = self.get_stoich_matrix()
         self.symbol_table = {}
         self.symbol_table.update(self.math_functions)
@@ -150,11 +155,11 @@ class SBMLModel(BaseModel):
     def get_stoich_matrix(self):
         """
         stoichiometry matrix: row (effect or substrate/species)
-                              columns (cause or reaction)
+                                columns (cause or reaction)
         """
-        mat = np.zeros((len(self.states), len(self.reactions)))
+        mat = np.zeros((len(self.state_order), len(self.reactions)))
         # maybe it's a good idea to always refer to the sbml for ordering
-        species_list = self.states['name'].tolist()
+        species_list = self.state_order
         for j, r in enumerate(self.reactions.values()):
             for species_ref in r.reactants:
                 reactant = self.sbml.model.species.get(species_ref.species)
@@ -172,8 +177,8 @@ class SBMLModel(BaseModel):
     def symbols(self):
         """parameters, states,"""
         table = self.math_functions
-        table.update(self.parameters['value'].to_dict())
-        table.update(self.states['value'].to_dict())
+        table.update(self.parameters["value"].to_dict())
+        table.update(self.states["value"].to_dict())
         return table
 
     def fluxes(self, t, x, p):
@@ -192,10 +197,11 @@ class SBMLModel(BaseModel):
         p: np.ndarray / pandas.Series
         """
         # assign p (parameters) and x (states)
-        self.states.loc[:, "value"] = x
+        # self.states.loc[:, "value"] = x
         v = self.fluxes(t, x, p)
         dxdt = np.dot(self.stoich_matrix, v)
         return dxdt
+
 
 def SBMLBuilder(sbml) -> SBMLModel:
     # TODO
@@ -204,36 +210,58 @@ def SBMLBuilder(sbml) -> SBMLModel:
     pass
 
 
-
 if __name__ == "__main__":
     from pprint import pprint
     from copy import deepcopy
 
     smallbone = SBMLModel("data/trehalose/smallbone.xml")
+    print(smallbone.state_order)
+    print(smallbone.flux_order)
+    print(smallbone.stoich_matrix)
+    # x1 = deepcopy(smallbone.states["value"].values)
+    # x0 = np.array(
+    #     [
+    #         0.09765,
+    #         0.10000,
+    #         2.67500,
+    #         0.05000,
+    #         0.02000,
+    #         0.70000,
+    #         1.28200,
+    #         2.52500,
+    #         1.00000,
+    #         0.62500,
+    #         1.00000,
+    #         1.00000,
+    #         0.28150,
+    #         0.64910,
+    #         1.00000,
+    #         100.00000,
+    #     ]
+    # )
+    # x0[15] = 0.1
+    # x0[0] = 100
+    # t_eval = np.linspace(0, 10, 1000)
+    # # import cProfile
+    # # cProfile.run("""smallbone.compute_states(new_params=0.5,
+    # #                              time_points=t_eval,
+    # #                              x0=x,
+    # #                              new_param_names=['hxt_Vmax'])""")
+    # y = smallbone.compute_states(time_points=t_eval, x0=x0)
 
-    x1 = deepcopy(smallbone.states['value'].values)
-    x0 = np.array([
-        0.09765, 0.10000, 2.67500, 0.05000, 0.02000, 0.70000, 1.28200, 2.52500,
-        1.00000, 0.62500, 1.00000, 1.00000, 0.28150, 0.64910, 1.00000,
-        100.00000
-    ])
-    x0[15] = 0.1
-    x0[0] = 100
-    t_eval = np.linspace(0, 10, 1000)
-    # import cProfile
-    # cProfile.run("""smallbone.compute_states(new_params=0.5,
-    #                              time_points=t_eval,
-    #                              x0=x,
-    #                              new_param_names=['hxt_Vmax'])""")
-    y = smallbone.compute_states(time_points=t_eval, x0=x0)
+    # # print(y)
 
-    # print(y)
+    # import matplotlib.pyplot as plt
 
-    import matplotlib.pyplot as plt
+    # for i in range(y.shape[0]):
+    #     plt.plot(t_eval, y[i, :], "--")
+    # # names = [x.name for x in smallbone.states.values()]
+    # print(smallbone.states["value"])
+    # plt.legend(smallbone.states.name)
+    # plt.show()
+    for i in smallbone.parameters.index:
+        print(i)
 
-    for i in range(y.shape[0]):
-        plt.plot(t_eval, y[i, :], "--")
-    # names = [x.name for x in smallbone.states.values()]
-    print(smallbone.states['value'])
-    plt.legend(smallbone.states.name)
-    plt.show()
+    for k, v in smallbone.reactions.items():
+        print(k, "=", v.text_formula)
+
