@@ -1,6 +1,0 @@
-[book]
-authors = ["Weizhou Xing"]
-language = "en"
-multilingual = false
-src = "src"
-title = "PyADAPT Documentation"
